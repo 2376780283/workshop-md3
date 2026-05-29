@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,8 +40,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -75,7 +72,6 @@ import com.slay.workshopnative.core.util.openUrlWithChooser
 import com.slay.workshopnative.data.model.SessionStatus
 import com.slay.workshopnative.data.model.SteamSessionState
 import com.slay.workshopnative.data.preferences.SavedSteamAccount
-import com.slay.workshopnative.ui.components.WorkshopBackdrop
 import com.slay.workshopnative.ui.feature.downloads.DownloadedUpdatesSheet
 import com.slay.workshopnative.ui.feature.downloads.DownloadsScreen
 import com.slay.workshopnative.ui.feature.downloads.DownloadsViewModel
@@ -266,15 +262,13 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
 
     if (!showApplicationShell) {
         if (showStartupOverlay) {
-            WorkshopBackdrop { StartupStateOverlay() }
+            StartupStateOverlay()
         } else if (showRestoreScreen) {
-            WorkshopBackdrop {
-                SessionStateOverlay(
-                    sessionState = sessionState,
-                    onRetryRestore = viewModel::retrySessionRestore,
-                    onShowLogin = { forceLoginScreen = true },
-                )
-            }
+            SessionStateOverlay(
+                sessionState = sessionState,
+                onRetryRestore = viewModel::retrySessionRestore,
+                onShowLogin = { forceLoginScreen = true },
+            )
         } else {
             LoginScreen(
                 sessionState = sessionState,
@@ -343,58 +337,91 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
 
     BackHandler(enabled = activeWorkshop != null && !imeVisible) { viewModel.closeWorkshop() }
 
-    WorkshopBackdrop {
-        Row(modifier = Modifier.fillMaxSize()) {
-            AnimatedVisibility(
-                visible = showNavigationRail,
-                enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
-                exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
-            ) {
-                NavigationRail {
-                    rootDestinations(showLibraryTab).forEach { destination ->
-                        val selected = currentRootTabRoute == destination.route
-                        NavigationRailItem(
-                            selected = selected,
-                            onClick = { viewModel.navigateRootTab(destination.route) },
-                            icon = destination.icon,
-                            label = { Text(destination.label) },
-                        )
-                    }
+    Row(modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = showNavigationRail,
+            enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
+        ) {
+            NavigationRail {
+                rootDestinations(showLibraryTab).forEach { destination ->
+                    val selected = currentRootTabRoute == destination.route
+                    NavigationRailItem(
+                        selected = selected,
+                        onClick = { viewModel.navigateRootTab(destination.route) },
+                        icon = destination.icon,
+                        label = { Text(destination.label) },
+                    )
                 }
             }
-            Scaffold(
-                modifier = Modifier.weight(1f),
-                containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.0f),
-                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            ) { paddingValues ->
-                val shellPadding =
-                    PaddingValues(
-                        top = paddingValues.calculateTopPadding() + sessionBannerPadding,
-                        bottom = paddingValues.calculateBottomPadding(),
-                    )
-                Box(modifier = Modifier.fillMaxSize()) {
-                    AnimatedContent(
-                        targetState = if (activeWorkshop != null) "workshop" else currentRootTab.route,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        label = "root_navigation"
-                    ) { target ->
-                        if (target == "workshop" && activeWorkshop != null) {
-                            WorkshopScreen(
-                                appId = activeWorkshop.first,
-                                appName = activeWorkshop.second,
-                                launchMode = activeWorkshop.third,
-                                paddingValues = shellPadding,
-                                onBack = { viewModel.closeWorkshop() },
-                                onOpenDownloads = {
-                                    viewModel.navigateRootTab(RootTab.Downloads.route)
-                                    viewModel.closeWorkshop()
-                                },
-                            )
-                        } else {
-                            when (target) {
-                                RootTab.Explore.route -> {
-                                    ExploreScreen(
+        }
+        Scaffold(
+            modifier = Modifier.weight(1f),
+            containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.0f),
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        ) { paddingValues ->
+            val shellPadding =
+                PaddingValues(
+                    top = paddingValues.calculateTopPadding() + sessionBannerPadding,
+                    bottom = paddingValues.calculateBottomPadding(),
+                )
+            Box(modifier = Modifier.fillMaxSize()) {
+                AnimatedContent(
+                    targetState = if (activeWorkshop != null) "workshop" else currentRootTab.route,
+                    transitionSpec = {
+                        (slideInHorizontally(initialOffsetX = { it / 4 }) + fadeIn()) togetherWith
+                            (slideOutHorizontally(targetOffsetX = { it / 4 }) + fadeOut())
+                    },
+                    label = "root_navigation",
+                ) { target ->
+                    if (target == "workshop" && activeWorkshop != null) {
+                        WorkshopScreen(
+                            appId = activeWorkshop.first,
+                            appName = activeWorkshop.second,
+                            launchMode = activeWorkshop.third,
+                            paddingValues = shellPadding,
+                            onBack = { viewModel.closeWorkshop() },
+                            onOpenDownloads = {
+                                viewModel.navigateRootTab(RootTab.Downloads.route)
+                                viewModel.closeWorkshop()
+                            },
+                        )
+                    } else {
+                        when (target) {
+                            RootTab.Explore.route -> {
+                                ExploreScreen(
+                                    paddingValues = shellPadding,
+                                    onOpenGame = { appId, name ->
+                                        viewModel.openWorkshop(
+                                            appId,
+                                            name,
+                                            WorkshopLaunchMode.Browse.name,
+                                        )
+                                    },
+                                )
+                            }
+
+                            RootTab.Library.route -> {
+                                if (
+                                    guestMode || sessionState.status != SessionStatus.Authenticated
+                                ) {
+                                    SignedInContentGate(
                                         paddingValues = shellPadding,
+                                        guestMode = guestMode,
+                                        sessionState = sessionState,
+                                        savedAccounts = savedAccounts,
+                                        onRetryRestore = viewModel::retrySessionRestore,
+                                        onShowLogin = {
+                                            viewModel.leaveGuestMode()
+                                            appUnlocked = false
+                                            forceLoginScreen = true
+                                        },
+                                        onSwitchSavedAccount = { viewModel.switchSavedAccount(it) },
+                                    )
+                                } else {
+                                    LibraryScreen(
+                                        paddingValues = shellPadding,
+                                        accountName = sessionState.account?.accountName.orEmpty(),
                                         onOpenGame = { appId, name ->
                                             viewModel.openWorkshop(
                                                 appId,
@@ -402,119 +429,87 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
                                                 WorkshopLaunchMode.Browse.name,
                                             )
                                         },
-                                    )
-                                }
-
-                                RootTab.Library.route -> {
-                                    if (
-                                        guestMode || sessionState.status != SessionStatus.Authenticated
-                                    ) {
-                                        SignedInContentGate(
-                                            paddingValues = shellPadding,
-                                            guestMode = guestMode,
-                                            sessionState = sessionState,
-                                            savedAccounts = savedAccounts,
-                                            onRetryRestore = viewModel::retrySessionRestore,
-                                            onShowLogin = {
-                                                viewModel.leaveGuestMode()
-                                                appUnlocked = false
-                                                forceLoginScreen = true
-                                            },
-                                            onSwitchSavedAccount = { viewModel.switchSavedAccount(it) },
-                                        )
-                                    } else {
-                                        LibraryScreen(
-                                            paddingValues = shellPadding,
-                                            accountName = sessionState.account?.accountName.orEmpty(),
-                                            onOpenGame = { appId, name ->
-                                                viewModel.openWorkshop(
-                                                    appId,
-                                                    name,
-                                                    WorkshopLaunchMode.Browse.name,
-                                                )
-                                            },
-                                            onOpenSubscriptions = { appId, name ->
-                                                viewModel.openWorkshop(
-                                                    appId,
-                                                    name,
-                                                    WorkshopLaunchMode.Subscriptions.name,
-                                                )
-                                            },
-                                        )
-                                    }
-                                }
-
-                                RootTab.Downloads.route -> {
-                                    DownloadsScreen(
-                                        paddingValues = shellPadding,
-                                        viewModel = downloadsViewModel,
-                                    )
-                                }
-
-                                RootTab.Settings.route -> {
-                                    SettingsScreen(
-                                        paddingValues = shellPadding,
-                                        isGuestMode = guestMode,
-                                        appUpdateUiState = appUpdateState,
-                                        onCheckAppUpdates = viewModel::checkForAppUpdates,
-                                        onShowLogin = {
-                                            viewModel.leaveGuestMode()
-                                            appUnlocked = false
-                                            forceLoginScreen = true
+                                        onOpenSubscriptions = { appId, name ->
+                                            viewModel.openWorkshop(
+                                                appId,
+                                                name,
+                                                WorkshopLaunchMode.Subscriptions.name,
+                                            )
                                         },
-                                        onSwitchSavedAccount = viewModel::switchSavedAccount,
-                                        onLogout = viewModel::logout,
                                     )
                                 }
                             }
+
+                            RootTab.Downloads.route -> {
+                                DownloadsScreen(
+                                    paddingValues = shellPadding,
+                                    viewModel = downloadsViewModel,
+                                )
+                            }
+
+                            RootTab.Settings.route -> {
+                                SettingsScreen(
+                                    paddingValues = shellPadding,
+                                    isGuestMode = guestMode,
+                                    appUpdateUiState = appUpdateState,
+                                    onCheckAppUpdates = viewModel::checkForAppUpdates,
+                                    onShowLogin = {
+                                        viewModel.leaveGuestMode()
+                                        appUnlocked = false
+                                        forceLoginScreen = true
+                                    },
+                                    onSwitchSavedAccount = viewModel::switchSavedAccount,
+                                    onLogout = viewModel::logout,
+                                )
+                            }
                         }
                     }
-
-                    if (showSessionBanner) {
-                        SessionStateBanner(
-                            modifier =
-                                Modifier.align(Alignment.TopCenter)
-                                    .statusBarsPadding()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                                    .zIndex(1f),
-                            sessionState = sessionState,
-                            onRetryRestore = viewModel::retrySessionRestore,
-                            onShowLogin = {
-                                appUnlocked = false
-                                forceLoginScreen = true
-                            },
-                        )
-                    }
                 }
-            }
-            if (showDisclaimerDialog) {
-                AppDisclaimerDialogIfNeeded(
-                    onConfirm = viewModel::acknowledgeDisclaimer,
-                    onOpenRepository = { openExternalUrl(WorkshopNativeAbout.repositoryUrl) },
-                )
-            } else if (showUsageBoundaryDialog) {
-                AppUsageBoundaryDialogIfNeeded(
-                    onConfirm = viewModel::acknowledgeUsageBoundary,
-                    onOpenRepository = { openExternalUrl(WorkshopNativeAbout.repositoryUrl) },
-                )
-            } else {
-                AppUpdateDialogIfNeeded(
-                    appUpdateState = appUpdateState,
-                    onDismiss = viewModel::dismissUpdateDialog,
-                    onConfirmDownload = { downloadUrl ->
-                        viewModel.dismissUpdateDialog()
-                        openExternalUrl(downloadUrl)
-                    },
-                )
-                if (downloadUpdatesDialogState.isVisible && !appUpdateState.showUpdateDialog) {
-                    DownloadedUpdatesSheet(
-                        state = downloadUpdatesDialogState,
-                        onDismiss = downloadsViewModel::dismissDownloadUpdatesDialog,
-                        onToggleSelection = downloadsViewModel::toggleDownloadUpdateSelection,
-                        onUpdateAll = downloadsViewModel::enqueueAllDownloadUpdates,
-                        onUpdateSelected = downloadsViewModel::enqueueSelectedDownloadUpdates,
+
+                if (showSessionBanner) {
+                    SessionStateBanner(
+                        modifier =
+                            Modifier.align(Alignment.TopCenter)
+                                .statusBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .zIndex(1f),
+                        sessionState = sessionState,
+                        onRetryRestore = viewModel::retrySessionRestore,
+                        onShowLogin = {
+                            appUnlocked = false
+                            forceLoginScreen = true
+                        },
                     )
                 }
+            }
+        }
+        if (showDisclaimerDialog) {
+            AppDisclaimerDialogIfNeeded(
+                onConfirm = viewModel::acknowledgeDisclaimer,
+                onOpenRepository = { openExternalUrl(WorkshopNativeAbout.repositoryUrl) },
+            )
+        } else if (showUsageBoundaryDialog) {
+            AppUsageBoundaryDialogIfNeeded(
+                onConfirm = viewModel::acknowledgeUsageBoundary,
+                onOpenRepository = { openExternalUrl(WorkshopNativeAbout.repositoryUrl) },
+            )
+        } else {
+            AppUpdateDialogIfNeeded(
+                appUpdateState = appUpdateState,
+                onDismiss = viewModel::dismissUpdateDialog,
+                onConfirmDownload = { downloadUrl ->
+                    viewModel.dismissUpdateDialog()
+                    openExternalUrl(downloadUrl)
+                },
+            )
+            if (downloadUpdatesDialogState.isVisible && !appUpdateState.showUpdateDialog) {
+                DownloadedUpdatesSheet(
+                    state = downloadUpdatesDialogState,
+                    onDismiss = downloadsViewModel::dismissDownloadUpdatesDialog,
+                    onToggleSelection = downloadsViewModel::toggleDownloadUpdateSelection,
+                    onUpdateAll = downloadsViewModel::enqueueAllDownloadUpdates,
+                    onUpdateSelected = downloadsViewModel::enqueueSelectedDownloadUpdates,
+                )
             }
         }
     }

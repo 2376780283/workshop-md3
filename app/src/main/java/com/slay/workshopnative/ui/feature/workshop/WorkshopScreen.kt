@@ -57,7 +57,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -65,11 +64,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -97,9 +96,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.slay.workshopnative.core.util.formatBytes
 import com.slay.workshopnative.core.util.formatEpochSeconds
 import com.slay.workshopnative.core.util.openUrlWithChooser
@@ -230,240 +229,247 @@ fun WorkshopScreen(
         topBar = {
             TopAppBar(
                 title = { Text(state.appName, style = MaterialTheme.typography.headlineSmall) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            WorkshopTopBarModern(
-                appName = state.appName,
-                totalCount = state.totalCount,
-                hasLoadedOnce = state.hasLoadedOnce,
-                launchMode = state.launchMode,
-                onBack = onBack,
-                onRefresh = viewModel::refresh,
-                onOpenSourcePicker = { showSourcePicker = true },
-                onOpenFilters = { showFilters = true },
-                onOpenBrowseSectionPicker = { showBrowseSectionPicker = true },
-                onOpenBrowseQuickFilterPicker = { showBrowseQuickFilterPicker = true },
-                canOpenAccountQuery = state.canOpenAccountQuery,
-                onOpenAccountQuery = viewModel::openAccountQueryMode,
-                canOpenSubscriptions = state.canOpenSubscriptions,
-                onOpenSubscriptions = viewModel::openSubscriptionsMode,
-                onSwitchToBrowse = viewModel::switchToBrowseMode,
-                isRefreshing = state.isRefreshing,
-                query = state.query,
-                sectionOptions = state.sectionOptions,
-                sortOptions = state.sortOptions,
-                periodOptions = state.periodOptions,
-                searchText = searchText,
-                onSearchTextChange = { searchText = it },
-                onSearchFocusChanged = { isSearchFieldFocused = it },
-                onSubmitSearch = {
-                    suppressExitBackAfterSearch = true
-                    val normalized = searchText.trim()
-                    if (normalized != state.query.searchText) {
-                        viewModel.applyQuery(state.query.copy(searchText = normalized, page = 1))
-                    }
-                },
-                onClearSearch = {
-                    searchText = ""
-                    focusManager.clearFocus(force = true)
-                    if (state.query.searchText.isNotBlank()) {
-                        viewModel.applyQuery(state.query.copy(searchText = "", page = 1))
-                    }
-                },
-            )
-
-            if (state.items.isEmpty() && (state.isRefreshing || !state.hasLoadedOnce)) {
-                WorkshopLoadingCard(
-                    modifier = Modifier.weight(1f),
+            Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                WorkshopTopBarModern(
                     appName = state.appName,
+                    totalCount = state.totalCount,
+                    hasLoadedOnce = state.hasLoadedOnce,
                     launchMode = state.launchMode,
-                    autoResolveDownloadInfo = state.autoResolveDownloadInfo,
+                    onBack = onBack,
+                    onRefresh = viewModel::refresh,
+                    onOpenSourcePicker = { showSourcePicker = true },
+                    onOpenFilters = { showFilters = true },
+                    onOpenBrowseSectionPicker = { showBrowseSectionPicker = true },
+                    onOpenBrowseQuickFilterPicker = { showBrowseQuickFilterPicker = true },
+                    canOpenAccountQuery = state.canOpenAccountQuery,
+                    onOpenAccountQuery = viewModel::openAccountQueryMode,
+                    canOpenSubscriptions = state.canOpenSubscriptions,
+                    onOpenSubscriptions = viewModel::openSubscriptionsMode,
+                    onSwitchToBrowse = viewModel::switchToBrowseMode,
+                    isRefreshing = state.isRefreshing,
+                    query = state.query,
+                    sectionOptions = state.sectionOptions,
+                    sortOptions = state.sortOptions,
+                    periodOptions = state.periodOptions,
+                    searchText = searchText,
+                    onSearchTextChange = { searchText = it },
+                    onSearchFocusChanged = { isSearchFieldFocused = it },
+                    onSubmitSearch = {
+                        suppressExitBackAfterSearch = true
+                        val normalized = searchText.trim()
+                        if (normalized != state.query.searchText) {
+                            viewModel.applyQuery(
+                                state.query.copy(searchText = normalized, page = 1)
+                            )
+                        }
+                    },
+                    onClearSearch = {
+                        searchText = ""
+                        focusManager.clearFocus(force = true)
+                        if (state.query.searchText.isNotBlank()) {
+                            viewModel.applyQuery(state.query.copy(searchText = "", page = 1))
+                        }
+                    },
                 )
-            } else if (state.items.isEmpty()) {
-                if (isSubscriptionMode) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = RoundedCornerShape(24.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(18.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+
+                if (state.items.isEmpty() && (state.isRefreshing || !state.hasLoadedOnce)) {
+                    WorkshopLoadingCard(
+                        modifier = Modifier.weight(1f),
+                        appName = state.appName,
+                        launchMode = state.launchMode,
+                        autoResolveDownloadInfo = state.autoResolveDownloadInfo,
+                    )
+                } else if (state.items.isEmpty()) {
+                    if (isSubscriptionMode) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shape = RoundedCornerShape(24.dp),
                         ) {
-                            Text(
-                                text = "你还没有订阅这个游戏的创意工坊内容。",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = "这里不会修改你的订阅状态，只会读取当前账号已经订阅的条目。",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Button(
-                                onClick = viewModel::switchToBrowseMode,
-                                shape = RoundedCornerShape(18.dp),
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                Text("浏览全部工坊")
+                                Text(
+                                    text = "你还没有订阅这个游戏的创意工坊内容。",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = "这里不会修改你的订阅状态，只会读取当前账号已经订阅的条目。",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Button(
+                                    onClick = viewModel::switchToBrowseMode,
+                                    shape = RoundedCornerShape(18.dp),
+                                ) {
+                                    Text("浏览全部工坊")
+                                }
                             }
                         }
-                    }
-                } else if (isAccountQueryMode && state.query.searchText.isBlank()) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = RoundedCornerShape(24.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(18.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    } else if (isAccountQueryMode && state.query.searchText.isBlank()) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shape = RoundedCornerShape(24.dp),
                         ) {
-                            Text(
-                                text = "输入关键词后，使用当前 Steam 账号查询账号可见的工坊条目。",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = "这类结果可能不会出现在公开工坊页面里，适合查找只在登录视角下可见的条目。",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Text(
+                                    text = "输入关键词后，使用当前 Steam 账号查询账号可见的工坊条目。",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = "这类结果可能不会出现在公开工坊页面里，适合查找只在登录视角下可见的条目。",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
-                    }
-                } else if (isAccountQueryMode) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = RoundedCornerShape(24.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(18.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    } else if (isAccountQueryMode) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shape = RoundedCornerShape(24.dp),
                         ) {
-                            Text(
-                                text = "当前账号可见范围内没有匹配条目。",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = "可以尝试更换关键词，或切回公开工坊继续浏览。",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            if (state.canOpenSubscriptions) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Text(
+                                    text = "当前账号可见范围内没有匹配条目。",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = "可以尝试更换关键词，或切回公开工坊继续浏览。",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                if (state.canOpenSubscriptions) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Button(
+                                            onClick = viewModel::switchToBrowseMode,
+                                            shape = RoundedCornerShape(18.dp),
+                                        ) {
+                                            Text("公开工坊")
+                                        }
+                                        OutlinedButton(
+                                            onClick = viewModel::openSubscriptionsMode,
+                                            shape = RoundedCornerShape(18.dp),
+                                        ) {
+                                            Text("我的订阅")
+                                        }
+                                    }
+                                } else {
                                     Button(
                                         onClick = viewModel::switchToBrowseMode,
                                         shape = RoundedCornerShape(18.dp),
                                     ) {
                                         Text("公开工坊")
                                     }
-                                    OutlinedButton(
-                                        onClick = viewModel::openSubscriptionsMode,
-                                        shape = RoundedCornerShape(18.dp),
-                                    ) {
-                                        Text("我的订阅")
-                                    }
-                                }
-                            } else {
-                                Button(
-                                    onClick = viewModel::switchToBrowseMode,
-                                    shape = RoundedCornerShape(18.dp),
-                                ) {
-                                    Text("公开工坊")
                                 }
                             }
                         }
-                    }
-                } else if (!state.inlineStatusMessage.isNullOrBlank()) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = RoundedCornerShape(24.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(18.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                    } else if (!state.inlineStatusMessage.isNullOrBlank()) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shape = RoundedCornerShape(24.dp),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = state.inlineStatusMessage.orEmpty(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = "可以返回探索页切换其他游戏，或稍后刷新再试。",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    } else {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shape = RoundedCornerShape(24.dp),
                         ) {
                             Text(
-                                text = state.inlineStatusMessage.orEmpty(),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = "可以返回探索页切换其他游戏，或稍后刷新再试。",
+                                text = "当前筛选条件下没有可显示的创意工坊条目。",
+                                modifier = Modifier.padding(18.dp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
                 } else {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = RoundedCornerShape(24.dp),
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        state = listState,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(bottom = 24.dp),
                     ) {
-                        Text(
-                            text = "当前筛选条件下没有可显示的创意工坊条目。",
-                            modifier = Modifier.padding(18.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp),
-                ) {
-                    items(items = state.items, key = WorkshopItem::publishedFileId) { item ->
-                        WorkshopListItem(
-                            item = item,
-                            showSubscriptionState = state.showSubscriptionState,
-                            autoResolveDownloadInfo = state.autoResolveDownloadInfo,
-                            animatedPreviewEnabled = state.animatedWorkshopPreviewEnabled,
-                            latestTask = state.downloadTasksByPublishedFileId[item.publishedFileId],
-                            onClick = { viewModel.openItemDetails(item) },
-                        )
-                    }
-
-                    if (
-                        shouldShowPagination(
-                            state.query.page,
-                            state.totalCount,
-                            state.hasMore,
-                            state.query.pageSize,
-                        )
-                    ) {
-                        item {
-                            PaginationCard(
-                                currentPage = state.query.page,
-                                totalPages =
-                                    workshopPageCount(state.totalCount, state.query.pageSize),
-                                totalCount = state.totalCount,
-                                pageSize = state.query.pageSize,
-                                isLoading = state.isLoadingMore,
-                                hasPrevious = state.query.page > 1,
-                                hasNext = state.hasMore,
-                                onPrevious = { viewModel.goToPage(state.query.page - 1) },
-                                onNext = { viewModel.goToPage(state.query.page + 1) },
+                        items(items = state.items, key = WorkshopItem::publishedFileId) { item ->
+                            WorkshopListItem(
+                                item = item,
+                                showSubscriptionState = state.showSubscriptionState,
+                                autoResolveDownloadInfo = state.autoResolveDownloadInfo,
+                                animatedPreviewEnabled = state.animatedWorkshopPreviewEnabled,
+                                latestTask =
+                                    state.downloadTasksByPublishedFileId[item.publishedFileId],
+                                onClick = { viewModel.openItemDetails(item) },
                             )
+                        }
+
+                        if (
+                            shouldShowPagination(
+                                state.query.page,
+                                state.totalCount,
+                                state.hasMore,
+                                state.query.pageSize,
+                            )
+                        ) {
+                            item {
+                                PaginationCard(
+                                    currentPage = state.query.page,
+                                    totalPages =
+                                        workshopPageCount(state.totalCount, state.query.pageSize),
+                                    totalCount = state.totalCount,
+                                    pageSize = state.query.pageSize,
+                                    isLoading = state.isLoadingMore,
+                                    hasPrevious = state.query.page > 1,
+                                    hasNext = state.hasMore,
+                                    onPrevious = { viewModel.goToPage(state.query.page - 1) },
+                                    onNext = { viewModel.goToPage(state.query.page + 1) },
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
 
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier =
-                Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp),
-        )
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier =
+                    Modifier.align(Alignment.BottomCenter)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+        }
     }
-}
 
     if (isBrowseMode && showFilters) {
         FilterSheet(
@@ -611,9 +617,7 @@ private fun WorkshopLoadingCard(
     launchMode: WorkshopLaunchMode,
     autoResolveDownloadInfo: Boolean,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-    ) {
+    Card(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -745,18 +749,19 @@ private fun WorkshopTopBarModern(
 
     Card(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        colors =
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         // 头卡片
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 CompactActionButton(
                     onClick = onBack,
@@ -1067,10 +1072,11 @@ private fun CompactActionButton(
     FilledIconButton(
         onClick = onClick,
         enabled = enabled,
-        colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        colors =
+            IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
     ) {
         icon()
     }
@@ -1236,9 +1242,7 @@ private fun WorkshopListItem(
     latestTask: DownloadTaskEntity?,
     onClick: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-    ) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             modifier = Modifier.padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),

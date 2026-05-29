@@ -39,7 +39,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.slay.workshopnative.data.model.OwnedGame
 import com.slay.workshopnative.ui.components.ArtworkThumbnail
-import com.slay.workshopnative.ui.components.steamCapsuleUrl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,18 +51,22 @@ fun LibraryScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val filteredGames = state.games.filter { game ->
-        state.query.isBlank() || game.name.contains(state.query, ignoreCase = true)
-    }
+    val filteredGames =
+        state.games.filter { game ->
+            state.query.isBlank() || game.name.contains(state.query, ignoreCase = true)
+        }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().padding(paddingValues),
         topBar = {
             TopAppBar(
                 title = { Text("游戏库", style = MaterialTheme.typography.headlineSmall) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
             // Search Bar
@@ -80,19 +83,19 @@ fun LibraryScreen(
                         }
                     }
                 },
-                shape = MaterialTheme.shapes.medium
+                shape = MaterialTheme.shapes.medium,
             )
 
             // Content List
             LazyColumn(
                 contentPadding = PaddingValues(top = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(items = filteredGames, key = { it.appId }) { game ->
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn() + slideInVertically(),
-                        exit = fadeOut() + slideOutVertically()
+                        exit = fadeOut() + slideOutVertically(),
                     ) {
                         LibraryGameCard(game = game, onOpen = { onOpenGame(game.appId, game.name) })
                     }
@@ -107,18 +110,25 @@ fun LibraryGameCard(game: OwnedGame, onOpen: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = onOpen,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             ArtworkThumbnail(
                 imageUrl = game.capsuleUrl,
                 fallbackText = game.name,
                 modifier = Modifier.size(64.dp),
-                shape = MaterialTheme.shapes.small
+                shape = MaterialTheme.shapes.small,
             )
             Column(modifier = Modifier.padding(start = 16.dp)) {
-                Text(text = game.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(text = "AppID: ${game.appId} | ${game.sourceLabel}", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = game.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "AppID: ${game.appId} | ${game.sourceLabel}",
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }

@@ -107,26 +107,27 @@ fun LoginScreen(
             else -> "正在处理…"
         }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(
             modifier = Modifier.fillMaxSize().imePadding().padding(24.dp),
             contentAlignment = Alignment.Center,
         ) {
             AnimatedContent(
-                targetState = when {
-                    isBusy -> "busy"
-                    awaitingCode -> "auth"
-                    else -> "login"
-                },
+                targetState =
+                    when {
+                        isBusy -> "busy"
+                        awaitingCode -> "auth"
+                        else -> "login"
+                    },
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "LoginStateTransition"
+                label = "LoginStateTransition",
             ) { targetState ->
                 Card(
                     modifier = Modifier.widthIn(max = 430.dp).animateContentSize(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        ),
                 ) {
                     when (targetState) {
                         "busy" -> {
@@ -184,15 +185,13 @@ private fun AuthForm(
     onSubmitAuthCode: (String) -> Unit,
 ) {
     val challenge = sessionState.challenge!!
-    val title = when (challenge.type) {
-        AuthChallengeType.SteamGuard -> "Steam Guard"
-        AuthChallengeType.Email -> challenge.emailHint?.let { "邮箱验证码 · $it" } ?: "邮箱验证码"
-    }
+    val title =
+        when (challenge.type) {
+            AuthChallengeType.SteamGuard -> "Steam Guard"
+            AuthChallengeType.Email -> challenge.emailHint?.let { "邮箱验证码 · $it" } ?: "邮箱验证码"
+        }
 
-    Column(
-        modifier = Modifier.padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
@@ -213,20 +212,22 @@ private fun AuthForm(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("验证码") },
             singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Ascii,
-                capitalization = KeyboardCapitalization.Characters,
-                autoCorrectEnabled = false,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(onDone = { if (authCode.isNotBlank()) onSubmitAuthCode(authCode) }),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Ascii,
+                    capitalization = KeyboardCapitalization.Characters,
+                    autoCorrectEnabled = false,
+                    imeAction = ImeAction.Done,
+                ),
+            keyboardActions =
+                KeyboardActions(onDone = { if (authCode.isNotBlank()) onSubmitAuthCode(authCode) }),
         )
 
         Button(
             onClick = { onSubmitAuthCode(authCode) },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             enabled = authCode.isNotBlank(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
         ) {
             Text("验证并登录", fontWeight = FontWeight.SemiBold)
         }
@@ -268,7 +269,7 @@ private fun LoginForm(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 8.dp),
             )
         }
 
@@ -291,14 +292,17 @@ private fun LoginForm(
             trailingIcon = {
                 IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
                     Icon(
-                        imageVector = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                        imageVector =
+                            if (passwordVisible) Icons.Rounded.VisibilityOff
+                            else Icons.Rounded.Visibility,
                         contentDescription = null,
                     )
                 }
             },
             enabled = inputsEnabled,
             singleLine = true,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            visualTransformation =
+                if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
         )
 
         Row(
@@ -314,7 +318,7 @@ private fun LoginForm(
             onClick = { onLogin(username, password, rememberSession) },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             enabled = username.isNotBlank() && password.isNotBlank() && inputsEnabled,
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
         ) {
             Text("登录 Steam", fontWeight = FontWeight.SemiBold)
         }
@@ -323,7 +327,7 @@ private fun LoginForm(
             onClick = onContinueAsGuest,
             modifier = Modifier.fillMaxWidth().height(50.dp),
             enabled = inputsEnabled,
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
         ) {
             Text("匿名访问", fontWeight = FontWeight.SemiBold)
         }
@@ -333,12 +337,13 @@ private fun LoginForm(
                 text = "已保存账号",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp)
+                modifier = Modifier.padding(top = 8.dp),
             )
             savedAccounts.forEach { account ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    colors =
+                        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -346,9 +351,14 @@ private fun LoginForm(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = account.accountName, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                text = if (account.steamId64 > 0L) "SteamID ${account.steamId64}" else "已保存登录态",
+                                text = account.accountName,
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text =
+                                    if (account.steamId64 > 0L) "SteamID ${account.steamId64}"
+                                    else "已保存登录态",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

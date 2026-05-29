@@ -1,7 +1,6 @@
 package com.slay.workshopnative.ui.feature.explore
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -27,15 +26,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -43,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.slay.workshopnative.data.model.FavoriteWorkshopGame
 import com.slay.workshopnative.data.model.WorkshopGameEntry
 import com.slay.workshopnative.ui.components.ArtworkThumbnail
 import com.slay.workshopnative.ui.components.steamCapsuleUrl
@@ -63,9 +57,12 @@ fun ExploreScreen(
         topBar = {
             TopAppBar(
                 title = { Text("工坊探索", style = MaterialTheme.typography.headlineSmall) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
             // Search Bar
@@ -82,19 +79,19 @@ fun ExploreScreen(
                         }
                     }
                 },
-                shape = MaterialTheme.shapes.medium
+                shape = MaterialTheme.shapes.medium,
             )
 
             // Content List
             LazyColumn(
                 contentPadding = PaddingValues(top = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(items = state.visibleGames, key = { it.appId }) { game ->
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn() + slideInVertically(),
-                        exit = fadeOut() + slideOutVertically()
+                        exit = fadeOut() + slideOutVertically(),
                     ) {
                         GameCard(game = game, onOpen = { onOpenGame(game.appId, game.name) })
                     }
@@ -109,17 +106,21 @@ fun GameCard(game: WorkshopGameEntry, onOpen: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = onOpen,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             ArtworkThumbnail(
                 imageUrl = game.capsuleUrl ?: steamCapsuleUrl(game.appId),
                 fallbackText = game.name,
                 modifier = Modifier.size(64.dp),
-                shape = MaterialTheme.shapes.small
+                shape = MaterialTheme.shapes.small,
             )
             Column(modifier = Modifier.padding(start = 16.dp)) {
-                Text(text = game.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    text = game.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
                 Text(text = "AppID: ${game.appId}", style = MaterialTheme.typography.bodySmall)
             }
         }

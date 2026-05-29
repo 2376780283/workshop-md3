@@ -8,7 +8,6 @@ import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,7 +41,6 @@ import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.SystemUpdateAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -76,18 +74,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import coil3.compose.AsyncImage
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.slay.workshopnative.BuildConfig
 import com.slay.workshopnative.core.logging.AppLog as Log
 import com.slay.workshopnative.core.storage.MEDIASTORE_DOWNLOADS_URI_STRING
@@ -98,7 +95,6 @@ import com.slay.workshopnative.data.local.DownloadStatus
 import com.slay.workshopnative.data.local.DownloadTaskEntity
 import com.slay.workshopnative.data.repository.DownloadedItemUpdateCandidate
 import com.slay.workshopnative.ui.components.ArtworkThumbnail
-import com.slay.workshopnative.ui.components.WorkshopNativeModalBottomSheet
 import com.slay.workshopnative.ui.components.steamCapsuleUrl
 import com.slay.workshopnative.ui.theme.LocalWorkshopDarkTheme
 import com.slay.workshopnative.ui.theme.workshopAdaptiveBorderColor
@@ -242,9 +238,12 @@ fun DownloadsScreen(paddingValues: PaddingValues, viewModel: DownloadsViewModel 
         topBar = {
             TopAppBar(
                 title = { Text("下载管理", style = MaterialTheme.typography.headlineSmall) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             LazyColumn(
@@ -252,173 +251,179 @@ fun DownloadsScreen(paddingValues: PaddingValues, viewModel: DownloadsViewModel 
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 88.dp),
             ) {
-            item {
-                DownloadsControlPanel(
-                    tabs = tabStates,
-                    selectedTab = selectedTab,
-                    onSelectTab = { tab -> selectedTabName = tab.name },
-                    hasInactiveHistory = hasInactiveHistory,
-                    isCheckingUpdates = isCheckingUpdates,
-                    isSimulatingUpdate = isSimulatingUpdate,
-                    showDebugActions = BuildConfig.DEBUG,
-                    onCreateTask = { isCreateTaskSheetVisible = true },
-                    onCheckUpdates = viewModel::checkDownloadedItemsForUpdates,
-                    onSimulateUpdate = viewModel::simulateUpdateAvailable,
-                    onRefresh = viewModel::refresh,
-                    onClearHistory = viewModel::clearInactiveHistory,
-                )
-            }
-
-            if (downloads.isEmpty()) {
                 item {
-                    DownloadsEmptyStateCard(
-                        title = "当前还没有下载任务",
-                        message = "去工坊列表点开条目，或直接在这里输入 publishedFileId 新建下载任务。",
+                    DownloadsControlPanel(
+                        tabs = tabStates,
+                        selectedTab = selectedTab,
+                        onSelectTab = { tab -> selectedTabName = tab.name },
+                        hasInactiveHistory = hasInactiveHistory,
+                        isCheckingUpdates = isCheckingUpdates,
+                        isSimulatingUpdate = isSimulatingUpdate,
+                        showDebugActions = BuildConfig.DEBUG,
+                        onCreateTask = { isCreateTaskSheetVisible = true },
+                        onCheckUpdates = viewModel::checkDownloadedItemsForUpdates,
+                        onSimulateUpdate = viewModel::simulateUpdateAvailable,
+                        onRefresh = viewModel::refresh,
+                        onClearHistory = viewModel::clearInactiveHistory,
                     )
                 }
-            } else {
-                if (groupedDownloads.isEmpty()) {
+
+                if (downloads.isEmpty()) {
                     item {
                         DownloadsEmptyStateCard(
-                            title = selectedTabState.emptyTitle,
-                            message = selectedTabState.emptyMessage,
+                            title = "当前还没有下载任务",
+                            message = "去工坊列表点开条目，或直接在这里输入 publishedFileId 新建下载任务。",
                         )
                     }
                 } else {
-                    items(groupedDownloads, key = { it.key }) { group ->
-                        val expanded = expandedGroupOverrides[group.key] ?: defaultExpandedForTab
-                        DownloadGameGroupCard(
-                            group = group,
-                            collapsed = !expanded,
-                            onToggleCollapse = {
-                                val nextExpanded = !expanded
-                                expandedGroupOverrides =
-                                    if (nextExpanded == defaultExpandedForTab) {
-                                        expandedGroupOverrides - group.key
-                                    } else {
-                                        expandedGroupOverrides + (group.key to nextExpanded)
-                                    }
-                            },
-                        ) { task ->
-                            DownloadListItem(
-                                task = task,
-                                onClick = { selectedTaskId = task.taskId },
-                                compact = true,
-                                onPause =
-                                    if (
-                                        task.status == DownloadStatus.Queued ||
-                                            task.status == DownloadStatus.Running
-                                    ) {
-                                        {
-                                            selectedTabName = DownloadsTab.Paused.name
-                                            viewModel.pause(task.taskId)
+                    if (groupedDownloads.isEmpty()) {
+                        item {
+                            DownloadsEmptyStateCard(
+                                title = selectedTabState.emptyTitle,
+                                message = selectedTabState.emptyMessage,
+                            )
+                        }
+                    } else {
+                        items(groupedDownloads, key = { it.key }) { group ->
+                            val expanded =
+                                expandedGroupOverrides[group.key] ?: defaultExpandedForTab
+                            DownloadGameGroupCard(
+                                group = group,
+                                collapsed = !expanded,
+                                onToggleCollapse = {
+                                    val nextExpanded = !expanded
+                                    expandedGroupOverrides =
+                                        if (nextExpanded == defaultExpandedForTab) {
+                                            expandedGroupOverrides - group.key
+                                        } else {
+                                            expandedGroupOverrides + (group.key to nextExpanded)
                                         }
-                                    } else {
-                                        null
-                                    },
-                                onResume =
-                                    if (task.status == DownloadStatus.Paused) {
-                                        {
-                                            selectedTabName = DownloadsTab.Active.name
-                                            viewModel.resume(task.taskId)
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                onRetry =
-                                    when (task.status) {
-                                        DownloadStatus.Failed -> ({
-                                                selectedTabName = DownloadsTab.Active.name
-                                                viewModel.retry(task.taskId)
-                                            })
-                                        DownloadStatus.Cancelled ->
-                                            task.retryActionOrNull {
-                                                selectedTabName = DownloadsTab.Active.name
-                                                viewModel.retry(task.taskId)
+                                },
+                            ) { task ->
+                                DownloadListItem(
+                                    task = task,
+                                    onClick = { selectedTaskId = task.taskId },
+                                    compact = true,
+                                    onPause =
+                                        if (
+                                            task.status == DownloadStatus.Queued ||
+                                                task.status == DownloadStatus.Running
+                                        ) {
+                                            {
+                                                selectedTabName = DownloadsTab.Paused.name
+                                                viewModel.pause(task.taskId)
                                             }
-                                        else -> null
-                                    },
-                                onCancel =
-                                    if (
-                                        task.status == DownloadStatus.Queued ||
-                                            task.status == DownloadStatus.Running ||
-                                            task.status == DownloadStatus.Paused ||
-                                            task.status == DownloadStatus.Failed
-                                    ) {
-                                        {
-                                            selectedTabName = DownloadsTab.Attention.name
-                                            viewModel.cancel(task.taskId)
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                onOpenDirectory =
-                                    if (task.status == DownloadStatus.Success) {
-                                        {
-                                            selectedTabName = DownloadsTab.Completed.name
-                                            when {
-                                                task.canPreviewDirectoryInApp() ->
-                                                    previewTaskId = task.taskId
-                                                else -> {
-                                                    val message =
-                                                        openDirectoryLocation(context, task)
-                                                    if (message != null) {
-                                                        scope.launch {
-                                                            snackbarHostState.showSnackbar(message)
+                                        } else {
+                                            null
+                                        },
+                                    onResume =
+                                        if (task.status == DownloadStatus.Paused) {
+                                            {
+                                                selectedTabName = DownloadsTab.Active.name
+                                                viewModel.resume(task.taskId)
+                                            }
+                                        } else {
+                                            null
+                                        },
+                                    onRetry =
+                                        when (task.status) {
+                                            DownloadStatus.Failed -> ({
+                                                    selectedTabName = DownloadsTab.Active.name
+                                                    viewModel.retry(task.taskId)
+                                                })
+                                            DownloadStatus.Cancelled ->
+                                                task.retryActionOrNull {
+                                                    selectedTabName = DownloadsTab.Active.name
+                                                    viewModel.retry(task.taskId)
+                                                }
+                                            else -> null
+                                        },
+                                    onCancel =
+                                        if (
+                                            task.status == DownloadStatus.Queued ||
+                                                task.status == DownloadStatus.Running ||
+                                                task.status == DownloadStatus.Paused ||
+                                                task.status == DownloadStatus.Failed
+                                        ) {
+                                            {
+                                                selectedTabName = DownloadsTab.Attention.name
+                                                viewModel.cancel(task.taskId)
+                                            }
+                                        } else {
+                                            null
+                                        },
+                                    onOpenDirectory =
+                                        if (task.status == DownloadStatus.Success) {
+                                            {
+                                                selectedTabName = DownloadsTab.Completed.name
+                                                when {
+                                                    task.canPreviewDirectoryInApp() ->
+                                                        previewTaskId = task.taskId
+                                                    else -> {
+                                                        val message =
+                                                            openDirectoryLocation(context, task)
+                                                        if (message != null) {
+                                                            scope.launch {
+                                                                snackbarHostState.showSnackbar(
+                                                                    message
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                onDelete =
-                                    if (task.canDeleteIndividually()) {
-                                        { viewModel.delete(task.taskId) }
-                                    } else {
-                                        null
-                                    },
-                            )
+                                        } else {
+                                            null
+                                        },
+                                    onDelete =
+                                        if (task.canDeleteIndividually()) {
+                                            { viewModel.delete(task.taskId) }
+                                        } else {
+                                            null
+                                        },
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
 
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier =
-                Modifier.align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-        )
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier =
+                    Modifier.align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+        }
     }
-}
 
     selectedTask?.let { task ->
-        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val sheetState =
+            androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(onDismissRequest = { selectedTaskId = null }, sheetState = sheetState) {
             DownloadTaskSheet(task = task)
         }
     }
 
     previewTask?.let { task ->
-        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val sheetState =
+            androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(onDismissRequest = { previewTaskId = null }, sheetState = sheetState) {
             DownloadResultSheet(task = task)
         }
     }
 
     if (isCreateTaskSheetVisible) {
-        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val sheetState =
+            androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
             onDismissRequest = {
                 if (!isCreatingTask) {
                     isCreateTaskSheetVisible = false
                 }
             },
-            sheetState = sheetState
+            sheetState = sheetState,
         ) {
             CreateDownloadTaskSheet(
                 input = createTaskInput,
@@ -438,17 +443,13 @@ private fun DownloadGameGroupCard(
     onToggleCollapse: () -> Unit,
     itemContent: @Composable (DownloadTaskEntity) -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .clickable(onClick = onToggleCollapse),
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleCollapse),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -522,10 +523,17 @@ private fun DownloadListItem(
             DownloadStatus.Unavailable -> false
         }
 
+    val tone = task.cardTone()
+
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = tone.surface),
+        border = BorderStroke(1.dp, tone.border),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -649,20 +657,18 @@ private fun DownloadRowActions(
                 icon = null,
                 label = label,
             )
+        }
+        onDelete?.let { deleteAction ->
+            IconButton(onClick = deleteAction) {
+                Icon(
+                    imageVector = Icons.Rounded.DeleteOutline,
+                    contentDescription = "删除这条记录",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            onDelete?.let { deleteAction ->
-            IconButton(
-            onClick = deleteAction,
-            ) {
-            Icon(
-            imageVector = Icons.Rounded.DeleteOutline,
-            contentDescription = "删除这条记录",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            }
-            }
-            }
-            }
+        }
+    }
+}
 
 @Composable
 private fun DownloadTaskSheet(task: DownloadTaskEntity) {
@@ -1039,14 +1045,15 @@ fun DownloadedUpdatesSheet(
     onUpdateSelected: () -> Unit,
 ) {
     val selectedCount = state.selectedPublishedFileIds.size
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState =
+        androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = {
             if (!state.isUpdating) {
                 onDismiss()
             }
         },
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         Column(
             modifier =
@@ -1197,9 +1204,7 @@ private fun DownloadUpdateCandidateRow(
 
 @Composable
 private fun DownloadsEmptyStateCard(title: String, message: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1212,7 +1217,7 @@ private fun DownloadsEmptyStateCard(title: String, message: String) {
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -1234,10 +1239,7 @@ private fun DownloadTabChip(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = state.tab.label,
-                    style = MaterialTheme.typography.labelMedium,
-                )
+                Text(text = state.tab.label, style = MaterialTheme.typography.labelMedium)
                 Text(
                     text = state.count.toString(),
                     style = MaterialTheme.typography.labelMedium,
@@ -1257,10 +1259,11 @@ private fun IconActionIconButton(
     FilledIconButton(
         onClick = onClick,
         enabled = enabled,
-        colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        colors =
+            IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
     ) {
         icon()
     }
@@ -1278,7 +1281,7 @@ private fun ActionPillButton(
         modifier = modifier,
         onClick = onClick,
         enabled = enabled,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1306,13 +1309,15 @@ private fun DownloadArtwork(
         model = imageUrl,
         contentDescription = task.title,
         modifier =
-            modifier.then(
-                if (width == null) {
-                    Modifier.height(height)
-                } else {
-                    Modifier.width(width).height(height)
-                }
-            ).clip(RoundedCornerShape(22.dp)),
+            modifier
+                .then(
+                    if (width == null) {
+                        Modifier.height(height)
+                    } else {
+                        Modifier.width(width).height(height)
+                    }
+                )
+                .clip(RoundedCornerShape(22.dp)),
         contentScale = ContentScale.Crop,
     )
 }
@@ -2034,8 +2039,6 @@ private fun DownloadTaskEntity.supportingMessageLabel(): String {
         else -> "更新检查"
     }
 }
-
-
 
 private fun DownloadTaskEntity.isInSystemDownloads(): Boolean {
     return savedFileUri == MEDIASTORE_DOWNLOADS_URI_STRING ||

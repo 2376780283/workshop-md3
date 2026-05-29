@@ -167,310 +167,319 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("设置", style = MaterialTheme.typography.headlineSmall) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-        item {
-            androidx.compose.material3.ListItem(
-                headlineContent = {
+            item {
+                androidx.compose.material3.ListItem(
+                    headlineContent = {
+                        Text(
+                            text =
+                                if (!uiState.isLoginFeatureEnabled) "账户能力"
+                                else if (isGuestMode) "未连接 Steam"
+                                else uiState.accountName.ifBlank { "未登录" }
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text =
+                                if (!uiState.isLoginFeatureEnabled) "仅开放匿名能力"
+                                else if (isGuestMode) "前往登录" else "已登录"
+                        )
+                    },
+                    leadingContent = {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Rounded.AccountCircle,
+                            contentDescription = null,
+                        )
+                    },
+                    trailingContent = {
+                        Button(onClick = if (isGuestMode) onShowLogin else onLogout) {
+                            Text(if (isGuestMode) "前往登录" else "退出登录")
+                        }
+                    },
+                )
+            }
+
+            item {
+                Column(modifier = Modifier.padding(bottom = 16.dp)) {
                     Text(
-                        text =
-                            if (!uiState.isLoginFeatureEnabled) "账户能力"
-                            else if (isGuestMode) "未连接 Steam"
-                            else uiState.accountName.ifBlank { "未登录" }
+                        "账户行为",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                     )
-                },
-                supportingContent = {
-                    Text(
-                        text =
-                            if (!uiState.isLoginFeatureEnabled) "仅开放匿名能力"
-                            else if (isGuestMode) "前往登录" else "已登录"
-                    )
-                },
-                leadingContent = {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Rounded.AccountCircle,
-                        contentDescription = null,
-                    )
-                },
-                trailingContent = {
-                    Button(onClick = if (isGuestMode) onShowLogin else onLogout) {
-                        Text(if (isGuestMode) "前往登录" else "退出登录")
+                    Card(shape = RoundedCornerShape(16.dp)) {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("打开用户登录功能") },
+                            supportingContent = {
+                                Text(
+                                    if (uiState.isLoginFeatureEnabled)
+                                        "当前已允许显示登录入口、已保存账号和 Steam 会话恢复。"
+                                    else "当前已关闭。应用只保留匿名访问，不展示登录入口，也不会恢复已保存登录态。"
+                                )
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = uiState.isLoginFeatureEnabled,
+                                    onCheckedChange = { enabled ->
+                                        if (enabled && !uiState.isLoginFeatureEnabled) {
+                                            showLoginRiskDialog = true
+                                        } else if (!enabled) {
+                                            viewModel.saveLoginFeatureEnabled(false)
+                                        }
+                                    },
+                                )
+                            },
+                        )
+                        HorizontalDivider()
+                        androidx.compose.material3.ListItem(headlineContent = { Text("用户信息获取") })
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("登录后下载") },
+                            supportingContent = {
+                                Text(
+                                    if (!uiState.isLoginFeatureEnabled) "需先打开“用户登录功能”。"
+                                    else "当前已开启。条目需要账号时，才允许使用当前 Steam 登录态下载。"
+                                )
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = uiState.isLoggedInDownloadEnabled,
+                                    onCheckedChange = viewModel::saveLoggedInDownloadEnabled,
+                                    enabled = uiState.isLoginFeatureEnabled,
+                                )
+                            },
+                        )
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("用户已购买标识展示") },
+                            supportingContent = {
+                                Text(
+                                    if (!uiState.isLoginFeatureEnabled) "需先打开“用户登录功能”。"
+                                    else "当前已开启。会显示“我的内容”、已购游戏和家庭共享信息。"
+                                )
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = uiState.isOwnedGamesDisplayEnabled,
+                                    onCheckedChange = viewModel::saveOwnedGamesDisplayEnabled,
+                                    enabled = uiState.isLoginFeatureEnabled,
+                                )
+                            },
+                        )
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("用户已订阅展示") },
+                            supportingContent = {
+                                Text(
+                                    if (!uiState.isLoginFeatureEnabled) "需先打开“用户登录功能”。"
+                                    else "当前已开启。会显示“我的订阅”入口和当前账号的订阅标识。"
+                                )
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = uiState.isSubscriptionDisplayEnabled,
+                                    onCheckedChange = viewModel::saveSubscriptionDisplayEnabled,
+                                    enabled = uiState.isLoginFeatureEnabled,
+                                )
+                            },
+                        )
                     }
-                },
-            )
-        }
+                }
+            }
 
-        item {
-            Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                Text(
-                    "账户行为",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                )
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("打开用户登录功能") },
-                        supportingContent = {
-                            Text(
-                                if (uiState.isLoginFeatureEnabled) "当前已允许显示登录入口、已保存账号和 Steam 会话恢复。"
-                                else "当前已关闭。应用只保留匿名访问，不展示登录入口，也不会恢复已保存登录态。"
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = uiState.isLoginFeatureEnabled,
-                                onCheckedChange = { enabled ->
-                                    if (enabled && !uiState.isLoginFeatureEnabled) {
-                                        showLoginRiskDialog = true
-                                    } else if (!enabled) {
-                                        viewModel.saveLoginFeatureEnabled(false)
-                                    }
+            item {
+                Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                    Text(
+                        "应用更新",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                    )
+                    Card(shape = RoundedCornerShape(16.dp)) {
+                        UpdateSettingsRow(
+                            uiState = appUpdateUiState,
+                            autoCheckEnabled = uiState.autoCheckAppUpdates,
+                            onClick = onCheckAppUpdates,
+                        )
+                        HorizontalDivider()
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("启动时自动检查更新") },
+                            supportingContent = {
+                                Text(
+                                    if (uiState.autoCheckAppUpdates)
+                                        "应用每次启动时会自动检查一次 GitHub Release。"
+                                    else "不会自动联网检查。"
+                                )
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = uiState.autoCheckAppUpdates,
+                                    onCheckedChange = viewModel::saveAutoCheckAppUpdates,
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+            item {
+                Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                    Text(
+                        "显示与外观",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                    )
+                    Card(shape = RoundedCornerShape(16.dp)) {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("主题模式") },
+                            supportingContent = { Text(uiState.themeMode.displayLabel()) },
+                            leadingContent = { Icon(Icons.Rounded.Palette, null) },
+                            trailingContent = {
+                                Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    activeDestinationName = SettingsDestination.Appearance.name
                                 },
-                            )
-                        },
+                        )
+                    }
+                }
+            }
+            item {
+                Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                    Text(
+                        "下载与浏览",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                     )
-                    HorizontalDivider()
-                    androidx.compose.material3.ListItem(headlineContent = { Text("用户信息获取") })
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("登录后下载") },
-                        supportingContent = {
-                            Text(
-                                if (!uiState.isLoginFeatureEnabled) "需先打开“用户登录功能”。"
-                                else "当前已开启。条目需要账号时，才允许使用当前 Steam 登录态下载。"
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = uiState.isLoggedInDownloadEnabled,
-                                onCheckedChange = viewModel::saveLoggedInDownloadEnabled,
-                                enabled = uiState.isLoginFeatureEnabled,
-                            )
-                        },
+                    Card(shape = RoundedCornerShape(16.dp)) {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("下载位置") },
+                            supportingContent = { Text(uiState.downloadTreeLabel ?: "系统下载") },
+                            leadingContent = { Icon(Icons.Rounded.FolderOpen, null) },
+                            trailingContent = {
+                                Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    activeDestinationName =
+                                        SettingsDestination.DownloadLocation.name
+                                },
+                        )
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("下载策略") },
+                            supportingContent = {
+                                Text(uiState.downloadPerformanceMode.performanceLabel())
+                            },
+                            leadingContent = { Icon(Icons.Rounded.Tune, null) },
+                            trailingContent = {
+                                Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    activeDestinationName =
+                                        SettingsDestination.DownloadStrategy.name
+                                },
+                        )
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("创意工坊") },
+                            supportingContent = { Text("${uiState.workshopPageSize} / 页") },
+                            leadingContent = { Icon(Icons.Rounded.TravelExplore, null) },
+                            trailingContent = {
+                                Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    activeDestinationName = SettingsDestination.Workshop.name
+                                },
+                        )
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("翻译服务") },
+                            supportingContent = {
+                                Text(uiState.translationProvider.displayLabel())
+                            },
+                            leadingContent = { Icon(Icons.Rounded.Translate, null) },
+                            trailingContent = {
+                                Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    activeDestinationName = SettingsDestination.Translation.name
+                                },
+                        )
+                        HorizontalDivider()
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("默认启动到访客模式") },
+                            trailingContent = {
+                                Switch(
+                                    checked = uiState.defaultGuestMode,
+                                    onCheckedChange = viewModel::saveDefaultGuestMode,
+                                    enabled = uiState.isLoginFeatureEnabled,
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+            item {
+                Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                    Text(
+                        "数据与维护",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                     )
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("用户已购买标识展示") },
-                        supportingContent = {
-                            Text(
-                                if (!uiState.isLoginFeatureEnabled) "需先打开“用户登录功能”。"
-                                else "当前已开启。会显示“我的内容”、已购游戏和家庭共享信息。"
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = uiState.isOwnedGamesDisplayEnabled,
-                                onCheckedChange = viewModel::saveOwnedGamesDisplayEnabled,
-                                enabled = uiState.isLoginFeatureEnabled,
-                            )
-                        },
+                    Card(shape = RoundedCornerShape(16.dp)) {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("数据与隐私") },
+                            supportingContent = {
+                                Text(uiState.maintenanceSummary ?: "清理缓存、登录状态和下载诊断。")
+                            },
+                            leadingContent = { Icon(Icons.Rounded.PrivacyTip, null) },
+                            trailingContent = {
+                                Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    activeDestinationName = SettingsDestination.DataPrivacy.name
+                                },
+                        )
+                    }
+                }
+            }
+            item {
+                Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                    Text(
+                        "关于与说明",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                     )
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("用户已订阅展示") },
-                        supportingContent = {
-                            Text(
-                                if (!uiState.isLoginFeatureEnabled) "需先打开“用户登录功能”。"
-                                else "当前已开启。会显示“我的订阅”入口和当前账号的订阅标识。"
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = uiState.isSubscriptionDisplayEnabled,
-                                onCheckedChange = viewModel::saveSubscriptionDisplayEnabled,
-                                enabled = uiState.isLoginFeatureEnabled,
-                            )
-                        },
-                    )
+                    Card(shape = RoundedCornerShape(16.dp)) {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("关于 Workshop Native") },
+                            leadingContent = { Icon(Icons.Rounded.Info, null) },
+                            trailingContent = {
+                                Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    activeDestinationName = SettingsDestination.About.name
+                                },
+                        )
+                    }
                 }
             }
         }
-
-        item {
-            Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                Text(
-                    "应用更新",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                )
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    UpdateSettingsRow(
-                        uiState = appUpdateUiState,
-                        autoCheckEnabled = uiState.autoCheckAppUpdates,
-                        onClick = onCheckAppUpdates,
-                    )
-                    HorizontalDivider()
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("启动时自动检查更新") },
-                        supportingContent = {
-                            Text(
-                                if (uiState.autoCheckAppUpdates) "应用每次启动时会自动检查一次 GitHub Release。"
-                                else "不会自动联网检查。"
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = uiState.autoCheckAppUpdates,
-                                onCheckedChange = viewModel::saveAutoCheckAppUpdates,
-                            )
-                        },
-                    )
-                }
-            }
-        }
-        item {
-            Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                Text(
-                    "显示与外观",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                )
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("主题模式") },
-                        supportingContent = { Text(uiState.themeMode.displayLabel()) },
-                        leadingContent = { Icon(Icons.Rounded.Palette, null) },
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
-                        },
-                        modifier =
-                            Modifier.clickable {
-                                activeDestinationName = SettingsDestination.Appearance.name
-                            },
-                    )
-                }
-            }
-        }
-        item {
-            Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                Text(
-                    "下载与浏览",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                )
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("下载位置") },
-                        supportingContent = { Text(uiState.downloadTreeLabel ?: "系统下载") },
-                        leadingContent = { Icon(Icons.Rounded.FolderOpen, null) },
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
-                        },
-                        modifier =
-                            Modifier.clickable {
-                                activeDestinationName = SettingsDestination.DownloadLocation.name
-                            },
-                    )
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("下载策略") },
-                        supportingContent = {
-                            Text(uiState.downloadPerformanceMode.performanceLabel())
-                        },
-                        leadingContent = { Icon(Icons.Rounded.Tune, null) },
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
-                        },
-                        modifier =
-                            Modifier.clickable {
-                                activeDestinationName = SettingsDestination.DownloadStrategy.name
-                            },
-                    )
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("创意工坊") },
-                        supportingContent = { Text("${uiState.workshopPageSize} / 页") },
-                        leadingContent = { Icon(Icons.Rounded.TravelExplore, null) },
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
-                        },
-                        modifier =
-                            Modifier.clickable {
-                                activeDestinationName = SettingsDestination.Workshop.name
-                            },
-                    )
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("翻译服务") },
-                        supportingContent = { Text(uiState.translationProvider.displayLabel()) },
-                        leadingContent = { Icon(Icons.Rounded.Translate, null) },
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
-                        },
-                        modifier =
-                            Modifier.clickable {
-                                activeDestinationName = SettingsDestination.Translation.name
-                            },
-                    )
-                    HorizontalDivider()
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("默认启动到访客模式") },
-                        trailingContent = {
-                            Switch(
-                                checked = uiState.defaultGuestMode,
-                                onCheckedChange = viewModel::saveDefaultGuestMode,
-                                enabled = uiState.isLoginFeatureEnabled,
-                            )
-                        },
-                    )
-                }
-            }
-        }
-        item {
-            Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                Text(
-                    "数据与维护",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                )
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("数据与隐私") },
-                        supportingContent = {
-                            Text(uiState.maintenanceSummary ?: "清理缓存、登录状态和下载诊断。")
-                        },
-                        leadingContent = { Icon(Icons.Rounded.PrivacyTip, null) },
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
-                        },
-                        modifier =
-                            Modifier.clickable {
-                                activeDestinationName = SettingsDestination.DataPrivacy.name
-                            },
-                    )
-                }
-            }
-        }
-        item {
-            Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                Text(
-                    "关于与说明",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                )
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("关于 Workshop Native") },
-                        leadingContent = { Icon(Icons.Rounded.Info, null) },
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null)
-                        },
-                        modifier =
-                            Modifier.clickable {
-                                activeDestinationName = SettingsDestination.About.name
-                            },
-                    )
-                }
-            }
-        }
-    }
     }
 
     activeDestination?.let { destination ->

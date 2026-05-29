@@ -33,6 +33,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -323,7 +325,7 @@ fun WorkshopNativeRoot(
     }
     val density = LocalDensity.current
     val imeVisible = WindowInsets.ime.getBottom(density) > 0
-    val showBottomBar = activeWorkshop == null
+    val showNavigationRail = activeWorkshop == null
     val showSessionBanner = showApplicationShell &&
         isLoginFeatureEnabled &&
         !guestMode &&
@@ -342,25 +344,31 @@ fun WorkshopNativeRoot(
     }
 
     WorkshopBackdrop {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.0f),
-            snackbarHost = {
-                SnackbarHost(hostState = snackbarHostState)
-            },
-            bottomBar = {
-                if (!showBottomBar) return@Scaffold
-                RootBottomBar(
-                    destinations = rootDestinations(showLibraryTab),
-                    currentRoute = currentRootTab.route,
-                    onNavigate = viewModel::navigateRootTab,
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (showNavigationRail) {
+                NavigationRail {
+                    rootDestinations(showLibraryTab).forEach { destination ->
+                        val selected = currentRootTabRoute == destination.route
+                        NavigationRailItem(
+                            selected = selected,
+                            onClick = { viewModel.navigateRootTab(destination.route) },
+                            icon = destination.icon,
+                            label = { Text(destination.label) }
+                        )
+                    }
+                }
+            }
+            Scaffold(
+                modifier = Modifier.weight(1f),
+                containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.0f),
+                snackbarHost = {
+                    SnackbarHost(hostState = snackbarHostState)
+                },
+            ) { paddingValues ->
+                val shellPadding = PaddingValues(
+                    top = paddingValues.calculateTopPadding() + sessionBannerPadding,
+                    bottom = paddingValues.calculateBottomPadding(),
                 )
-            },
-        ) { paddingValues ->
-            val shellPadding = PaddingValues(
-                top = paddingValues.calculateTopPadding() + sessionBannerPadding,
-                bottom = paddingValues.calculateBottomPadding(),
-            )
             Box(modifier = Modifier.fillMaxSize()) {
                 if (activeWorkshop != null) {
                     WorkshopScreen(
@@ -488,12 +496,13 @@ fun WorkshopNativeRoot(
                     onUpdateSelected = downloadsViewModel::enqueueSelectedDownloadUpdates,
                 )
             }
-        }
-    }
-}
+            }
+            }
+            }
+            }
 
-@Composable
-private fun AppDisclaimerDialogIfNeeded(
+            @Composable
+            private fun AppDisclaimerDialogIfNeeded(
     onConfirm: () -> Unit,
     onOpenRepository: () -> Unit,
 ) {
@@ -898,124 +907,6 @@ private fun SignedInContentGate(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun RootBottomBar(
-    destinations: List<RootDestination>,
-    currentRoute: String,
-    onNavigate: (String) -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        tonalElevation = 0.dp,
-        shadowElevation = 10.dp,
-        color = Color(0xFF192130).copy(alpha = 0.94f),
-        shape = RoundedCornerShape(32.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f)),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-        ) {
-            destinations.forEach { destination ->
-                val selected = currentRoute == destination.route
-                RootBottomBarItem(
-                    modifier = Modifier.weight(1f),
-                    label = destination.label,
-                    selected = selected,
-                    icon = destination.icon,
-                    onClick = {
-                        if (!selected) onNavigate(destination.route)
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RootBottomBarItem(
-    modifier: Modifier = Modifier,
-    label: String,
-    selected: Boolean,
-    icon: @Composable () -> Unit,
-    onClick: () -> Unit,
-) {
-    val darkTheme = LocalWorkshopDarkTheme.current
-    Column(
-        modifier = modifier
-            .padding(horizontal = 3.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(
-                brush = if (selected) {
-                    workshopAdaptiveGradientBrush(
-                        lightStart = Color(0xFFF7E7D8),
-                        lightEnd = Color(0xFFFFF4E8),
-                        darkStart = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f),
-                        darkEnd = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
-                    )
-                } else {
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color.Transparent,
-                        ),
-                    )
-                },
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(
-                    if (selected) {
-                        if (darkTheme) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-                        } else {
-                            Color(0x1AE96D43)
-                        }
-                    } else {
-                        if (darkTheme) {
-                            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.42f)
-                        } else {
-                            Color.White.copy(alpha = 0.06f)
-                        }
-                    },
-                )
-                ,
-            contentAlignment = Alignment.Center,
-        ) {
-            icon()
-        }
-        Text(
-            text = label,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp),
-            color = if (selected) {
-                if (darkTheme) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    Color(0xFF172131)
-                }
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-        )
     }
 }
 

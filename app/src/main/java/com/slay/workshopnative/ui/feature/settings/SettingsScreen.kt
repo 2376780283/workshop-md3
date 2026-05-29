@@ -56,8 +56,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -110,7 +113,6 @@ private enum class SettingsDestination {
     Translation,
     DataPrivacy,
     About,
-    UsageBoundary,
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -169,297 +171,182 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            AccountCard(
-                uiState = uiState,
-                isGuestMode = isGuestMode,
-                onShowLogin = onShowLogin,
-                onLogout = onLogout,
-                onSwitchSavedAccount = onSwitchSavedAccount,
-                onRemoveSavedAccount = viewModel::removeSavedAccount,
+            androidx.compose.material3.ListItem(
+                headlineContent = { Text(text = if (!uiState.isLoginFeatureEnabled) "账户能力" else if (isGuestMode) "未连接 Steam" else uiState.accountName.ifBlank { "未登录" }) },
+                supportingContent = { Text(text = if (!uiState.isLoginFeatureEnabled) "仅开放匿名能力" else if (isGuestMode) "前往登录" else "已登录") },
+                leadingContent = {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Rounded.AccountCircle,
+                        contentDescription = null,
+                    )
+                },
+                trailingContent = {
+                    Button(onClick = if (isGuestMode) onShowLogin else onLogout) {
+                        Text(if (isGuestMode) "前往登录" else "退出登录")
+                    }
+                }
             )
         }
 
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingsSectionHeader(
-                    title = "账户行为",
-                    subtitle = "默认只保留匿名能力，所有 Steam 账号相关能力都需要你主动打开。",
-                )
-                SettingsPanel {
-                    SettingsBooleanRow(
-                        title = "打开用户登录功能",
-                        description = if (uiState.isLoginFeatureEnabled) {
-                            "当前已允许显示登录入口、已保存账号和 Steam 会话恢复。"
-                        } else {
-                            "当前已关闭。应用只保留匿名访问，不展示登录入口，也不会恢复已保存登录态。"
-                        },
-                        checked = uiState.isLoginFeatureEnabled,
-                        onCheckedChange = { enabled ->
-                            if (enabled && !uiState.isLoginFeatureEnabled) {
-                                showLoginRiskDialog = true
-                            } else if (!enabled) {
-                                viewModel.saveLoginFeatureEnabled(false)
-                            }
+            Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                Text("账户行为", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
+                Card(shape = RoundedCornerShape(16.dp)) {
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("打开用户登录功能") },
+                        supportingContent = { Text(if (uiState.isLoginFeatureEnabled) "当前已允许显示登录入口、已保存账号和 Steam 会话恢复。" else "当前已关闭。应用只保留匿名访问，不展示登录入口，也不会恢复已保存登录态。") },
+                        trailingContent = {
+                            Switch(
+                                checked = uiState.isLoginFeatureEnabled,
+                                onCheckedChange = { enabled ->
+                                    if (enabled && !uiState.isLoginFeatureEnabled) {
+                                        showLoginRiskDialog = true
+                                    } else if (!enabled) {
+                                        viewModel.saveLoginFeatureEnabled(false)
+                                    }
+                                },
+                            )
                         },
                     )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-                    SettingsSubsectionTitle(
-                        title = "用户信息获取",
-                        subtitle = "下面 3 个能力彼此独立，默认全部关闭。",
-                    )
-                    SettingsBooleanRow(
-                        title = "登录后下载",
-                        description = if (!uiState.isLoginFeatureEnabled) {
-                            "需先打开“用户登录功能”。未开启前，下载只允许匿名方式。"
-                        } else if (uiState.isLoggedInDownloadEnabled) {
-                            "当前已开启。条目需要账号时，才允许使用当前 Steam 登录态下载。"
-                        } else {
-                            "当前已关闭。即使已登录，也只允许匿名下载。"
+                    HorizontalDivider()
+                    androidx.compose.material3.ListItem(headlineContent = { Text("用户信息获取") })
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("登录后下载") },
+                        supportingContent = { Text(if (!uiState.isLoginFeatureEnabled) "需先打开“用户登录功能”。" else "当前已开启。条目需要账号时，才允许使用当前 Steam 登录态下载。") },
+                        trailingContent = {
+                            Switch(
+                                checked = uiState.isLoggedInDownloadEnabled,
+                                onCheckedChange = viewModel::saveLoggedInDownloadEnabled,
+                                enabled = uiState.isLoginFeatureEnabled
+                            )
                         },
-                        checked = uiState.isLoggedInDownloadEnabled,
-                        enabled = uiState.isLoginFeatureEnabled,
-                        onCheckedChange = viewModel::saveLoggedInDownloadEnabled,
                     )
-                    SettingsBooleanRow(
-                        title = "用户已购买标识展示",
-                        description = if (!uiState.isLoginFeatureEnabled) {
-                            "需先打开“用户登录功能”。未开启前，不展示已购与家庭共享信息。"
-                        } else if (uiState.isOwnedGamesDisplayEnabled) {
-                            "当前已开启。会显示“我的内容”、已购游戏和家庭共享信息。"
-                        } else {
-                            "当前已关闭。不展示已购与家庭共享信息，也不保留相关入口。"
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("用户已购买标识展示") },
+                        supportingContent = { Text(if (!uiState.isLoginFeatureEnabled) "需先打开“用户登录功能”。" else "当前已开启。会显示“我的内容”、已购游戏和家庭共享信息。") },
+                        trailingContent = {
+                            Switch(
+                                checked = uiState.isOwnedGamesDisplayEnabled,
+                                onCheckedChange = viewModel::saveOwnedGamesDisplayEnabled,
+                                enabled = uiState.isLoginFeatureEnabled
+                            )
                         },
-                        checked = uiState.isOwnedGamesDisplayEnabled,
-                        enabled = uiState.isLoginFeatureEnabled,
-                        onCheckedChange = viewModel::saveOwnedGamesDisplayEnabled,
                     )
-                    SettingsBooleanRow(
-                        title = "用户已订阅展示",
-                        description = if (!uiState.isLoginFeatureEnabled) {
-                            "需先打开“用户登录功能”。未开启前，不展示当前账号的订阅状态。"
-                        } else if (uiState.isSubscriptionDisplayEnabled) {
-                            "当前已开启。会显示“我的订阅”入口和当前账号的订阅标识。"
-                        } else {
-                            "当前已关闭。不展示“已订阅”标识，也不展示“我的订阅”入口。"
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("用户已订阅展示") },
+                        supportingContent = { Text(if (!uiState.isLoginFeatureEnabled) "需先打开“用户登录功能”。" else "当前已开启。会显示“我的订阅”入口和当前账号的订阅标识。") },
+                        trailingContent = {
+                            Switch(
+                                checked = uiState.isSubscriptionDisplayEnabled,
+                                onCheckedChange = viewModel::saveSubscriptionDisplayEnabled,
+                                enabled = uiState.isLoginFeatureEnabled
+                            )
                         },
-                        checked = uiState.isSubscriptionDisplayEnabled,
-                        enabled = uiState.isLoginFeatureEnabled,
-                        onCheckedChange = viewModel::saveSubscriptionDisplayEnabled,
                     )
                 }
             }
         }
 
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingsSectionHeader(
-                    title = "应用更新",
-                    subtitle = "启动时自动检查一次，手动检查后直接弹出更新说明。",
-                )
-                SettingsPanel {
+            Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                Text("应用更新", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
+                Card(shape = RoundedCornerShape(16.dp)) {
                     UpdateSettingsRow(
                         uiState = appUpdateUiState,
                         autoCheckEnabled = uiState.autoCheckAppUpdates,
                         onClick = onCheckAppUpdates,
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                    SettingsBooleanRow(
-                        title = "启动时自动检查更新",
-                        description = if (uiState.autoCheckAppUpdates) {
-                            "当前已开启。应用每次启动时会自动检查一次 GitHub Release。"
-                        } else {
-                            "当前已关闭。不会自动联网检查，但仍可手动点上方立即检查。"
-                        },
-                        checked = uiState.autoCheckAppUpdates,
-                        onCheckedChange = viewModel::saveAutoCheckAppUpdates,
+                    HorizontalDivider()
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("启动时自动检查更新") },
+                        supportingContent = { Text(if (uiState.autoCheckAppUpdates) "应用每次启动时会自动检查一次 GitHub Release。" else "不会自动联网检查。") },
+                        trailingContent = { Switch(checked = uiState.autoCheckAppUpdates, onCheckedChange = viewModel::saveAutoCheckAppUpdates) },
                     )
                 }
             }
         }
-
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingsSectionHeader(
-                    title = "显示与外观",
-                    subtitle = "支持跟随系统，也可以单独固定浅色或深色主题。",
-                )
-                SettingsPanel {
-                    SettingsNavigationRow(
-                        icon = Icons.Rounded.Palette,
-                        iconTint = Color(0xFF7A5A3A),
-                        title = "主题模式",
-                        summary = uiState.themeMode.displayLabel(),
-                        onClick = { activeDestinationName = SettingsDestination.Appearance.name },
+            Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                Text("显示与外观", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
+                Card(shape = RoundedCornerShape(16.dp)) {
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("主题模式") },
+                        supportingContent = { Text(uiState.themeMode.displayLabel()) },
+                        leadingContent = { Icon(Icons.Rounded.Palette, null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null) },
+                        modifier = Modifier.clickable { activeDestinationName = SettingsDestination.Appearance.name },
                     )
                 }
             }
         }
-
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingsSectionHeader(
-                    title = "下载与浏览",
-                    subtitle = "高频设置保留在首页，复杂选项再进入详情页。",
-                )
-                SettingsPanel {
-                    SettingsNavigationRow(
-                        icon = Icons.Rounded.FolderOpen,
-                        iconTint = Color(0xFFB86A2A),
-                        title = "下载位置",
-                        summary = buildString {
-                            append(uiState.downloadTreeLabel ?: "系统下载")
-                            append(" / ")
-                            append(uiState.effectiveDownloadFolderName)
-                        },
-                        onClick = { activeDestinationName = SettingsDestination.DownloadLocation.name },
+            Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                Text("下载与浏览", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
+                Card(shape = RoundedCornerShape(16.dp)) {
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("下载位置") },
+                        supportingContent = { Text(uiState.downloadTreeLabel ?: "系统下载") },
+                        leadingContent = { Icon(Icons.Rounded.FolderOpen, null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null) },
+                        modifier = Modifier.clickable { activeDestinationName = SettingsDestination.DownloadLocation.name },
                     )
-                    SettingsNavigationRow(
-                        icon = Icons.Rounded.Tune,
-                        iconTint = Color(0xFF2F7F73),
-                        title = "下载策略",
-                        summary = buildString {
-                            append(uiState.downloadPerformanceMode.performanceLabel())
-                            if (
-                                uiState.downloadPerformanceMode == DownloadPerformanceMode.Primordial &&
-                                uiState.primordialReducedMemoryProtectionEnabled
-                            ) {
-                                append("+放松保护")
-                            }
-                            if (
-                                uiState.downloadPerformanceMode == DownloadPerformanceMode.Primordial &&
-                                uiState.primordialAuthenticatedAggressiveCdnEnabled
-                            ) {
-                                append("+账户激进")
-                            }
-                            append(" · ")
-                            append(
-                                when {
-                                    !uiState.isLoginFeatureEnabled || !uiState.isLoggedInDownloadEnabled -> "仅匿名"
-                                    uiState.preferAnonymousDownloads -> "匿名优先"
-                                    else -> "账号优先"
-                                },
-                            )
-                            append(" · ")
-                            append(uiState.cdnTransportPreference.transportLabel())
-                        },
-                        onClick = { activeDestinationName = SettingsDestination.DownloadStrategy.name },
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("下载策略") },
+                        supportingContent = { Text(uiState.downloadPerformanceMode.performanceLabel()) },
+                        leadingContent = { Icon(Icons.Rounded.Tune, null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null) },
+                        modifier = Modifier.clickable { activeDestinationName = SettingsDestination.DownloadStrategy.name },
                     )
-                    SettingsNavigationRow(
-                        icon = Icons.Rounded.TravelExplore,
-                        iconTint = Color(0xFF3568A8),
-                        title = "创意工坊",
-                        summary = buildString {
-                            append("${uiState.workshopPageSize} / 页")
-                            append(" · ")
-                            append(if (uiState.workshopAutoResolveVisibleItems) "列表预读已开" else "列表预读已关")
-                            append(" · ")
-                            append(if (uiState.autoCheckDownloadedModUpdatesOnLaunch) "启动检查已开" else "启动检查已关")
-                            append(" · ")
-                            append(if (uiState.animatedWorkshopPreviewEnabled) "动态预览已开" else "动态预览已关")
-                            append(" · ")
-                            append(
-                                if (uiState.terrariaArchivePostProcessorEnabled) {
-                                    if (uiState.terrariaArchiveKeepOriginal) "Terraria压缩+保留原目录"
-                                    else "Terraria压缩已开"
-                                } else {
-                                    "Terraria压缩已关"
-                                },
-                            )
-                            append(" · ")
-                            append(
-                                if (uiState.wallpaperEnginePkgExtractEnabled) {
-                                    buildString {
-                                        append("WE提取")
-                                        if (uiState.wallpaperEngineTexConversionEnabled) {
-                                            append("+转图")
-                                        }
-                                        if (uiState.wallpaperEnginePkgKeepOriginal) {
-                                            append("+保留原目录")
-                                        }
-                                    }
-                                } else {
-                                    "WE提取已关"
-                                },
-                            )
-                        },
-                        onClick = { activeDestinationName = SettingsDestination.Workshop.name },
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("创意工坊") },
+                        supportingContent = { Text("${uiState.workshopPageSize} / 页") },
+                        leadingContent = { Icon(Icons.Rounded.TravelExplore, null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null) },
+                        modifier = Modifier.clickable { activeDestinationName = SettingsDestination.Workshop.name },
                     )
-                    SettingsNavigationRow(
-                        icon = Icons.Rounded.Translate,
-                        iconTint = Color(0xFF7E5BA6),
-                        title = "翻译服务",
-                        summary = buildString {
-                            append(uiState.translationProvider.displayLabel())
-                            append(" · ")
-                            append(uiState.translationProvider.settingsStatusLabel(uiState.isTranslationConfigured))
-                        },
-                        onClick = { activeDestinationName = SettingsDestination.Translation.name },
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("翻译服务") },
+                        supportingContent = { Text(uiState.translationProvider.displayLabel()) },
+                        leadingContent = { Icon(Icons.Rounded.Translate, null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null) },
+                        modifier = Modifier.clickable { activeDestinationName = SettingsDestination.Translation.name },
                     )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-                    SettingsBooleanRow(
-                        title = "默认启动到访客模式",
-                        description = if (!uiState.isLoginFeatureEnabled) {
-                            "登录功能关闭时，应用始终以匿名方式启动。"
-                        } else if (uiState.defaultGuestMode) {
-                            "当前会先进入探索页，不主动恢复 Steam 登录。"
-                        } else {
-                            "当前会优先恢复上次登录状态，再进入内容页。"
-                        },
-                        checked = uiState.defaultGuestMode,
-                        enabled = uiState.isLoginFeatureEnabled,
-                        onCheckedChange = viewModel::saveDefaultGuestMode,
+                    HorizontalDivider()
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("默认启动到访客模式") },
+                        trailingContent = { Switch(checked = uiState.defaultGuestMode, onCheckedChange = viewModel::saveDefaultGuestMode, enabled = uiState.isLoginFeatureEnabled) },
                     )
                 }
             }
         }
-
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingsSectionHeader(
-                    title = "数据与维护",
-                    subtitle = "查看本地保存内容，处理缓存、历史和登录数据。",
-                )
-                SettingsPanel {
-                    SettingsNavigationRow(
-                        icon = Icons.Rounded.PrivacyTip,
-                        iconTint = Color(0xFF8F4A4A),
-                        title = "数据与隐私",
-                        summary = uiState.maintenanceSummary
-                            ?: "查看本地保存内容，清理缓存、登录状态和下载诊断。",
-                        onClick = { activeDestinationName = SettingsDestination.DataPrivacy.name },
+            Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                Text("数据与维护", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
+                Card(shape = RoundedCornerShape(16.dp)) {
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("数据与隐私") },
+                        supportingContent = { Text(uiState.maintenanceSummary ?: "清理缓存、登录状态和下载诊断。") },
+                        leadingContent = { Icon(Icons.Rounded.PrivacyTip, null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null) },
+                        modifier = Modifier.clickable { activeDestinationName = SettingsDestination.DataPrivacy.name },
+                    )
+                }
+            }
+        }
+        item {
+            Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                Text("关于与说明", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
+                Card(shape = RoundedCornerShape(16.dp)) {
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("关于 Workshop Native") },
+                        leadingContent = { Icon(Icons.Rounded.Info, null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null) },
+                        modifier = Modifier.clickable { activeDestinationName = SettingsDestination.About.name },
                     )
                 }
             }
         }
 
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingsSectionHeader(
-                    title = "关于与说明",
-                    subtitle = "查看项目来源、作者信息，以及首次启动时展示的说明。",
-                )
-                SettingsPanel {
-                    SettingsNavigationRow(
-                        icon = Icons.Rounded.Info,
-                        iconTint = Color(0xFF8A633B),
-                        title = "关于 Workshop Native",
-                        summary = "开源地址、作者信息、版本信息与使用说明。",
-                        onClick = { activeDestinationName = SettingsDestination.About.name },
-                    )
-                    SettingsNavigationRow(
-                        icon = Icons.Rounded.PrivacyTip,
-                        iconTint = Color(0xFF8F4A4A),
-                        title = "学习交流与使用边界",
-                        summary = "查看合法使用范围、禁止用途和权利反馈说明。",
-                        onClick = { activeDestinationName = SettingsDestination.UsageBoundary.name },
-                    )
-                }
-            }
-        }
     }
 
     activeDestination?.let { destination ->
@@ -476,7 +363,6 @@ fun SettingsScreen(
                     SettingsDestination.Translation -> "翻译服务"
                     SettingsDestination.DataPrivacy -> "数据与隐私"
                     SettingsDestination.About -> "关于 Workshop Native"
-                    SettingsDestination.UsageBoundary -> "学习交流与使用边界"
                 },
                 subtitle = when (destination) {
                     SettingsDestination.Appearance -> "控制应用外观跟随系统，还是固定为浅色或深色。"
@@ -486,7 +372,6 @@ fun SettingsScreen(
                     SettingsDestination.Translation -> "配置简介翻译提供商，手动把游戏或工坊介绍翻译成中文。"
                     SettingsDestination.DataPrivacy -> "查看本地保存内容，并清理缓存、历史和诊断信息。"
                     SettingsDestination.About -> "查看作者、开源地址和首次启动时展示的说明。"
-                    SettingsDestination.UsageBoundary -> "查看使用范围、权利边界和通过项目主页反馈问题的方式。"
                 },
             ) {
                 when (destination) {
@@ -573,10 +458,6 @@ fun SettingsScreen(
 
                     SettingsDestination.About -> AboutContent(
                         versionName = appUpdateUiState.currentVersionName,
-                        onOpenRepository = { openExternalUrl(WorkshopNativeAbout.repositoryUrl) },
-                    )
-
-                    SettingsDestination.UsageBoundary -> UsageBoundaryContent(
                         onOpenRepository = { openExternalUrl(WorkshopNativeAbout.repositoryUrl) },
                     )
                 }
@@ -755,12 +636,13 @@ private fun ThemeSettingsContent(
     currentMode: AppThemeMode,
     onThemeModeSelect: (AppThemeMode) -> Unit,
 ) {
-    SettingsSubsectionTitle(
-        title = "应用主题",
-        subtitle = "当前 ${currentMode.displayLabel()}。",
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("应用主题") },
+        supportingContent = { Text("当前 ${currentMode.displayLabel()}。") },
     )
-
+    
     FlowRow(
+        modifier = Modifier.padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -772,10 +654,11 @@ private fun ThemeSettingsContent(
             )
         }
     }
-
-    SettingsInlineHint(text = currentMode.descriptionLabel())
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-    SettingsInlineHint(text = "深色模式下会优先使用主题化的深色卡片和文字，避免浅底亮字导致对比度不足。")
+    
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text(currentMode.descriptionLabel()) },
+        supportingContent = { Text("深色模式下会优先使用主题化的深色卡片和文字，避免浅底亮字导致对比度不足。") },
+    )
 }
 
 @Composable
@@ -1041,48 +924,6 @@ private fun AccountAvatar(
     }
 }
 
-@Composable
-private fun SettingsSectionHeader(
-    title: String,
-    subtitle: String,
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun SettingsPanel(
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Surface(
-        shape = RoundedCornerShape(26.dp),
-        color = workshopAdaptiveSurfaceColor(
-            light = Color.White.copy(alpha = 0.86f),
-        ),
-        shadowElevation = 6.dp,
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, workshopAdaptiveBorderColor()),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            content = content,
-        )
-    }
-}
 
 @Composable
 private fun SettingsSubsectionTitle(
@@ -1105,69 +946,6 @@ private fun SettingsSubsectionTitle(
     }
 }
 
-@Composable
-private fun SettingsNavigationRow(
-    icon: ImageVector,
-    iconTint: Color,
-    title: String,
-    summary: String,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = iconTint.copy(alpha = 0.12f),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconTint,
-                    )
-                }
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                contentDescription = "进入详情",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
-}
 
 @Composable
 private fun SettingsSheetScaffold(
@@ -1177,23 +955,20 @@ private fun SettingsSheetScaffold(
 ) {
     Column(
         modifier = Modifier
-            .padding(horizontal = 18.dp, vertical = 4.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        androidx.compose.material3.ListItem(
+            headlineContent = { Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) },
+            supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodyMedium) },
+        )
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        ) {
+            Column(content = content)
         }
-        SettingsPanel(content = content)
     }
 }
 
@@ -1210,112 +985,22 @@ private fun UpdateSettingsRow(
         uiState.lastCheckSucceeded == false -> "重试"
         else -> "检查"
     }
-    val statusContainerColor = when {
-        uiState.hasUpdateAvailable -> Color(0xFFDCEFD8)
-        uiState.isChecking -> Color(0xFFE8EDF7)
-        uiState.lastCheckSucceeded == false -> Color(0xFFFBE1DD)
-        else -> MaterialTheme.colorScheme.surfaceContainerHigh
-    }
-    val statusContentColor = when {
-        uiState.hasUpdateAvailable -> Color(0xFF215B28)
-        uiState.isChecking -> Color(0xFF355A8A)
-        uiState.lastCheckSucceeded == false -> Color(0xFFA03B2C)
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-    val summary = when {
-        uiState.isChecking -> "正在连接 GitHub Release 检查新版本。"
-        uiState.hasUpdateAvailable && uiState.release != null ->
-            "发现 ${uiState.release.rawTagName}，点击查看更新说明并前往浏览器下载。"
-        uiState.lastCheckSucceeded == true && uiState.release != null ->
-            "已检查到 ${uiState.release.rawTagName}，当前安装版本已是最新。"
-        !uiState.summary.isNullOrBlank() -> uiState.summary
-        autoCheckEnabled -> "当前版本 ${uiState.currentVersionName}，应用启动时会自动检查一次更新。"
-        else -> "当前版本 ${uiState.currentVersionName}，已关闭自动检查更新，可手动检查。"
-    }
-    val metaLine = buildString {
-        append("当前 ")
-        append(uiState.currentVersionName)
-        if (uiState.release != null) {
-            append(" · 最新 ")
-            append(uiState.release.rawTagName)
-        }
-        uiState.metadataSource?.let { source ->
-            append(" · ")
-            append(source.displayName)
-        }
-    }
 
-    Surface(
-        modifier = Modifier.clickable(enabled = !uiState.isChecking, onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-            ) {
-                Box(
-                    modifier = Modifier.size(42.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.SystemUpdateAlt,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = "应用更新",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = metaLine,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (uiState.isChecking) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.2.dp,
-                    )
-                }
-                SettingsValuePill(
-                    text = statusLabel,
-                    containerColor = statusContainerColor,
-                    contentColor = statusContentColor,
-                    borderColor = statusContentColor.copy(alpha = 0.15f),
-                )
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("应用更新") },
+        supportingContent = {
+            Text(
+                text = if (uiState.isChecking) "正在检查更新..." 
+                       else if (uiState.hasUpdateAvailable) "发现新版本，点击查看详情"
+                       else "当前版本 ${uiState.currentVersionName}"
+            )
+        },
+        trailingContent = {
+            Button(onClick = onClick, enabled = !uiState.isChecking) {
+                Text(statusLabel)
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -1335,72 +1020,46 @@ private fun DataPrivacyContent(
         title = "问题反馈日志",
         subtitle = "导出运行日志、错误日志和崩溃日志，方便把问题现场发给作者定位。",
     )
-    SettingsInlineHint(text = uiState.supportLogs.summary)
+    Text(
+        text = uiState.supportLogs.summary,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    )
     uiState.supportLogs.latestCrashLabel?.let { latestCrash ->
-        SettingsInlineHint(text = latestCrash)
+        Text(
+        text = latestCrash,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    )
     }
-    SettingsInlineHint(text = uiState.supportLogs.retentionSummary)
-    SettingsActionButton(
-        text = if (uiState.supportLogs.isExporting) "正在导出日志包…" else "导出诊断日志包",
-        enabled = !uiState.supportLogs.isExporting,
-        onClick = onExportSupportLogs,
+    Text(
+        text = uiState.supportLogs.retentionSummary,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
     )
-    SettingsActionButton(
-        text = "清除运行日志",
-        enabled = uiState.supportLogs.hasRuntimeLogs && !uiState.supportLogs.isExporting,
-        onClick = onClearRuntimeLogs,
-    )
-    SettingsActionButton(
-        text = "清除崩溃日志",
-        enabled = uiState.supportLogs.hasCrashLogs && !uiState.supportLogs.isExporting,
-        onClick = onClearCrashLogs,
-    )
-    SettingsActionButton(
-        text = "清除全部日志文件",
-        enabled = uiState.supportLogs.hasAnyLogs && !uiState.supportLogs.isExporting,
-        onClick = onClearAllSupportLogs,
-    )
-
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-    SettingsSubsectionTitle(
-        title = "本地保存内容",
-        subtitle = "以下数据只保存在当前设备，用于登录恢复、下载管理和界面体验。",
-    )
-    SettingsInlineHint(text = "登录状态只保存在当前设备，并通过系统安全能力加密保存。")
-    SettingsInlineHint(text = "下载记录会保留结果路径；如不需要，可单独清除诊断信息和历史记录。")
-    SettingsInlineHint(text = "应用会直接连接 Steam 官方相关下载节点，以兼容不同网络环境。")
-
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-    SettingsSubsectionTitle(
-        title = "清理动作",
-        subtitle = "清理后不会影响应用设置项，但相关数据会在下次使用时重新生成。",
-    )
-    SettingsActionButton(
-        text = "清除全部登录状态",
-        onClick = onClearAccountData,
-    )
-    SettingsActionButton(
-        text = "清除游戏库缓存",
-        onClick = onClearOwnedGamesCache,
-    )
-    SettingsActionButton(
-        text = "清除收藏列表",
-        onClick = onClearFavoriteGames,
-    )
-    SettingsActionButton(
-        text = "清除下载诊断信息",
-        onClick = onClearDownloadDiagnostics,
-    )
-    SettingsActionButton(
-        text = "删除下载历史",
-        onClick = onClearDownloadHistory,
-    )
+    OutlinedButton(onClick = onExportSupportLogs, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) { Text(if (uiState.supportLogs.isExporting) "正在导出日志包…" else "导出诊断日志包") }
+    OutlinedButton(onClick = onClearRuntimeLogs, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), enabled = uiState.supportLogs.hasRuntimeLogs && !uiState.supportLogs.isExporting) { Text("清除运行日志") }
+    OutlinedButton(onClick = onClearCrashLogs, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), enabled = uiState.supportLogs.hasCrashLogs && !uiState.supportLogs.isExporting) { Text("清除崩溃日志") }
+    OutlinedButton(onClick = onClearAllSupportLogs, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), enabled = uiState.supportLogs.hasAnyLogs && !uiState.supportLogs.isExporting) { Text("清除全部日志文件") }
+    HorizontalDivider()
+    androidx.compose.material3.ListItem(headlineContent = { Text("清理动作", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) })
+    OutlinedButton(onClick = onClearAccountData, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) { Text("清除全部登录状态") }
+    OutlinedButton(onClick = onClearOwnedGamesCache, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) { Text("清除游戏库缓存") }
+    OutlinedButton(onClick = onClearFavoriteGames, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) { Text("清除收藏列表") }
+    OutlinedButton(onClick = onClearDownloadDiagnostics, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) { Text("清除下载诊断信息") }
+    OutlinedButton(onClick = onClearDownloadHistory, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) { Text("删除下载历史") }
 
     uiState.maintenanceSummary?.let { summary ->
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-        SettingsInlineHint(text = summary)
+        Text(
+        text = summary,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    )
     }
 }
 
@@ -1420,64 +1079,34 @@ private fun AboutContent(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         WorkshopNativeAbout.highlights.forEach { highlight ->
-            SettingsValuePill(text = highlight)
+            SuggestionChip(
+                onClick = { },
+                label = { Text(highlight) },
+            )
         }
-        SettingsValuePill(
-            text = "版本 $versionName",
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+        SuggestionChip(
+            onClick = { },
+            label = { Text("版本 $versionName") },
+            colors = SuggestionChipDefaults.suggestionChipColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ),
         )
     }
 
-    SettingsInlineHint(text = "本应用不依赖自建后端，源码与版本发布都以 GitHub 官方仓库为准。")
-
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-    SettingsSubsectionTitle(
-        title = "作者与项目信息",
-        subtitle = "以下信息可以帮助确认项目来源。",
+    Text(
+        text = "本应用不依赖自建后端，源码与版本发布都以 GitHub 官方仓库为准。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
     )
-    SettingsInfoRow(label = "应用名称", value = WorkshopNativeAbout.appDisplayName)
-    SettingsInfoRow(label = "开源地址", value = WorkshopNativeAbout.repositoryUrl)
-    SettingsInfoRow(label = "B 站昵称", value = WorkshopNativeAbout.bilibiliNickname)
-    SettingsInfoRow(label = "项目关系", value = "个人开源项目，与 Valve / Steam 无官方关联")
-    SettingsActionButton(
-        text = "打开 GitHub 仓库",
-        onClick = onOpenRepository,
+    Text(
+        text = "如需反馈问题或权利相关事项，可优先通过项目 GitHub 主页联系作者。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
     )
-
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-    SettingsSubsectionTitle(
-        title = "使用说明与免责声明",
-        subtitle = "首次启动已提示一次，这里保留完整说明，方便之后随时复看。",
-    )
-    WorkshopNativeAbout.disclaimerItems.forEach { item ->
-        AppNoticeCard(item = item)
-    }
-}
-
-@Composable
-private fun UsageBoundaryContent(
-    onOpenRepository: () -> Unit,
-) {
-    SettingsSubsectionTitle(
-        title = "学习交流与使用边界",
-        subtitle = "这部分说明聚焦合法使用范围、禁止用途、用户责任和权利反馈方式。",
-    )
-
-    WorkshopNativeAbout.usageBoundaryItems.forEach { item ->
-        AppNoticeCard(item = item)
-    }
-
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-    SettingsInlineHint(text = "如需反馈问题或权利相关事项，可优先通过项目 GitHub 主页联系作者。")
-    SettingsActionButton(
-        text = "打开项目主页",
-        onClick = onOpenRepository,
-    )
+    Button(onClick = onOpenRepository, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) { Text("打开项目主页") }
 }
 
 @Composable
@@ -1493,15 +1122,15 @@ private fun DownloadLocationContent(
         append(uiState.effectiveDownloadFolderName)
     }
 
-    SettingsSubsectionTitle(
-        title = "保存目录",
-        subtitle = "当前写入到 $targetSummary",
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("保存目录") },
+        supportingContent = { Text("当前写入到 $targetSummary") },
     )
 
     OutlinedTextField(
         value = uiState.downloadFolderName,
         onValueChange = onFolderNameChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         singleLine = true,
         label = { Text("目录名") },
         placeholder = {
@@ -1510,7 +1139,10 @@ private fun DownloadLocationContent(
         shape = RoundedCornerShape(20.dp),
     )
 
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(
+        modifier = Modifier.padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         Button(
             onClick = onChooseRoot,
             modifier = Modifier.weight(1f),
@@ -1535,8 +1167,9 @@ private fun DownloadLocationContent(
         }
     }
 
-    SettingsInlineHint(
-        text = "下载会先落到应用内暂存，再整理到目标目录。自定义根目录通常比系统公共下载目录更快。",
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("说明") },
+        supportingContent = { Text("下载会先落到应用内暂存，再整理到目标目录。自定义根目录通常比系统公共下载目录更快。") },
     )
 }
 
@@ -1570,68 +1203,82 @@ private fun DownloadStrategyContent(
             )
         }
     }
-    SettingsInlineHint(text = uiState.downloadPerformanceMode.performanceDescription())
+    Text(text = uiState.downloadPerformanceMode.performanceDescription(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
     if (uiState.downloadPerformanceMode == DownloadPerformanceMode.Primordial) {
-        SettingsInlineHint(
-            text = "建议只在高内存设备和稳定网络下临时使用。若遇到发热、速度抖动、掉登录或失败增多，请立即切回自动高性能。",
-        )
-        SettingsBooleanRow(
-            title = "降低内存保护强度（实验性）",
-            description = "仅对洪荒模式生效。会更激进地放宽并发收紧阈值和节点上限，更容易逼近链路上限，但也更容易带来发热、卡顿、闪退或下载失败。",
-            checked = uiState.primordialReducedMemoryProtectionEnabled,
-            onCheckedChange = onToggleReducedMemoryProtection,
-        )
-        SettingsInlineHint(
+        Text(text = "建议只在高内存设备和稳定网络下临时使用。若遇到发热、速度抖动、掉登录或失败增多，请立即切回自动高性能。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("降低内存保护强度（实验性）") },
+        supportingContent = { Text("仅对洪荒模式生效。会更激进地放宽并发收紧阈值和节点上限，更容易逼近链路上限，但也更容易带来发热、卡顿、闪退或下载失败。") },
+        trailingContent = {
+            Switch(
+                checked = uiState.primordialReducedMemoryProtectionEnabled,
+                onCheckedChange = onToggleReducedMemoryProtection,
+            )
+        }
+    )
+        Text(
             text = if (uiState.primordialReducedMemoryProtectionEnabled) {
                 "当前已放松洪荒模式的内存保护。诊断里会额外记录这个状态，便于后续分析速度与稳定性。"
             } else {
                 "默认关闭。建议先观察普通洪荒模式是否足够，再决定是否进一步放松保护。"
             },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
         )
-        SettingsBooleanRow(
-            title = "已登录下载使用激进 CDN 策略（实验性）",
-            description = if (!allowLoggedInDownload) {
-                "需先在“账户行为”里打开“登录后下载”，这个开关才会生效。"
-            } else {
-                "所有模式下的匿名下载都会保留基础匿名优化；默认只有洪荒模式下的匿名下载会启用更激进的 CDN 首连和选路。打开后，已登录下载也会进入激进分支。"
+        androidx.compose.material3.ListItem(
+            headlineContent = { Text("已登录下载使用激进 CDN 策略（实验性）") },
+            supportingContent = {
+                Text(if (!allowLoggedInDownload) {
+                    "需先在“账户行为”里打开“登录后下载”，这个开关才会生效。"
+                } else {
+                    "所有模式下的匿名下载都会保留基础匿名优化；默认只有洪荒模式下的匿名下载会启用更激进的 CDN 首连和选路。打开后，已登录下载也会进入激进分支。"
+                })
             },
-            checked = uiState.primordialAuthenticatedAggressiveCdnEnabled,
-            enabled = allowLoggedInDownload,
-            onCheckedChange = onToggleAuthenticatedAggressiveCdn,
+            trailingContent = {
+                Switch(
+                    checked = uiState.primordialAuthenticatedAggressiveCdnEnabled,
+                    enabled = allowLoggedInDownload,
+                    onCheckedChange = onToggleAuthenticatedAggressiveCdn,
+                )
+            }
         )
-        SettingsInlineHint(
+        Text(
             text = if (uiState.primordialAuthenticatedAggressiveCdnEnabled) {
                 "当前已对已登录下载放开激进 CDN 策略。若遇到掉登录、限流或失败增多，先关闭这个开关再观察。"
             } else {
                 "默认关闭。这样可以把更激进的 CDN 探测先限制在匿名下载上，降低账户侧的额外风险暴露面。"
             },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
         )
     }
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-    SettingsBooleanRow(
-        title = "公开内容优先匿名下载",
-        description = if (!allowLoggedInDownload) {
-            "当前只允许匿名下载，这个设置暂时不会生效。"
-        } else {
-            "公开内容会优先使用匿名方式，必要时再使用当前登录账号。"
-        },
-        checked = uiState.preferAnonymousDownloads,
-        enabled = allowLoggedInDownload,
-        onCheckedChange = onTogglePreferAnonymous,
-    )
+    androidx.compose.material3.ListItem(headlineContent = { Text("公开内容优先匿名下载") }, supportingContent = { Text(if (!allowLoggedInDownload) {
+                    "当前只允许匿名下载，这个设置暂时不会生效。"
+                } else {
+                    "公开内容会优先使用匿名方式，必要时再使用当前登录账号。"
+                }) }, trailingContent = { Switch(checked = uiState.preferAnonymousDownloads, onCheckedChange = onTogglePreferAnonymous, enabled = allowLoggedInDownload) })
 
-    SettingsBooleanRow(
-        title = "匿名失败后回退到账号下载",
-        description = if (!allowLoggedInDownload) {
-            "需先在“账户行为”里打开“登录后下载”。"
-        } else {
-            "仅在你已登录且任务绑定当前账号时生效。"
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("匿名失败后回退到账号下载") },
+        supportingContent = {
+            Text(if (!allowLoggedInDownload) {
+                "需先在“账户行为”里打开“登录后下载”。"
+            } else {
+                "仅在你已登录且任务绑定当前账号时生效。"
+            })
         },
-        checked = uiState.allowAuthenticatedDownloadFallback,
-        enabled = allowLoggedInDownload,
-        onCheckedChange = onToggleAllowAuthenticatedFallback,
+        trailingContent = {
+            Switch(
+                checked = uiState.allowAuthenticatedDownloadFallback,
+                enabled = allowLoggedInDownload,
+                onCheckedChange = onToggleAllowAuthenticatedFallback,
+            )
+        }
     )
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
@@ -1653,7 +1300,7 @@ private fun DownloadStrategyContent(
             )
         }
     }
-    SettingsInlineHint(text = uiState.cdnTransportPreference.transportDescription())
+    Text(text = uiState.cdnTransportPreference.transportDescription(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
 
     SettingsSubsectionTitle(
         title = "节点范围",
@@ -1671,7 +1318,7 @@ private fun DownloadStrategyContent(
             )
         }
     }
-    SettingsInlineHint(text = uiState.cdnPoolPreference.poolDescription())
+    Text(text = uiState.cdnPoolPreference.poolDescription(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -1689,9 +1336,9 @@ private fun WorkshopSettingsContent(
     onToggleWallpaperEngineTexConversionEnabled: (Boolean) -> Unit,
     onToggleWallpaperEngineKeepConvertedTexOriginal: (Boolean) -> Unit,
 ) {
-    SettingsSubsectionTitle(
-        title = "每页数量",
-        subtitle = "当前 ${uiState.workshopPageSize} / 页。数量越高，翻页越少但首次读取更重。",
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("每页数量") },
+        supportingContent = { Text("当前 ${uiState.workshopPageSize} / 页。数量越高，翻页越少但首次读取更重。") },
     )
 
     FlowRow(
@@ -1709,119 +1356,171 @@ private fun WorkshopSettingsContent(
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-    SettingsBooleanRow(
-        title = "列表预读下载方式",
-        description = "开启后会预读当前可见条目的可下载能力；关闭后列表先只加载条目，点进详情或开始下载时再检测。",
-        checked = uiState.workshopAutoResolveVisibleItems,
-        onCheckedChange = onToggleAutoResolve,
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("列表预读下载方式") },
+        supportingContent = { Text("开启后会预读当前可见条目的可下载能力；关闭后列表先只加载条目，点进详情或开始下载时再检测。") },
+        trailingContent = {
+            Switch(
+                checked = uiState.workshopAutoResolveVisibleItems,
+                onCheckedChange = onToggleAutoResolve,
+            )
+        }
     )
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-    SettingsBooleanRow(
-        title = "启动时检查已下载更新",
-        description = if (uiState.autoCheckDownloadedModUpdatesOnLaunch) {
-            "当前已开启。应用冷启动时会按公开工坊数据检查一次已下载条目的更新，并在发现可更新条目时弹出选择窗口。"
-        } else {
-            "当前已关闭。不会在启动时自动检查，仍可在下载中心手动检查更新。"
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("启动时检查已下载更新") },
+        supportingContent = {
+            Text(if (uiState.autoCheckDownloadedModUpdatesOnLaunch) {
+                "当前已开启。应用冷启动时会按公开工坊数据检查一次已下载条目的更新，并在发现可更新条目时弹出选择窗口。"
+            } else {
+                "当前已关闭。不会在启动时自动检查，仍可在下载中心手动检查更新。"
+            })
         },
-        checked = uiState.autoCheckDownloadedModUpdatesOnLaunch,
-        onCheckedChange = onToggleAutoCheckDownloadedModUpdatesOnLaunch,
+        trailingContent = {
+            Switch(
+                checked = uiState.autoCheckDownloadedModUpdatesOnLaunch,
+                onCheckedChange = onToggleAutoCheckDownloadedModUpdatesOnLaunch,
+            )
+        }
     )
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-    SettingsBooleanRow(
-        title = "工坊动态预览",
-        description = if (uiState.animatedWorkshopPreviewEnabled) {
-            "当前已开启。工坊列表会切到新的 GIF 动态预览逻辑，Wallpaper Engine 这类条目的缩略图会动起来。"
-        } else {
-            "当前已关闭。工坊列表继续沿用原来的静态缩略图逻辑，不会启用新的动态预览代码。"
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("工坊动态预览") },
+        supportingContent = {
+            Text(if (uiState.animatedWorkshopPreviewEnabled) {
+                "当前已开启。工坊列表会切到新的 GIF 动态预览逻辑，Wallpaper Engine 这类条目的缩略图会动起来。"
+            } else {
+                "当前已关闭。工坊列表继续沿用原来的静态缩略图逻辑，不会启用新的动态预览代码。"
+            })
         },
-        checked = uiState.animatedWorkshopPreviewEnabled,
-        onCheckedChange = onToggleAnimatedPreview,
+        trailingContent = {
+            Switch(
+                checked = uiState.animatedWorkshopPreviewEnabled,
+                onCheckedChange = onToggleAnimatedPreview,
+            )
+        }
     )
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-    SettingsBooleanRow(
-        title = "Terraria 压缩导出",
-        description = if (uiState.terrariaArchivePostProcessorEnabled) {
-            "当前已开启。命中 Terraria 工坊下载时，会执行内置后处理器，并生成原名加 _Post 的压缩结果。"
-        } else {
-            "当前已关闭。Terraria 工坊下载仍然完全沿用现在的默认落盘逻辑。"
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("Terraria 压缩导出") },
+        supportingContent = {
+            Text(if (uiState.terrariaArchivePostProcessorEnabled) {
+                "当前已开启。命中 Terraria 工坊下载时，会执行内置后处理器，并生成原名加 _Post 的压缩结果。"
+            } else {
+                "当前已关闭。Terraria 工坊下载仍然完全沿用现在的默认落盘逻辑。"
+            })
         },
-        checked = uiState.terrariaArchivePostProcessorEnabled,
-        onCheckedChange = onToggleTerrariaArchivePostProcessorEnabled,
+        trailingContent = {
+            Switch(
+                checked = uiState.terrariaArchivePostProcessorEnabled,
+                onCheckedChange = onToggleTerrariaArchivePostProcessorEnabled,
+            )
+        }
     )
 
     if (uiState.terrariaArchivePostProcessorEnabled) {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-        SettingsBooleanRow(
-            title = "Terraria 压缩后保留原目录",
-            description = if (uiState.terrariaArchiveKeepOriginal) {
-                "当前已开启。后处理完成后，会导出一个 _Post 文件夹，里面同时保留原目录和压缩包。"
-            } else {
-                "当前已关闭。后处理完成后，只保留原名加 _Post 的压缩包。"
+        androidx.compose.material3.ListItem(
+            headlineContent = { Text("Terraria 压缩后保留原目录") },
+            supportingContent = {
+                Text(if (uiState.terrariaArchiveKeepOriginal) {
+                    "当前已开启。后处理完成后，会导出一个 _Post 文件夹，里面同时保留原目录和压缩包。"
+                } else {
+                    "当前已关闭。后处理完成后，只保留原名加 _Post 的压缩包。"
+                })
             },
-            checked = uiState.terrariaArchiveKeepOriginal,
-            onCheckedChange = onToggleTerrariaArchiveKeepOriginal,
+            trailingContent = {
+                Switch(
+                    checked = uiState.terrariaArchiveKeepOriginal,
+                    onCheckedChange = onToggleTerrariaArchiveKeepOriginal,
+                )
+            }
         )
     }
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-    SettingsBooleanRow(
-        title = "Wallpaper Engine PKG 提取",
-        description = if (uiState.wallpaperEnginePkgExtractEnabled) {
-            "当前已开启。命中 Wallpaper Engine 工坊下载且目录中包含 .pkg 时，会执行内置后处理器，并生成原名加 _Post 的提取结果。该功能不会生成手机版可导入的 .mpkg。"
-        } else {
-            "当前已关闭。Wallpaper Engine 工坊下载仍然完全沿用现在的默认落盘逻辑。该功能只会在检测到 .pkg 时额外提取，不会生成 .mpkg。"
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("Wallpaper Engine PKG 提取") },
+        supportingContent = {
+            Text(if (uiState.wallpaperEnginePkgExtractEnabled) {
+                "当前已开启。命中 Wallpaper Engine 工坊下载且目录中包含 .pkg 时，会执行内置后处理器，并生成原名加 _Post 的提取结果。该功能不会生成手机版可导入的 .mpkg。"
+            } else {
+                "当前已关闭。Wallpaper Engine 工坊下载仍然完全沿用现在的默认落盘逻辑。该功能只会在检测到 .pkg 时额外提取，不会生成 .mpkg。"
+            })
         },
-        checked = uiState.wallpaperEnginePkgExtractEnabled,
-        onCheckedChange = onToggleWallpaperEnginePkgExtractEnabled,
+        trailingContent = {
+            Switch(
+                checked = uiState.wallpaperEnginePkgExtractEnabled,
+                onCheckedChange = onToggleWallpaperEnginePkgExtractEnabled,
+            )
+        }
     )
 
     if (uiState.wallpaperEnginePkgExtractEnabled) {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-        SettingsBooleanRow(
-            title = "Wallpaper Engine 提取后保留原目录",
-            description = if (uiState.wallpaperEnginePkgKeepOriginal) {
-                "当前已开启。后处理完成后，会导出一个 _Post 文件夹，里面同时保留原目录和 PKG 提取结果。"
-            } else {
-                "当前已关闭。后处理完成后，只保留原名加 _Post 的 PKG 提取结果。"
+        androidx.compose.material3.ListItem(
+            headlineContent = { Text("Wallpaper Engine 提取后保留原目录") },
+            supportingContent = {
+                Text(if (uiState.wallpaperEnginePkgKeepOriginal) {
+                    "当前已开启。后处理完成后，会导出一个 _Post 文件夹，里面同时保留原目录和 PKG 提取结果。"
+                } else {
+                    "当前已关闭。后处理完成后，只保留原名加 _Post 的 PKG 提取结果。"
+                })
             },
-            checked = uiState.wallpaperEnginePkgKeepOriginal,
-            onCheckedChange = onToggleWallpaperEnginePkgKeepOriginal,
+            trailingContent = {
+                Switch(
+                    checked = uiState.wallpaperEnginePkgKeepOriginal,
+                    onCheckedChange = onToggleWallpaperEnginePkgKeepOriginal,
+                )
+            }
         )
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-        SettingsBooleanRow(
-            title = "尝试将 TEX 转为图片",
-            description = if (uiState.wallpaperEngineTexConversionEnabled) {
-                "当前已开启。命中可识别的 TEX 时，会额外尝试转换成 png、jpg 或 mp4。当前只覆盖最常见、最稳定的几类格式，不会生成 .mpkg。"
-            } else {
-                "当前已关闭。Wallpaper Engine 后处理将只提取 PKG，不再额外尝试转换 TEX。"
+        androidx.compose.material3.ListItem(
+            headlineContent = { Text("尝试将 TEX 转为图片") },
+            supportingContent = {
+                Text(if (uiState.wallpaperEngineTexConversionEnabled) {
+                    "当前已开启。命中可识别的 TEX 时，会额外尝试转换成 png、jpg 或 mp4。当前只覆盖最常见、最稳定的几类格式，不会生成 .mpkg。"
+                } else {
+                    "当前已关闭。Wallpaper Engine 后处理将只提取 PKG，不再额外尝试转换 TEX。"
+                })
             },
-            checked = uiState.wallpaperEngineTexConversionEnabled,
-            onCheckedChange = onToggleWallpaperEngineTexConversionEnabled,
+            trailingContent = {
+                Switch(
+                    checked = uiState.wallpaperEngineTexConversionEnabled,
+                    onCheckedChange = onToggleWallpaperEngineTexConversionEnabled,
+                )
+            }
         )
 
         if (uiState.wallpaperEngineTexConversionEnabled) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-            SettingsBooleanRow(
-                title = "转换后保留原 TEX",
-                description = if (uiState.wallpaperEngineKeepConvertedTexOriginal) {
-                    "当前已开启。转换成功后会同时保留原始 TEX，避免因部分格式暂不支持而丢失原始资源。"
-                } else {
-                    "当前已关闭。转换成功后会删除原始 TEX，只保留转换结果。"
+            androidx.compose.material3.ListItem(
+                headlineContent = { Text("转换后保留原 TEX") },
+                supportingContent = {
+                    Text(if (uiState.wallpaperEngineKeepConvertedTexOriginal) {
+                        "当前已开启。转换成功后会同时保留原始 TEX，避免因部分格式暂不支持而丢失原始资源。"
+                    } else {
+                        "当前已关闭。转换成功后会删除原始 TEX，只保留转换结果。"
+                    })
                 },
-                checked = uiState.wallpaperEngineKeepConvertedTexOriginal,
-                onCheckedChange = onToggleWallpaperEngineKeepConvertedTexOriginal,
+                trailingContent = {
+                    Switch(
+                        checked = uiState.wallpaperEngineKeepConvertedTexOriginal,
+                        onCheckedChange = onToggleWallpaperEngineKeepConvertedTexOriginal,
+                    )
+                }
             )
         }
     }
@@ -1871,18 +1570,22 @@ private fun TranslationSettingsContent(
         googleApiKey = normalizedDraftGoogleApiKey,
     )
 
-    SettingsSubsectionTitle(
-        title = "翻译提供商",
-        subtitle = if (hasPendingChanges) {
-            "当前有未保存的更改。保存后再测试，详情页才会使用最新配置。"
-        } else if (provider == TranslationProvider.Disabled) {
-            "当前未启用简介翻译。详情页不会发起额外翻译请求。"
-        } else if (provider.isExperimental()) {
-            "当前 ${uiState.translationProvider.displayLabel()} 为实验模式，无需填写密钥。"
-        } else if (uiState.isTranslationConfigured) {
-            "当前 ${uiState.translationProvider.displayLabel()} 已配置完成。"
-        } else {
-            "当前未配置。详情页点击“翻译成中文”前，请先完成这里的设置。"
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("翻译提供商") },
+        supportingContent = {
+            Text(
+                if (hasPendingChanges) {
+                    "当前有未保存的更改。保存后再测试，详情页才会使用最新配置。"
+                } else if (provider == TranslationProvider.Disabled) {
+                    "当前未启用简介翻译。详情页不会发起额外翻译请求。"
+                } else if (provider.isExperimental()) {
+                    "当前 ${uiState.translationProvider.displayLabel()} 为实验模式，无需填写密钥。"
+                } else if (uiState.isTranslationConfigured) {
+                    "当前 ${uiState.translationProvider.displayLabel()} 已配置完成。"
+                } else {
+                    "当前未配置。详情页点击“翻译成中文”前，请先完成这里的设置。"
+                }
+            )
         },
     )
 
@@ -1898,7 +1601,12 @@ private fun TranslationSettingsContent(
             )
         }
     }
-    SettingsInlineHint(text = "官方模式更稳定，但 Azure 和 Google Cloud 都需要你自己提供凭据。")
+    Text(
+        text = "官方模式更稳定，但 Azure 和 Google Cloud 都需要你自己提供凭据。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
@@ -1923,7 +1631,7 @@ private fun TranslationSettingsContent(
 
     when (provider) {
         TranslationProvider.Disabled -> {
-            SettingsInlineHint(text = "关闭后不会移除已保存密钥，只是详情页不再发起翻译请求。")
+            Text(text = "关闭后不会移除已保存密钥，只是详情页不再发起翻译 请求。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
 
         TranslationProvider.AzureTranslator -> {
@@ -1974,7 +1682,7 @@ private fun TranslationSettingsContent(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 shape = RoundedCornerShape(20.dp),
             )
-            SettingsInlineHint(text = "默认全局 Endpoint 通常是 https://api.cognitive.microsofttranslator.com")
+            Text(text = "默认全局 Endpoint 通常是 https://api.cognitive.microsofttranslator.com", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
 
         TranslationProvider.GoogleCloudTranslate -> {
@@ -2008,7 +1716,7 @@ private fun TranslationSettingsContent(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 shape = RoundedCornerShape(20.dp),
             )
-            SettingsInlineHint(text = "使用 Google 时，应用内展示翻译结果应保留 Google 归因说明。")
+            Text(text = "使用 Google 时，应用内展示翻译结果应保留 Google 归因说明。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
 
         TranslationProvider.GoogleWebTranslate -> {
@@ -2016,7 +1724,7 @@ private fun TranslationSettingsContent(
                 title = "Google Web 翻译",
                 subtitle = "直接调用 Google 网页翻译通道，无需 API Key。",
             )
-            SettingsInlineHint(text = "该模式依赖 Google 网页接口。可直接使用，但未来可能出现限流、失效或返回结构变化。")
+            Text(text = "该模式依赖 Google 网页接口。可直接使用，但未来可能出现限流、失效或返回结构变化。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
 
         TranslationProvider.MicrosoftEdgeTranslate -> {
@@ -2024,7 +1732,7 @@ private fun TranslationSettingsContent(
                 title = "Microsoft Edge 翻译",
                 subtitle = "直接复用 Microsoft Edge 翻译认证通道，无需 Azure 资源和 API Key。",
             )
-            SettingsInlineHint(text = "该模式依赖 Edge 客户端通道。可直接使用，但未来可能被微软调整、限流或关闭。")
+            Text(text = "该模式依赖 Edge 客户端通道。可直接使用，但未来可能被微软调整、限流或关闭。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
     }
 
@@ -2032,62 +1740,57 @@ private fun TranslationSettingsContent(
 
     when {
         hasPendingChanges -> {
-            SettingsInlineHint(text = "你修改了翻译参数，保存后才能使用“测试当前配置”。")
+            Text(text = "你修改了翻译参数，保存后才能使用“测试当前配置”。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
 
         provider != TranslationProvider.Disabled && !uiState.isTranslationConfigured -> {
-            SettingsInlineHint(text = "当前配置仍不完整。补齐必填项并保存后，详情页才会发起翻译请求。")
+            Text(text = "当前配置仍不完整。补齐必填项并保存后，详情页才会发起翻译请求。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
 
         provider.isExperimental() -> {
-            SettingsInlineHint(text = "实验模式无需密钥。保存后即可在详情页手动翻译，但测试通过也不代表长期稳定。")
+            Text(text = "实验模式无需密钥。保存后即可在详情页手动翻译，但测试通过也不代表长期稳定。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
 
         provider != TranslationProvider.Disabled && isDraftConfigured -> {
-            SettingsInlineHint(text = "详情页会在你手动点击“翻译成中文”后发起请求，原文会继续保留，可随时切回。")
+            Text(text = "详情页会在你手动点击“翻译成中文”后发起请求，原文会继续保留，可随时切回。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
     }
 
     uiState.translationStatusSummary?.let { summary ->
-        SettingsInlineHint(text = summary)
+        Text(
+        text = summary,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    )
     }
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-    SettingsActionButton(
-        text = "保存翻译配置",
+    OutlinedButton(
+        onClick = { onSave(provider, azureEndpoint, azureRegion, azureApiKey, googleApiKey) },
         enabled = hasPendingChanges,
-        onClick = {
-            onSave(
-                provider,
-                azureEndpoint,
-                azureRegion,
-                azureApiKey,
-                googleApiKey,
-            )
-        },
-    )
-    SettingsActionButton(
-        text = if (uiState.isVerifyingTranslation) "正在测试配置…" else "测试当前配置",
-        enabled = !hasPendingChanges &&
-            uiState.translationProvider != TranslationProvider.Disabled &&
-            uiState.isTranslationConfigured &&
-            !uiState.isVerifyingTranslation,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+    ) { Text("保存翻译配置") }
+    OutlinedButton(
         onClick = onVerify,
-    )
-    SettingsActionButton(
-        text = "清空已保存配置",
-        enabled = hasPendingChanges ||
-            uiState.isTranslationConfigured ||
-            uiState.translationProvider != TranslationProvider.Disabled,
+        enabled = !hasPendingChanges && uiState.translationProvider != TranslationProvider.Disabled && uiState.isTranslationConfigured && !uiState.isVerifyingTranslation,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+    ) { Text(if (uiState.isVerifyingTranslation) "正在测试配置…" else "测试当前配置") }
+    OutlinedButton(
         onClick = onClear,
-    )
-    SettingsInlineHint(
+        enabled = hasPendingChanges || uiState.isTranslationConfigured || uiState.translationProvider != TranslationProvider.Disabled,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+    ) { Text("清空已保存配置") }
+    Text(
         text = if (provider.isExperimental()) {
             "“测试当前配置”会直接测试当前实验通道是否可访问。修改后请先保存。"
         } else {
             "“测试当前配置”会使用已经保存的参数发起一次示例翻译。修改后请先保存。"
         },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
     )
 }
 
@@ -2107,191 +1810,18 @@ private fun isTranslationDraftConfigured(
 }
 
 @Composable
-private fun SettingsBooleanRow(
-    title: String,
-    description: String,
-    checked: Boolean,
-    enabled: Boolean = true,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-        )
-    }
-}
-
-@Composable
 private fun SettingsChoiceChip(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-        border = BorderStroke(
-            1.dp,
-            if (selected) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
-            } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
-            },
-        ),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (selected) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-        )
-    }
-}
-
-@Composable
-private fun SettingsActionButton(
-    text: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    OutlinedButton(
+    androidx.compose.material3.FilterChip(
+        selected = selected,
         onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-    ) {
-        Text(text)
-    }
-}
-
-@Composable
-private fun SettingsInfoRow(
-    label: String,
-    value: String,
-) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-    }
-}
-
-@Composable
-private fun AppNoticeCard(item: AppNoticeItem) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = item.body,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsInlineHint(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        label = { Text(text = label) },
     )
 }
 
-@Composable
-private fun SettingsValuePill(
-    text: String,
-    modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    contentColor: Color = MaterialTheme.colorScheme.onSurface,
-    borderColor: Color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = containerColor,
-        border = BorderStroke(1.dp, borderColor),
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
-        )
-    }
-}
 
 private fun initialsOf(accountName: String): String {
     val letters = accountName
@@ -2359,3 +1889,4 @@ private fun CdnPoolPreference.poolDescription(): String {
 private fun com.slay.workshopnative.data.preferences.SavedSteamAccount.matches(accountName: String): Boolean {
     return accountName.isNotBlank() && this.accountName.equals(accountName, ignoreCase = true)
 }
+

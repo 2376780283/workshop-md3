@@ -6,6 +6,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.slay.workshopnative.core.logging.MainActivityRuntimeTracker
 import com.slay.workshopnative.ui.MainViewModel
@@ -28,8 +36,15 @@ class MainActivity : ComponentActivity() {
         )
         enableEdgeToEdge()
         setContent {
+            var visible by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { visible = true }
+            
             val themeMode = viewModel.themeMode.collectAsStateWithLifecycle().value
-            WorkshopNativeTheme(themeMode = themeMode) { WorkshopNativeRoot(viewModel = viewModel) }
+            WorkshopNativeTheme(themeMode = themeMode) {
+                AnimatedVisibility(visible = visible, enter = fadeIn(tween(1000))) {
+                    WorkshopNativeRoot(viewModel = viewModel)
+                }
+            }
         }
     }
 

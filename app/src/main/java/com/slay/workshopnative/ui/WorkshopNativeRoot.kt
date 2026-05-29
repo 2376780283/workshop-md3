@@ -4,13 +4,14 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -182,6 +185,12 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
         viewModel.userMessages.collectLatest { message -> snackbarHostState.showSnackbar(message) }
     }
 
+    LaunchedEffect(sessionState.isRestoring, sessionState.status) {
+        if (sessionState.isRestoring || sessionState.status == SessionStatus.Connecting) {
+            snackbarHostState.showSnackbar("Steam 正在重连中，联网操作恢复后会自动接上。")
+        }
+    }
+
     LaunchedEffect(sessionState.status, showLibraryTab) {
         when (sessionState.status) {
             SessionStatus.Authenticated -> {
@@ -321,14 +330,19 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
         }
     val density = LocalDensity.current
     val imeVisible = WindowInsets.ime.getBottom(density) > 0
+
     val showNavigationRail = activeWorkshop == null
+    val navRailWidth by animateDpAsState(
+        targetValue = if (showNavigationRail) 80.dp else 0.dp,
+        animationSpec = tween(durationMillis = 300),
+        label = "nav_rail_width",
+    )
+    val isRecovering = sessionState.isRestoring || sessionState.status == SessionStatus.Connecting
     val showSessionBanner =
         showApplicationShell &&
             isLoginFeatureEnabled &&
             !guestMode &&
-            (sessionState.status == SessionStatus.Error ||
-                sessionState.isRestoring ||
-                sessionState.status == SessionStatus.Connecting)
+            sessionState.status == SessionStatus.Error
     val sessionBannerPadding =
         when {
             !showSessionBanner -> 0.dp
@@ -337,13 +351,13 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
 
     BackHandler(enabled = activeWorkshop != null && !imeVisible) { viewModel.closeWorkshop() }
 
-    Row(modifier = Modifier.fillMaxSize()) {
+    Row(modifier = Modifier.fillMaxSize().background(color = MaterialTheme.colorScheme.background)) {
         AnimatedVisibility(
             visible = showNavigationRail,
             enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
         ) {
-            NavigationRail {
+            NavigationRail(modifier = Modifier.width(navRailWidth)) {
                 rootDestinations(showLibraryTab).forEach { destination ->
                     val selected = currentRootTabRoute == destination.route
                     NavigationRailItem(
@@ -357,7 +371,7 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
         }
         Scaffold(
             modifier = Modifier.weight(1f),
-            containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.0f),
+            containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { paddingValues ->
             val shellPadding =
@@ -470,7 +484,6 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
                     SessionStateBanner(
                         modifier =
                             Modifier.align(Alignment.TopCenter)
-                                .statusBarsPadding()
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                                 .zIndex(1f),
                         sessionState = sessionState,
@@ -1006,7 +1019,6 @@ private fun SessionStateBanner(
     onRetryRestore: () -> Unit,
     onShowLogin: () -> Unit,
 ) {
-    val isRecovering = sessionState.isRestoring || sessionState.status == SessionStatus.Connecting
     val containerColor =
         workshopAdaptiveSurfaceColor(
             light = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
@@ -1025,52 +1037,38 @@ private fun SessionStateBanner(
         shadowElevation = 8.dp,
         border = BorderStroke(1.dp, borderColor),
     ) {
-        if (isRecovering) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = sessionState.errorMessage ?: "Steam 连接已断开",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement =
+                    androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
             ) {
-                Text(
-                    text = "Steam ，联网操作恢复后会自动接上。",
+                Button(
+                    onClick = onRetryRestore,
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        } else {
-            Column(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    text = sessionState.errorMessage ?: "Steam 连接已断开",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement =
-                        androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
+                    shape = RoundedCornerShape(18.dp),
                 ) {
-                    Button(
-                        onClick = onRetryRestore,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
-                    ) {
-                        Text("重试恢复")
-                    }
-                    OutlinedButton(
-                        onClick = onShowLogin,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
-                        border =
-                            BorderStroke(
-                                1.dp,
-                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f),
-                            ),
-                    ) {
-                        Text("登录页", color = MaterialTheme.colorScheme.onSurface)
-                    }
+                    Text("重试恢复")
+                }
+                OutlinedButton(
+                    onClick = onShowLogin,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(18.dp),
+                    border =
+                        BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f),
+                        ),
+                ) {
+                    Text("登录页", color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }

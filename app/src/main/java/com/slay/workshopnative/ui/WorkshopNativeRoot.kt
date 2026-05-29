@@ -2,6 +2,10 @@ package com.slay.workshopnative.ui
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,9 +38,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -359,54 +366,28 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
                         bottom = paddingValues.calculateBottomPadding(),
                     )
                 Box(modifier = Modifier.fillMaxSize()) {
-                    if (activeWorkshop != null) {
-                        WorkshopScreen(
-                            appId = activeWorkshop.first,
-                            appName = activeWorkshop.second,
-                            launchMode = activeWorkshop.third,
-                            paddingValues = shellPadding,
-                            onBack = { viewModel.closeWorkshop() },
-                            onOpenDownloads = {
-                                viewModel.navigateRootTab(RootTab.Downloads.route)
-                                viewModel.closeWorkshop()
-                            },
-                        )
-                    } else {
-                        when (currentRootTab) {
-                            RootTab.Explore -> {
-                                ExploreScreen(
-                                    paddingValues = shellPadding,
-                                    onOpenGame = { appId, name ->
-                                        viewModel.openWorkshop(
-                                            appId,
-                                            name,
-                                            WorkshopLaunchMode.Browse.name,
-                                        )
-                                    },
-                                )
-                            }
-
-                            RootTab.Library -> {
-                                if (
-                                    guestMode || sessionState.status != SessionStatus.Authenticated
-                                ) {
-                                    SignedInContentGate(
+                    AnimatedContent(
+                        targetState = if (activeWorkshop != null) "workshop" else currentRootTab.route,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "root_navigation"
+                    ) { target ->
+                        if (target == "workshop" && activeWorkshop != null) {
+                            WorkshopScreen(
+                                appId = activeWorkshop.first,
+                                appName = activeWorkshop.second,
+                                launchMode = activeWorkshop.third,
+                                paddingValues = shellPadding,
+                                onBack = { viewModel.closeWorkshop() },
+                                onOpenDownloads = {
+                                    viewModel.navigateRootTab(RootTab.Downloads.route)
+                                    viewModel.closeWorkshop()
+                                },
+                            )
+                        } else {
+                            when (target) {
+                                RootTab.Explore.route -> {
+                                    ExploreScreen(
                                         paddingValues = shellPadding,
-                                        guestMode = guestMode,
-                                        sessionState = sessionState,
-                                        savedAccounts = savedAccounts,
-                                        onRetryRestore = viewModel::retrySessionRestore,
-                                        onShowLogin = {
-                                            viewModel.leaveGuestMode()
-                                            appUnlocked = false
-                                            forceLoginScreen = true
-                                        },
-                                        onSwitchSavedAccount = { viewModel.switchSavedAccount(it) },
-                                    )
-                                } else {
-                                    LibraryScreen(
-                                        paddingValues = shellPadding,
-                                        accountName = sessionState.account?.accountName.orEmpty(),
                                         onOpenGame = { appId, name ->
                                             viewModel.openWorkshop(
                                                 appId,
@@ -414,38 +395,70 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
                                                 WorkshopLaunchMode.Browse.name,
                                             )
                                         },
-                                        onOpenSubscriptions = { appId, name ->
-                                            viewModel.openWorkshop(
-                                                appId,
-                                                name,
-                                                WorkshopLaunchMode.Subscriptions.name,
-                                            )
-                                        },
                                     )
                                 }
-                            }
 
-                            RootTab.Downloads -> {
-                                DownloadsScreen(
-                                    paddingValues = shellPadding,
-                                    viewModel = downloadsViewModel,
-                                )
-                            }
+                                RootTab.Library.route -> {
+                                    if (
+                                        guestMode || sessionState.status != SessionStatus.Authenticated
+                                    ) {
+                                        SignedInContentGate(
+                                            paddingValues = shellPadding,
+                                            guestMode = guestMode,
+                                            sessionState = sessionState,
+                                            savedAccounts = savedAccounts,
+                                            onRetryRestore = viewModel::retrySessionRestore,
+                                            onShowLogin = {
+                                                viewModel.leaveGuestMode()
+                                                appUnlocked = false
+                                                forceLoginScreen = true
+                                            },
+                                            onSwitchSavedAccount = { viewModel.switchSavedAccount(it) },
+                                        )
+                                    } else {
+                                        LibraryScreen(
+                                            paddingValues = shellPadding,
+                                            accountName = sessionState.account?.accountName.orEmpty(),
+                                            onOpenGame = { appId, name ->
+                                                viewModel.openWorkshop(
+                                                    appId,
+                                                    name,
+                                                    WorkshopLaunchMode.Browse.name,
+                                                )
+                                            },
+                                            onOpenSubscriptions = { appId, name ->
+                                                viewModel.openWorkshop(
+                                                    appId,
+                                                    name,
+                                                    WorkshopLaunchMode.Subscriptions.name,
+                                                )
+                                            },
+                                        )
+                                    }
+                                }
 
-                            RootTab.Settings -> {
-                                SettingsScreen(
-                                    paddingValues = shellPadding,
-                                    isGuestMode = guestMode,
-                                    appUpdateUiState = appUpdateState,
-                                    onCheckAppUpdates = viewModel::checkForAppUpdates,
-                                    onShowLogin = {
-                                        viewModel.leaveGuestMode()
-                                        appUnlocked = false
-                                        forceLoginScreen = true
-                                    },
-                                    onSwitchSavedAccount = viewModel::switchSavedAccount,
-                                    onLogout = viewModel::logout,
-                                )
+                                RootTab.Downloads.route -> {
+                                    DownloadsScreen(
+                                        paddingValues = shellPadding,
+                                        viewModel = downloadsViewModel,
+                                    )
+                                }
+
+                                RootTab.Settings.route -> {
+                                    SettingsScreen(
+                                        paddingValues = shellPadding,
+                                        isGuestMode = guestMode,
+                                        appUpdateUiState = appUpdateState,
+                                        onCheckAppUpdates = viewModel::checkForAppUpdates,
+                                        onShowLogin = {
+                                            viewModel.leaveGuestMode()
+                                            appUnlocked = false
+                                            forceLoginScreen = true
+                                        },
+                                        onSwitchSavedAccount = viewModel::switchSavedAccount,
+                                        onLogout = viewModel::logout,
+                                    )
+                                }
                             }
                         }
                     }
@@ -729,18 +742,10 @@ private fun AppUpdateDialogIfNeeded(
 
 @Composable
 private fun UpdateMetaPill(text: String) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+    SuggestionChip(
+        onClick = {},
+        label = { Text(text = text, style = MaterialTheme.typography.labelMedium) },
+    )
 }
 
 @Composable

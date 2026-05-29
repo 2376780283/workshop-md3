@@ -37,6 +37,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -1000,50 +1002,23 @@ private fun GameOverviewCard(
 
 @Composable
 private fun ActionCapsule(text: String, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        shadowElevation = 0.dp,
-        color = Color.Transparent,
+    Button(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+        modifier = Modifier.height(32.dp),
     ) {
-        Box(
-            modifier =
-                Modifier.background(
-                        Brush.horizontalGradient(listOf(Color(0xFFE96D43), Color(0xFFF08A52))),
-                        shape = RoundedCornerShape(14.dp),
-                    )
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = text,
-                color = Color.White,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        Text(text = text, style = MaterialTheme.typography.labelSmall)
     }
 }
 
 @Composable
 private fun SecondaryActionCapsule(text: String, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f)),
+    OutlinedButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+        modifier = Modifier.height(32.dp),
     ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = text,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        Text(text = text, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -1115,18 +1090,16 @@ private fun SourceBadge(game: OwnedGame) {
     }
 }
 
+
 @Composable
 private fun MetaChip(
     label: String,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
-    Surface(color = containerColor, shape = RoundedCornerShape(999.dp)) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
-        )
-    }
+    SuggestionChip(
+        onClick = {},
+        label = { Text(text = label, style = MaterialTheme.typography.labelMedium) },
+        colors = SuggestionChipDefaults.suggestionChipColors(containerColor = containerColor, labelColor = contentColor),
+    )
 }

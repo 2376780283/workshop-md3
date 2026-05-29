@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FilterAlt
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,12 +47,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -70,6 +76,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -86,6 +93,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.slay.workshopnative.core.util.formatBytes
@@ -589,21 +597,14 @@ private fun WorkshopLoadingCard(
     launchMode: WorkshopLaunchMode,
     autoResolveDownloadInfo: Boolean,
 ) {
-    Surface(
+    Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.82f)),
-        shadowElevation = 8.dp,
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, workshopAdaptiveBorderColor()),
-        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
             CircularProgressIndicator()
             Text(
                 text =
@@ -643,7 +644,6 @@ private fun WorkshopLoadingCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
@@ -1084,24 +1084,15 @@ private fun CompactActionButton(
     enabled: Boolean = true,
     icon: @Composable () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.68f)),
-        border =
-            BorderStroke(
-                1.dp,
-                workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.44f)),
-            ),
-        shadowElevation = 2.dp,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+    FilledIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            icon()
-        }
+        icon()
     }
 }
 
@@ -1112,44 +1103,18 @@ private fun QuickFilterChip(
     highlighted: Boolean = false,
     icon: (@Composable () -> Unit)? = null,
 ) {
-    Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color =
-            if (highlighted) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh
-            },
-        border =
-            BorderStroke(
-                1.dp,
-                if (highlighted) {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
-                } else {
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-                },
-            ),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            icon?.invoke()
+    FilterChip(
+        selected = highlighted,
+        onClick = onClick,
+        label = {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Medium,
-                color =
-                    if (highlighted) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
             )
-        }
-    }
+        },
+        leadingIcon = icon,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1162,7 +1127,8 @@ private fun QuickChoiceSheet(
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit,
 ) {
-    WorkshopNativeModalBottomSheet(onDismissRequest = onDismiss) {
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -1179,16 +1145,7 @@ private fun QuickChoiceSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Surface(
-                color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.84f)),
-                shape = RoundedCornerShape(24.dp),
-                border =
-                    BorderStroke(
-                        1.dp,
-                        workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f)),
-                    ),
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            ) {
+            Card {
                 Column(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1207,6 +1164,7 @@ private fun QuickChoiceSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SteamPublicBrowseQuickFilterSheet(
     currentQuery: WorkshopBrowseQuery,
@@ -1215,7 +1173,8 @@ private fun SteamPublicBrowseQuickFilterSheet(
     onDismiss: () -> Unit,
     onApply: (WorkshopBrowseQuery) -> Unit,
 ) {
-    WorkshopNativeModalBottomSheet(onDismissRequest = onDismiss) {
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -1232,16 +1191,7 @@ private fun SteamPublicBrowseQuickFilterSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Surface(
-                color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.84f)),
-                shape = RoundedCornerShape(24.dp),
-                border =
-                    BorderStroke(
-                        1.dp,
-                        workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f)),
-                    ),
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            ) {
+            Card {
                 Column(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -1306,110 +1256,45 @@ private fun WorkshopListItem(
     latestTask: DownloadTaskEntity?,
     onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.84f)),
-        shadowElevation = 4.dp,
-        tonalElevation = 2.dp,
-        border =
-            BorderStroke(
-                1.dp,
-                workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.44f)),
-            ),
-        contentColor = MaterialTheme.colorScheme.onSurface,
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(
-                        workshopAdaptiveGradientBrush(
-                            lightStart = Color.White.copy(alpha = 0.97f),
-                            lightEnd = Color(0xFFF7EEE4).copy(alpha = 0.92f),
-                        ),
-                        shape = RoundedCornerShape(22.dp),
-                    )
-                    .clickable(onClick = onClick)
-                    .padding(horizontal = 10.dp, vertical = 9.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (animatedPreviewEnabled) {
-                AnimatedWorkshopThumbnail(
-                    imageUrl = item.previewUrl,
-                    fallbackText = item.title,
-                    modifier = Modifier.width(78.dp).height(50.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                ArtworkThumbnail(
-                    imageUrl = item.previewUrl,
-                    fallbackText = item.title,
-                    modifier = Modifier.width(78.dp).height(50.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    contentScale = ContentScale.Crop,
-                )
-            }
+            AsyncImage(
+                model = item.previewUrl,
+                contentDescription = item.title,
+                modifier = Modifier.width(78.dp).height(50.dp).clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop,
+            )
 
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = item.title,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0x12E96D43),
-                        border = BorderStroke(1.dp, Color(0x2AE96D43)),
-                    ) {
-                        Text(
-                            text = "详情",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = Color(0xFFE96D43),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    InfoPill(
-                        text = item.downloadModeLabel(autoResolveDownloadInfo),
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    )
-                    if (showSubscriptionState && item.isSubscribed) {
-                        InfoPill(text = "已订阅")
-                    }
-                    latestTask?.let { task -> DownloadStatusPill(task = task) }
-                }
-
                 Text(
-                    text =
-                        buildList {
-                                if (item.authorName.isNotBlank()) add("作者 ${item.authorName}")
-                                if (item.fileSize > 0L) add(formatBytes(item.fileSize))
-                                if (item.timeUpdated > 0L) add(formatEpochSeconds(item.timeUpdated))
-                            }
-                            .joinToString(" · ")
-                            .ifBlank { "点开查看完整介绍与下载操作" },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = item.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(text = item.downloadModeLabel(autoResolveDownloadInfo)) },
+                    )
+                    if (showSubscriptionState && item.isSubscribed) {
+                        AssistChip(onClick = {}, label = { Text(text = "已订阅") })
+                    }
+                    latestTask?.let { task ->
+                        AssistChip(onClick = {}, label = { Text(text = task.status.name) })
+                    }
+                }
             }
         }
     }

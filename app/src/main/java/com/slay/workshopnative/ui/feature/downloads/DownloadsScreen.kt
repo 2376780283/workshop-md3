@@ -46,9 +46,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -66,10 +72,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import coil3.compose.AsyncImage
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -375,24 +384,28 @@ fun DownloadsScreen(paddingValues: PaddingValues, viewModel: DownloadsViewModel 
     }
 
     selectedTask?.let { task ->
-        WorkshopNativeModalBottomSheet(onDismissRequest = { selectedTaskId = null }) {
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(onDismissRequest = { selectedTaskId = null }, sheetState = sheetState) {
             DownloadTaskSheet(task = task)
         }
     }
 
     previewTask?.let { task ->
-        WorkshopNativeModalBottomSheet(onDismissRequest = { previewTaskId = null }) {
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(onDismissRequest = { previewTaskId = null }, sheetState = sheetState) {
             DownloadResultSheet(task = task)
         }
     }
 
     if (isCreateTaskSheetVisible) {
-        WorkshopNativeModalBottomSheet(
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
             onDismissRequest = {
                 if (!isCreatingTask) {
                     isCreateTaskSheetVisible = false
                 }
-            }
+            },
+            sheetState = sheetState
         ) {
             CreateDownloadTaskSheet(
                 input = createTaskInput,
@@ -412,32 +425,25 @@ private fun DownloadGameGroupCard(
     onToggleCollapse: () -> Unit,
     itemContent: @Composable (DownloadTaskEntity) -> Unit,
 ) {
-    Surface(
-        shape = RoundedCornerShape(28.dp),
-        color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.84f)),
-        shadowElevation = 6.dp,
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, workshopAdaptiveBorderColor()),
-        contentColor = MaterialTheme.colorScheme.onSurface,
+    Card(
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 modifier =
                     Modifier.fillMaxWidth()
-                        .clickable(onClick = onToggleCollapse)
-                        .padding(horizontal = 2.dp, vertical = 2.dp),
+                        .clickable(onClick = onToggleCollapse),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ArtworkThumbnail(
-                    imageUrl = group.appId.takeIf { it > 0 }?.let(::steamCapsuleUrl),
-                    alternateImageUrl = null,
-                    fallbackText = group.gameTitle,
-                    modifier = Modifier.width(84.dp).height(48.dp),
-                    shape = RoundedCornerShape(16.dp),
+                AsyncImage(
+                    model = group.appId.takeIf { it > 0 }?.let(::steamCapsuleUrl),
+                    contentDescription = group.gameTitle,
+                    modifier = Modifier.width(84.dp).height(48.dp).clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Crop,
                 )
                 Column(
                     modifier = Modifier.weight(1f),
@@ -458,35 +464,16 @@ private fun DownloadGameGroupCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border =
-                        BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
-                        ),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = group.tasks.size.toString(),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Icon(
-                            imageVector =
-                                if (collapsed) {
-                                    Icons.Rounded.KeyboardArrowDown
-                                } else {
-                                    Icons.Rounded.KeyboardArrowUp
-                                },
-                            contentDescription = null,
-                        )
-                    }
+                IconButton(onClick = onToggleCollapse) {
+                    Icon(
+                        imageVector =
+                            if (collapsed) {
+                                Icons.Rounded.KeyboardArrowDown
+                            } else {
+                                Icons.Rounded.KeyboardArrowUp
+                            },
+                        contentDescription = if (collapsed) "展开" else "收起",
+                    )
                 }
             }
 
@@ -511,7 +498,6 @@ private fun DownloadListItem(
     onOpenDirectory: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
 ) {
-    val cardTone = task.cardTone()
     val showProgressBar =
         when (task.status) {
             DownloadStatus.Queued,
@@ -523,136 +509,68 @@ private fun DownloadListItem(
             DownloadStatus.Unavailable -> false
         }
 
-    Surface(
+    Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(if (compact) 20.dp else 24.dp),
-        color = cardTone.surface,
-        shadowElevation = if (compact) 0.dp else 4.dp,
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, cardTone.border),
     ) {
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(
-                        brush = Brush.horizontalGradient(listOf(cardTone.start, cardTone.end)),
-                        shape = RoundedCornerShape(24.dp),
-                    )
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .padding(
-                            horizontal = if (compact) 10.dp else 11.dp,
-                            vertical = if (compact) 9.dp else 10.dp,
-                        ),
-                horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                DownloadArtwork(
-                    task = task,
-                    width = if (compact) 78.dp else 92.dp,
-                    height = if (compact) 50.dp else 58.dp,
-                )
+                DownloadArtwork(task = task, width = 80.dp, height = 48.dp)
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(if (compact) 3.dp else 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(3.dp),
-                        ) {
-                            if (task.status == DownloadStatus.Success && task.hasUpdateAvailable) {
-                                UpdateAvailableBadge(compact = compact)
-                            }
-                            Text(
-                                text = task.title,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style =
-                                    if (compact) MaterialTheme.typography.titleSmall
-                                    else MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
+                        Text(
+                            text = task.title,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                         StatusBadge(task = task, compact = compact)
                     }
 
                     if (showProgressBar) {
-                        if (task.isConnectingToSource() || task.isFinalizingDownload()) {
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        } else {
-                            LinearProgressIndicator(
-                                progress = {
-                                    when {
-                                        task.totalBytes > 0L -> task.progressPercent / 100f
-                                        else -> 0f
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                    }
-
-                    if (compact) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = task.progressLabel(),
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            DownloadAuthBadge(task = task, compact = true)
-                        }
-                    } else {
-                        Text(
-                            text = task.progressLabel(),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        DownloadAuthBadge(task = task)
-                    }
-
-                    DownloadRowActions(
-                        task = task,
-                        onPause = onPause,
-                        onResume = onResume,
-                        onRetry = onRetry,
-                        onCancel = onCancel,
-                        onOpenDirectory = onOpenDirectory,
-                        onDelete = onDelete,
-                    )
-
-                    task.supportingMessage()?.let { message ->
-                        Text(
-                            text = message,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelSmall,
-                            color =
-                                if (task.status == DownloadStatus.Failed) {
-                                    MaterialTheme.colorScheme.error
+                        LinearProgressIndicator(
+                            progress = {
+                                if (task.isConnectingToSource() || task.isFinalizingDownload()) {
+                                    0f // Indeterminate or placeholder
                                 } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
+                                    if (task.totalBytes > 0L) task.progressPercent / 100f else 0f
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
+
+                    Text(
+                        text = task.progressLabel(),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
+
+            DownloadRowActions(
+                task = task,
+                onPause = onPause,
+                onResume = onResume,
+                onRetry = onRetry,
+                onCancel = onCancel,
+                onOpenDirectory = onOpenDirectory,
+                onDelete = onDelete,
+            )
         }
     }
 }
@@ -717,24 +635,21 @@ private fun DownloadRowActions(
                 onClick = action,
                 icon = null,
                 label = label,
-                compact = true,
             )
-        }
-        onDelete?.let { deleteAction ->
-            IconActionSurface(
-                onClick = deleteAction,
-                icon = {
-                    Icon(
-                        imageVector = Icons.Rounded.DeleteOutline,
-                        contentDescription = "删除这条记录",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-                compact = true,
+            }
+            onDelete?.let { deleteAction ->
+            IconButton(
+            onClick = deleteAction,
+            ) {
+            Icon(
+            imageVector = Icons.Rounded.DeleteOutline,
+            contentDescription = "删除这条记录",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-    }
-}
+            }
+            }
+            }
+            }
 
 @Composable
 private fun DownloadTaskSheet(task: DownloadTaskEntity) {
@@ -965,15 +880,15 @@ private fun DownloadsControlPanel(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconActionSurface(
+                    IconActionIconButton(
                         onClick = onCreateTask,
                         icon = { Icon(Icons.Rounded.Add, contentDescription = "新建下载任务") },
                     )
-                    IconActionSurface(
+                    IconActionIconButton(
                         onClick = onRefresh,
                         icon = { Icon(Icons.Rounded.Refresh, contentDescription = "刷新下载状态") },
                     )
-                    IconActionSurface(
+                    IconActionIconButton(
                         onClick = onCheckUpdates,
                         enabled = !isCheckingUpdates && !isSimulatingUpdate,
                         icon = {
@@ -988,7 +903,7 @@ private fun DownloadsControlPanel(
                         },
                     )
                     if (showDebugActions) {
-                        IconActionSurface(
+                        IconActionIconButton(
                             onClick = onSimulateUpdate,
                             enabled = !isCheckingUpdates && !isSimulatingUpdate,
                             icon = {
@@ -1004,7 +919,7 @@ private fun DownloadsControlPanel(
                         )
                     }
                     if (hasInactiveHistory) {
-                        IconActionSurface(
+                        IconActionIconButton(
                             onClick = onClearHistory,
                             icon = {
                                 Icon(Icons.Rounded.CleaningServices, contentDescription = "清理历史")
@@ -1101,6 +1016,7 @@ private fun CreateDownloadTaskSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadedUpdatesSheet(
     state: DownloadUpdatesDialogState,
@@ -1110,12 +1026,14 @@ fun DownloadedUpdatesSheet(
     onUpdateSelected: () -> Unit,
 ) {
     val selectedCount = state.selectedPublishedFileIds.size
-    WorkshopNativeModalBottomSheet(
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = {
             if (!state.isUpdating) {
                 onDismiss()
             }
-        }
+        },
+        sheetState = sheetState
     ) {
         Column(
             modifier =
@@ -1267,24 +1185,22 @@ private fun DownloadUpdateCandidateRow(
 @Composable
 private fun DownloadsEmptyStateCard(title: String, message: String) {
     Card(
-        shape = RoundedCornerShape(28.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.86f))
-            ),
-        border = BorderStroke(1.dp, workshopAdaptiveBorderColor()),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(text = message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -1296,29 +1212,11 @@ private fun DownloadTabChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        color =
-            if (selected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh
-            },
-        shape = RoundedCornerShape(18.dp),
-        border =
-            BorderStroke(
-                1.dp,
-                if (selected) {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
-                } else {
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
-                },
-            ),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 6.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+    FilterChip(
+        modifier = modifier,
+        selected = selected,
+        onClick = onClick,
+        label = {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1326,58 +1224,32 @@ private fun DownloadTabChip(
                 Text(
                     text = state.tab.label,
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                    color =
-                        if (selected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
                 )
                 Text(
                     text = state.count.toString(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color =
-                        if (selected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
                 )
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
-private fun IconActionSurface(
+private fun IconActionIconButton(
     onClick: () -> Unit,
     icon: @Composable () -> Unit,
     enabled: Boolean = true,
-    compact: Boolean = false,
 ) {
-    Surface(
-        modifier = Modifier.clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(if (compact) 16.dp else 18.dp),
-        color =
-            if (enabled) {
-                MaterialTheme.colorScheme.surfaceContainerHigh
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHighest
-            },
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+    FilledIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     ) {
-        Box(
-            modifier =
-                Modifier.padding(
-                    horizontal = if (compact) 10.dp else 12.dp,
-                    vertical = if (compact) 8.dp else 10.dp,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            icon()
-        }
+        icon()
     }
 }
 
@@ -1388,47 +1260,22 @@ private fun ActionPillButton(
     icon: (@Composable () -> Unit)?,
     label: String,
     enabled: Boolean = true,
-    compact: Boolean = false,
 ) {
-    Surface(
-        modifier = modifier.clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color =
-            if (enabled) {
-                workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.72f))
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHighest
-            },
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
-        contentColor =
-            if (enabled) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
+    FilledTonalButton(
+        modifier = modifier,
+        onClick = onClick,
+        enabled = enabled,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Row(
-            modifier =
-                Modifier.padding(
-                    horizontal = if (compact) 10.dp else 12.dp,
-                    vertical = if (compact) 8.dp else 10.dp,
-                ),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             icon?.invoke()
             Text(
                 text = label,
-                style =
-                    if (compact) MaterialTheme.typography.labelMedium
-                    else MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
-                color =
-                    if (enabled) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
             )
         }
     }
@@ -1441,10 +1288,10 @@ private fun DownloadArtwork(
     width: Dp? = 112.dp,
     height: Dp = 72.dp,
 ) {
-    ArtworkThumbnail(
-        imageUrl = task.previewUrl,
-        alternateImageUrl = steamCapsuleUrl(task.appId),
-        fallbackText = task.title,
+    val imageUrl = task.previewUrl ?: steamCapsuleUrl(task.appId)
+    AsyncImage(
+        model = imageUrl,
+        contentDescription = task.title,
         modifier =
             modifier.then(
                 if (width == null) {
@@ -1452,8 +1299,8 @@ private fun DownloadArtwork(
                 } else {
                     Modifier.width(width).height(height)
                 }
-            ),
-        shape = RoundedCornerShape(22.dp),
+            ).clip(RoundedCornerShape(22.dp)),
+        contentScale = ContentScale.Crop,
     )
 }
 
@@ -2175,37 +2022,7 @@ private fun DownloadTaskEntity.supportingMessageLabel(): String {
     }
 }
 
-@Composable
-private fun UpdateAvailableBadge(compact: Boolean) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)),
-    ) {
-        Row(
-            modifier =
-                Modifier.padding(
-                    horizontal = if (compact) 8.dp else 9.dp,
-                    vertical = if (compact) 4.dp else 5.dp,
-                ),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.SystemUpdateAlt,
-                contentDescription = null,
-                modifier = Modifier.size(if (compact) 12.dp else 14.dp),
-                tint = MaterialTheme.colorScheme.onTertiaryContainer,
-            )
-            Text(
-                text = "可更新",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
+
 
 private fun DownloadTaskEntity.isInSystemDownloads(): Boolean {
     return savedFileUri == MEDIASTORE_DOWNLOADS_URI_STRING ||

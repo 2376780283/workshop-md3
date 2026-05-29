@@ -26,6 +26,8 @@ import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -718,10 +721,8 @@ private fun OutlinedActionRow(
     actionText: String,
     onClick: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+    OutlinedCard(
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -796,12 +797,8 @@ private fun ExploreOverviewCard(
     publishers: List<String>,
     genres: List<String>,
 ) {
-    Surface(
-        color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.78f)),
+    OutlinedCard(
         shape = RoundedCornerShape(24.dp),
-        border =
-            BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f))),
-        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -860,28 +857,12 @@ private fun ExploreDetailGroup(label: String, values: List<String>) {
 
 @Composable
 private fun ExploreActionCapsule(text: String, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.focusProperties { canFocus = false }.clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        shadowElevation = 0.dp,
-        color = Color.Transparent,
+    Button(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+        modifier = Modifier.height(32.dp),
     ) {
-        Box(
-            modifier =
-                Modifier.background(
-                        Brush.horizontalGradient(listOf(Color(0xFFE96D43), Color(0xFFF08A52))),
-                        shape = RoundedCornerShape(14.dp),
-                    )
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = text,
-                color = Color.White,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        Text(text = text, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -891,12 +872,9 @@ private fun ExploreMetaChip(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
-    Surface(shape = RoundedCornerShape(999.dp), color = containerColor) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
-        )
-    }
+    AssistChip(
+        onClick = {},
+        label = { Text(text = label) },
+        colors = AssistChipDefaults.assistChipColors(containerColor = containerColor, labelColor = contentColor),
+    )
 }

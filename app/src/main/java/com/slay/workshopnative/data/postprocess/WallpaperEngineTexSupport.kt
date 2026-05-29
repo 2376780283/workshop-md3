@@ -3,17 +3,14 @@ package com.slay.workshopnative.data.postprocess
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.zip.CRC32
 import java.util.zip.Deflater
-import java.io.RandomAccessFile
 import net.jpountz.lz4.LZ4Factory
 
-internal data class WallpaperEngineTexConversionResult(
-    val extension: String,
-    val bytes: ByteArray,
-)
+internal data class WallpaperEngineTexConversionResult(val extension: String, val bytes: ByteArray)
 
 internal data class WallpaperEngineTexFastPathCopy(
     val extension: String,
@@ -40,26 +37,30 @@ internal object WallpaperEngineTexConverter {
                 WallpaperEngineTexConversionResult("jpg", tex.payload)
             WallpaperEngineTexContentType.Mp4 ->
                 WallpaperEngineTexConversionResult("mp4", tex.payload)
-            WallpaperEngineTexContentType.R8 -> expandR8(tex)?.let { rgba ->
-                WallpaperEngineTexConversionResult(
-                    extension = "png",
-                    bytes = SimplePngEncoder.encodeRgba(
-                        width = tex.width,
-                        height = tex.height,
-                        rgba = rgba,
-                    ),
-                )
-            }
-            WallpaperEngineTexContentType.Rg88 -> expandRg88(tex)?.let { rgba ->
-                WallpaperEngineTexConversionResult(
-                    extension = "png",
-                    bytes = SimplePngEncoder.encodeRgba(
-                        width = tex.width,
-                        height = tex.height,
-                        rgba = rgba,
-                    ),
-                )
-            }
+            WallpaperEngineTexContentType.R8 ->
+                expandR8(tex)?.let { rgba ->
+                    WallpaperEngineTexConversionResult(
+                        extension = "png",
+                        bytes =
+                            SimplePngEncoder.encodeRgba(
+                                width = tex.width,
+                                height = tex.height,
+                                rgba = rgba,
+                            ),
+                    )
+                }
+            WallpaperEngineTexContentType.Rg88 ->
+                expandRg88(tex)?.let { rgba ->
+                    WallpaperEngineTexConversionResult(
+                        extension = "png",
+                        bytes =
+                            SimplePngEncoder.encodeRgba(
+                                width = tex.width,
+                                height = tex.height,
+                                rgba = rgba,
+                            ),
+                    )
+                }
             WallpaperEngineTexContentType.Unsupported -> null
         }
     }
@@ -163,12 +164,12 @@ internal object WallpaperEngineTexFastPathInspector {
             val payloadOffset = raf.filePointer
             if (
                 !texv.startsWith("TEXV") ||
-                !texi.startsWith("TEXI") ||
-                !texb.startsWith("TEXB") ||
-                formatId != 0L ||
-                lz4Flag != 0L ||
-                payloadSize <= 0L ||
-                payloadOffset + payloadSize > raf.length()
+                    !texi.startsWith("TEXI") ||
+                    !texb.startsWith("TEXB") ||
+                    formatId != 0L ||
+                    lz4Flag != 0L ||
+                    payloadSize <= 0L ||
+                    payloadOffset + payloadSize > raf.length()
             ) {
                 return null
             }
@@ -239,23 +240,9 @@ internal object WallpaperEngineTexFastPathInspector {
         return Integer.toUnsignedLong(Integer.reverseBytes(readInt()))
     }
 
-    private val PNG_SIGNATURE = byteArrayOf(
-        0x89.toByte(),
-        0x50,
-        0x4E,
-        0x47,
-        0x0D,
-        0x0A,
-        0x1A,
-        0x0A,
-    )
+    private val PNG_SIGNATURE = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
 
-    private val MP4_SIGNATURE = byteArrayOf(
-        0x66,
-        0x74,
-        0x79,
-        0x70,
-    )
+    private val MP4_SIGNATURE = byteArrayOf(0x66, 0x74, 0x79, 0x70)
 }
 
 private data class ParsedWallpaperEngineTex(
@@ -308,27 +295,30 @@ private object WallpaperEngineTexParser {
         val payload = ByteArray(payloadSize)
         buffer.get(payload)
 
-        val resolvedPayload = if (lz4Flag == 1) {
-            if (decompressedSize <= 0) return null
-            runCatching {
-                LZ4Factory.fastestInstance()
-                    .safeDecompressor()
-                    .decompress(payload, decompressedSize)
-            }.getOrNull() ?: return null
-        } else {
-            payload
-        }
+        val resolvedPayload =
+            if (lz4Flag == 1) {
+                if (decompressedSize <= 0) return null
+                runCatching {
+                        LZ4Factory.fastestInstance()
+                            .safeDecompressor()
+                            .decompress(payload, decompressedSize)
+                    }
+                    .getOrNull() ?: return null
+            } else {
+                payload
+            }
 
         if (!texv.startsWith("TEXV") || !texi.startsWith("TEXI") || !texb.startsWith("TEXB")) {
             return null
         }
 
-        val contentType = when (formatId) {
-            0 -> matchRawSignature(resolvedPayload)
-            8 -> WallpaperEngineTexContentType.Rg88
-            9 -> WallpaperEngineTexContentType.R8
-            else -> WallpaperEngineTexContentType.Unsupported
-        }
+        val contentType =
+            when (formatId) {
+                0 -> matchRawSignature(resolvedPayload)
+                8 -> WallpaperEngineTexContentType.Rg88
+                9 -> WallpaperEngineTexContentType.R8
+                else -> WallpaperEngineTexContentType.Unsupported
+            }
 
         return ParsedWallpaperEngineTex(
             width = width,
@@ -342,10 +332,10 @@ private object WallpaperEngineTexParser {
         return when {
             payload.size >= 8 && payload.copyOfRange(0, 8).contentEquals(PNG_SIGNATURE) ->
                 WallpaperEngineTexContentType.Png
-            payload.size >= 3 && payload[0] == 0xFF.toByte() &&
+            payload.size >= 3 &&
+                payload[0] == 0xFF.toByte() &&
                 payload[1] == 0xD8.toByte() &&
-                payload[2] == 0xFF.toByte() ->
-                WallpaperEngineTexContentType.Jpg
+                payload[2] == 0xFF.toByte() -> WallpaperEngineTexContentType.Jpg
             payload.size >= 8 && payload.copyOfRange(4, 8).contentEquals(MP4_SIGNATURE) ->
                 WallpaperEngineTexContentType.Mp4
             else -> WallpaperEngineTexContentType.Unsupported
@@ -366,31 +356,13 @@ private object WallpaperEngineTexParser {
         return true
     }
 
-    private val PNG_SIGNATURE = byteArrayOf(
-        0x89.toByte(),
-        0x50,
-        0x4E,
-        0x47,
-        0x0D,
-        0x0A,
-        0x1A,
-        0x0A,
-    )
+    private val PNG_SIGNATURE = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
 
-    private val MP4_SIGNATURE = byteArrayOf(
-        0x66,
-        0x74,
-        0x79,
-        0x70,
-    )
+    private val MP4_SIGNATURE = byteArrayOf(0x66, 0x74, 0x79, 0x70)
 }
 
 private object SimplePngEncoder {
-    fun encodeRgba(
-        width: Int,
-        height: Int,
-        rgba: ByteArray,
-    ): ByteArray {
+    fun encodeRgba(width: Int, height: Int, rgba: ByteArray): ByteArray {
         require(width > 0 && height > 0) { "PNG 宽高必须大于 0" }
         require(rgba.size == width * height * 4) { "PNG RGBA 数据长度不正确" }
 
@@ -437,30 +409,20 @@ private object SimplePngEncoder {
         return output.toByteArray()
     }
 
-    private fun writeChunk(
-        output: ByteArrayOutputStream,
-        type: String,
-        data: ByteArray,
-    ) {
+    private fun writeChunk(output: ByteArrayOutputStream, type: String, data: ByteArray) {
         val typeBytes = type.toByteArray(Charsets.US_ASCII)
         output.write(ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(data.size).array())
         output.write(typeBytes)
         output.write(data)
-        val crc = CRC32().apply {
-            update(typeBytes)
-            update(data)
-        }
-        output.write(ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(crc.value.toInt()).array())
+        val crc =
+            CRC32().apply {
+                update(typeBytes)
+                update(data)
+            }
+        output.write(
+            ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(crc.value.toInt()).array()
+        )
     }
 
-    private val PNG_SIGNATURE = byteArrayOf(
-        0x89.toByte(),
-        0x50,
-        0x4E,
-        0x47,
-        0x0D,
-        0x0A,
-        0x1A,
-        0x0A,
-    )
+    private val PNG_SIGNATURE = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
 }

@@ -10,12 +10,7 @@ enum class AppUpdateSource(
     val displayName: String,
     private val proxyPrefix: String?,
 ) {
-    Official(
-        id = "official",
-        displayName = "GitHub 官方",
-        proxyPrefix = null,
-    ),
-    ;
+    Official(id = "official", displayName = "GitHub 官方", proxyPrefix = null);
 
     fun buildUrl(targetUrl: String): String = proxyPrefix?.plus(targetUrl) ?: targetUrl
 
@@ -28,11 +23,9 @@ enum class AppUpdateSource(
         fun normalizePreferredSource(value: String?): AppUpdateSource =
             fromPersistedValue(value) ?: DEFAULT
 
-        fun userSelectableSources(): List<AppUpdateSource> =
-            listOf(Official)
+        fun userSelectableSources(): List<AppUpdateSource> = listOf(Official)
 
-        fun metadataCandidates(preferred: AppUpdateSource): List<AppUpdateSource> =
-            listOf(Official)
+        fun metadataCandidates(preferred: AppUpdateSource): List<AppUpdateSource> = listOf(Official)
 
         fun downloadCandidates(
             preferred: AppUpdateSource,
@@ -51,11 +44,7 @@ data class AppUpdateReleaseInfo(
     val assets: List<AppUpdateAsset>,
 )
 
-data class AppUpdateAsset(
-    val name: String,
-    val downloadUrl: String,
-    val sizeBytes: Long = 0L,
-)
+data class AppUpdateAsset(val name: String, val downloadUrl: String, val sizeBytes: Long = 0L)
 
 data class AppUpdateDownloadResolution(
     val source: AppUpdateSource,
@@ -82,8 +71,7 @@ sealed interface AppUpdateCheckResult {
 object AppUpdateVersioning {
     private val releaseVersionPattern =
         Regex("""^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-hotfix(\d+))?(?:[-+].*)?$""")
-    private val publishedAtFormatter =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.US)
+    private val publishedAtFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.US)
 
     fun normalizeVersionTag(value: String): String =
         value.trim().removePrefix("v").removePrefix("V")
@@ -101,10 +89,11 @@ object AppUpdateVersioning {
         val normalized = value?.trim().orEmpty()
         if (normalized.isEmpty()) return ""
         return runCatching {
-            Instant.parse(normalized)
-                .atZone(ZoneId.systemDefault())
-                .format(publishedAtFormatter)
-        }.getOrElse { normalized }
+                Instant.parse(normalized)
+                    .atZone(ZoneId.systemDefault())
+                    .format(publishedAtFormatter)
+            }
+            .getOrElse { normalized }
     }
 
     fun normalizeReleaseNotesText(value: String?): String {
@@ -123,7 +112,9 @@ object AppUpdateVersioning {
         val hotfix: Int,
     ) : Comparable<ParsedReleaseVersion> {
         override fun compareTo(other: ParsedReleaseVersion): Int {
-            return compareValuesBy(this, other,
+            return compareValuesBy(
+                this,
+                other,
                 ParsedReleaseVersion::major,
                 ParsedReleaseVersion::minor,
                 ParsedReleaseVersion::patch,

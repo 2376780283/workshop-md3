@@ -1,5 +1,6 @@
 package com.slay.workshopnative.data.repository
 
+import com.slay.workshopnative.core.logging.SupportSessionRuntimeSnapshot
 import com.slay.workshopnative.data.model.GameDetails
 import com.slay.workshopnative.data.model.OwnedGame
 import com.slay.workshopnative.data.model.SteamSessionState
@@ -8,7 +9,6 @@ import com.slay.workshopnative.data.model.WorkshopBrowseQuery
 import com.slay.workshopnative.data.model.WorkshopGameEntry
 import com.slay.workshopnative.data.model.WorkshopGamePage
 import com.slay.workshopnative.data.model.WorkshopItem
-import com.slay.workshopnative.core.logging.SupportSessionRuntimeSnapshot
 import kotlinx.coroutines.flow.StateFlow
 
 interface SteamRepository {
@@ -73,7 +73,9 @@ interface SteamRepository {
 
     suspend fun resolveWorkshopItemForDetails(publishedFileId: Long): Result<WorkshopItem>
 
-    suspend fun resolveWorkshopItemsForDownload(publishedFileIds: Collection<Long>): Result<List<WorkshopItem>>
+    suspend fun resolveWorkshopItemsForDownload(
+        publishedFileIds: Collection<Long>
+    ): Result<List<WorkshopItem>>
 
     suspend fun resolveWorkshopItemForDownload(publishedFileId: Long): Result<WorkshopItem>
 }

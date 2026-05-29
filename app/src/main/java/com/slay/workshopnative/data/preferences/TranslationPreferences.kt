@@ -53,8 +53,7 @@ fun TranslationProvider.isReady(
         TranslationProvider.Disabled -> false
         TranslationProvider.AzureTranslator ->
             azureEndpoint.isNotBlank() && azureApiKey.isNotBlank()
-        TranslationProvider.GoogleCloudTranslate ->
-            googleApiKey.isNotBlank()
+        TranslationProvider.GoogleCloudTranslate -> googleApiKey.isNotBlank()
         TranslationProvider.GoogleWebTranslate,
         TranslationProvider.MicrosoftEdgeTranslate -> true
     }
@@ -70,22 +69,25 @@ fun TranslationProvider.settingsStatusLabel(isConfigured: Boolean): String {
 }
 
 fun translationLanguageLabel(code: String?): String? {
-    val normalized = code
-        ?.trim()
-        ?.lowercase(Locale.ROOT)
-        ?.takeIf(String::isNotBlank)
-        ?: return null
+    val normalized = code?.trim()?.lowercase(Locale.ROOT)?.takeIf(String::isNotBlank) ?: return null
 
     return when (normalized) {
-        "zh", "zh-cn", "zh-hans", "zh-sg" -> "中文"
-        "zh-hant", "zh-hk", "zh-tw" -> "繁体中文"
+        "zh",
+        "zh-cn",
+        "zh-hans",
+        "zh-sg" -> "中文"
+        "zh-hant",
+        "zh-hk",
+        "zh-tw" -> "繁体中文"
         "en" -> "英语"
         "ja" -> "日语"
         "ko" -> "韩语"
         "fr" -> "法语"
         "de" -> "德语"
         "es" -> "西班牙语"
-        "pt", "pt-br", "pt-pt" -> "葡萄牙语"
+        "pt",
+        "pt-br",
+        "pt-pt" -> "葡萄牙语"
         "it" -> "意大利语"
         "ru" -> "俄语"
         "uk" -> "乌克兰语"

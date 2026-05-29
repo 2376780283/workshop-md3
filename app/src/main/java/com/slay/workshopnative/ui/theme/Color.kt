@@ -18,7 +18,6 @@ val Teal200 = Color(0xFFBEEAE3)
 val Slate100 = Color(0xFFE9EEF7)
 val Coral100 = Color(0xFFFFD7CC)
 
-
 val purple_primaryLight = Color(0xFF585992)
 val purple_onPrimaryLight = Color(0xFFFFFFFF)
 val purple_primaryContainerLight = Color(0xFFE1DFFF)

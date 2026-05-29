@@ -59,32 +59,37 @@ internal object PublicWorkshopBrowseParser {
         val isExplicitlyEmpty: Boolean,
     )
 
-    private data class LinkCandidate(
-        val href: String,
-        val label: String,
-    )
+    private data class LinkCandidate(val href: String, val label: String)
 
-    private val workshopHoverRegex = Regex(
-        """SharedFileBindMouseHover\(\s*"sharedfile_(\d+)"\s*,\s*false\s*,\s*(\{.*?\})\s*\);""",
-        setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
-    )
-    private val totalCountRegexes = listOf(
-        Regex("""Showing\s+\d+\s*(?:-|to)\s*\d+\s+of\s+([\d,]+)\s+(?:entries|results)""", RegexOption.IGNORE_CASE),
-        Regex("""([\d,]+)\s+(?:entries|results)\s+matching\s+filters""", RegexOption.IGNORE_CASE),
-        Regex("""正在显示第\s*\d+\s*-\s*\d+\s*项，共\s*([\d,]+)\s*项(?:条目|结果)"""),
-        Regex("""共\s*([\d,]+)\s*项(?:条目|结果)"""),
-    )
-    private val emptyStateRegexes = listOf(
-        Regex("""\b0\s+(?:entries|results)\s+matching\s+filters\b""", RegexOption.IGNORE_CASE),
-        Regex("""no\s+(?:items|entries|results)\s+matching""", RegexOption.IGNORE_CASE),
-        Regex("""没有[^。]*匹配"""),
-        Regex("""没有可显示的创意工坊条目"""),
-    )
+    private val workshopHoverRegex =
+        Regex(
+            """SharedFileBindMouseHover\(\s*"sharedfile_(\d+)"\s*,\s*false\s*,\s*(\{.*?\})\s*\);""",
+            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
+        )
+    private val totalCountRegexes =
+        listOf(
+            Regex(
+                """Showing\s+\d+\s*(?:-|to)\s*\d+\s+of\s+([\d,]+)\s+(?:entries|results)""",
+                RegexOption.IGNORE_CASE,
+            ),
+            Regex(
+                """([\d,]+)\s+(?:entries|results)\s+matching\s+filters""",
+                RegexOption.IGNORE_CASE,
+            ),
+            Regex("""正在显示第\s*\d+\s*-\s*\d+\s*项，共\s*([\d,]+)\s*项(?:条目|结果)"""),
+            Regex("""共\s*([\d,]+)\s*项(?:条目|结果)"""),
+        )
+    private val emptyStateRegexes =
+        listOf(
+            Regex("""\b0\s+(?:entries|results)\s+matching\s+filters\b""", RegexOption.IGNORE_CASE),
+            Regex("""no\s+(?:items|entries|results)\s+matching""", RegexOption.IGNORE_CASE),
+            Regex("""没有[^。]*匹配"""),
+            Regex("""没有可显示的创意工坊条目"""),
+        )
     private val ssrLoaderDataRegex = Regex("""window\.SSR\.loaderData\s*=\s*(\[[\s\S]*?]);""")
-    private val ssrRenderContextRegex = Regex("""window\.SSR\.renderContext\s*=\s*JSON\.parse\("([\s\S]*?)"\);?""")
-    private val json = Json {
-        ignoreUnknownKeys = true
-    }
+    private val ssrRenderContextRegex =
+        Regex("""window\.SSR\.renderContext\s*=\s*JSON\.parse\("([\s\S]*?)"\);?""")
+    private val json = Json { ignoreUnknownKeys = true }
 
     fun parse(
         appId: Int,
@@ -93,14 +98,8 @@ internal object PublicWorkshopBrowseParser {
         baseUrl: String,
     ): PublicWorkshopBrowseSkeleton {
         val document = Jsoup.parse(html, baseUrl)
-        val ssrPayload = parseSsrBrowsePayload(
-            appId = appId,
-            query = query,
-            html = html,
-        )
-        val itemSkeletons = ssrPayload.items.ifEmpty {
-            extractItemSkeletons(document, html)
-        }
+        val ssrPayload = parseSsrBrowsePayload(appId = appId, query = query, html = html)
+        val itemSkeletons = ssrPayload.items.ifEmpty { extractItemSkeletons(document, html) }
         val totalCount = ssrPayload.totalCount ?: parseTotalCount(document, html)
         val maxPage = (ssrPayload.maxPage ?: parseMaxPage(document)).coerceAtLeast(query.page)
         val sectionOptions = parseSectionOptions(document)
@@ -108,31 +107,35 @@ internal object PublicWorkshopBrowseParser {
         val periodOptions = parsePeriodOptions(document)
         val domTagGroups = parseTagGroups(document)
         val tagGroups = ssrPayload.tagGroups.ifEmpty { domTagGroups }
-        val supportsIncompatibleFilter = ssrPayload.supportsIncompatibleFilter
-            ?: supportsIncompatibleFilter(document)
+        val supportsIncompatibleFilter =
+            ssrPayload.supportsIncompatibleFilter ?: supportsIncompatibleFilter(document)
 
         return PublicWorkshopBrowseSkeleton(
             items = itemSkeletons,
             totalCount = totalCount,
             maxPage = maxPage,
-            sectionOptions = if (sectionOptions.isEmpty()) {
-                emptyList()
-            } else {
-                ensureCurrentSection(sectionOptions, query.sectionKey)
-            },
-            sortOptions = if (sortOptions.isEmpty()) {
-                emptyList()
-            } else {
-                ensureCurrentSortOption(sortOptions, query.sortKey)
-            },
-            periodOptions = if (periodOptions.isEmpty()) {
-                emptyList()
-            } else {
-                ensureCurrentPeriodOption(periodOptions, query.periodDays)
-            },
+            sectionOptions =
+                if (sectionOptions.isEmpty()) {
+                    emptyList()
+                } else {
+                    ensureCurrentSection(sectionOptions, query.sectionKey)
+                },
+            sortOptions =
+                if (sortOptions.isEmpty()) {
+                    emptyList()
+                } else {
+                    ensureCurrentSortOption(sortOptions, query.sortKey)
+                },
+            periodOptions =
+                if (periodOptions.isEmpty()) {
+                    emptyList()
+                } else {
+                    ensureCurrentPeriodOption(periodOptions, query.periodDays)
+                },
             tagGroups = tagGroups,
             supportsIncompatibleFilter = supportsIncompatibleFilter,
-            isExplicitlyEmpty = ssrPayload.isExplicitlyEmpty || isExplicitlyEmpty(document, totalCount),
+            isExplicitlyEmpty =
+                ssrPayload.isExplicitlyEmpty || isExplicitlyEmpty(document, totalCount),
         )
     }
 
@@ -154,48 +157,54 @@ internal object PublicWorkshopBrowseParser {
         upsert(linkSkeletons)
         upsert(dataSkeletons)
 
-        val hoverIds = workshopHoverRegex.findAll(html)
-            .mapNotNull { it.groupValues.getOrNull(1)?.toLongOrNull() }
-            .filter { it > 0L }
-            .distinct()
-            .toList()
+        val hoverIds =
+            workshopHoverRegex
+                .findAll(html)
+                .mapNotNull { it.groupValues.getOrNull(1)?.toLongOrNull() }
+                .filter { it > 0L }
+                .distinct()
+                .toList()
 
-        val preferredOrder = when {
-            hoverIds.isNotEmpty() -> hoverIds
-            dataSkeletons.isNotEmpty() -> dataSkeletons.map(PublicWorkshopBrowseItemSkeleton::publishedFileId)
-            else -> linkSkeletons.map(PublicWorkshopBrowseItemSkeleton::publishedFileId)
-        }
+        val preferredOrder =
+            when {
+                hoverIds.isNotEmpty() -> hoverIds
+                dataSkeletons.isNotEmpty() ->
+                    dataSkeletons.map(PublicWorkshopBrowseItemSkeleton::publishedFileId)
+                else -> linkSkeletons.map(PublicWorkshopBrowseItemSkeleton::publishedFileId)
+            }
 
         return preferredOrder.map { publishedFileId ->
-            skeletonById[publishedFileId] ?: PublicWorkshopBrowseItemSkeleton(
-                publishedFileId = publishedFileId,
-            )
+            skeletonById[publishedFileId]
+                ?: PublicWorkshopBrowseItemSkeleton(publishedFileId = publishedFileId)
         }
     }
 
-    private fun extractLinkBasedSkeletons(document: Document): List<PublicWorkshopBrowseItemSkeleton> {
+    private fun extractLinkBasedSkeletons(
+        document: Document
+    ): List<PublicWorkshopBrowseItemSkeleton> {
         val results = LinkedHashMap<Long, PublicWorkshopBrowseItemSkeleton>()
         document.select("a[href*=\"sharedfiles/filedetails/\"]").forEach { link ->
             val href = link.absUrl("href").ifBlank { link.attr("href") }
             val publishedFileId = extractPublishedFileId(href) ?: return@forEach
-            results[publishedFileId] = mergeSkeletons(
-                results[publishedFileId],
-                buildItemSkeleton(link, publishedFileId),
-            )
+            results[publishedFileId] =
+                mergeSkeletons(results[publishedFileId], buildItemSkeleton(link, publishedFileId))
         }
         return results.values.toList()
     }
 
-    private fun extractDataAttributeSkeletons(document: Document): List<PublicWorkshopBrowseItemSkeleton> {
+    private fun extractDataAttributeSkeletons(
+        document: Document
+    ): List<PublicWorkshopBrowseItemSkeleton> {
         val results = LinkedHashMap<Long, PublicWorkshopBrowseItemSkeleton>()
         document.select("[data-publishedfileid]").forEach { element ->
-            val publishedFileId = element.attr("data-publishedfileid").toLongOrNull()
-                ?.takeIf { it > 0L }
-                ?: return@forEach
-            results[publishedFileId] = mergeSkeletons(
-                results[publishedFileId],
-                buildItemSkeleton(element, publishedFileId),
-            )
+            val publishedFileId =
+                element.attr("data-publishedfileid").toLongOrNull()?.takeIf { it > 0L }
+                    ?: return@forEach
+            results[publishedFileId] =
+                mergeSkeletons(
+                    results[publishedFileId],
+                    buildItemSkeleton(element, publishedFileId),
+                )
         }
         return results.values.toList()
     }
@@ -205,32 +214,40 @@ internal object PublicWorkshopBrowseParser {
         publishedFileId: Long,
     ): PublicWorkshopBrowseItemSkeleton {
         val contexts = buildContextChain(element)
-        val title = firstMeaningfulText(
-            contexts.asSequence().mapNotNull { context ->
-                context.selectFirst(
-                    ".workshopItemTitle, [class*=workshopItemTitle], [class*=ItemTitle], [data-panel*=title]",
-                )?.text()
-            },
-            contexts.asSequence().map { it.attr("title") },
-            sequenceOf(element.text()),
-            contexts.asSequence().mapNotNull { context ->
-                context.selectFirst("img[alt]")?.attr("alt")
-            },
-        )
-        val previewUrl = firstMeaningfulUrl(
-            contexts.asSequence().mapNotNull { context ->
-                context.selectFirst("img.workshopItemPreviewImage[src], img[src]")?.let { image ->
-                    image.absUrl("src").ifBlank { image.attr("src") }
+        val title =
+            firstMeaningfulText(
+                contexts.asSequence().mapNotNull { context ->
+                    context
+                        .selectFirst(
+                            ".workshopItemTitle, [class*=workshopItemTitle], [class*=ItemTitle], [data-panel*=title]"
+                        )
+                        ?.text()
+                },
+                contexts.asSequence().map { it.attr("title") },
+                sequenceOf(element.text()),
+                contexts.asSequence().mapNotNull { context ->
+                    context.selectFirst("img[alt]")?.attr("alt")
+                },
+            )
+        val previewUrl =
+            firstMeaningfulUrl(
+                contexts.asSequence().mapNotNull { context ->
+                    context.selectFirst("img.workshopItemPreviewImage[src], img[src]")?.let { image
+                        ->
+                        image.absUrl("src").ifBlank { image.attr("src") }
+                    }
                 }
-            },
-        )
-        val authorName = firstMeaningfulAuthor(
-            contexts.asSequence().mapNotNull { context ->
-                context.selectFirst(
-                    ".workshopItemAuthorName, [class*=AuthorName], [class*=author] a, [class*=author]",
-                )?.text()
-            },
-        )
+            )
+        val authorName =
+            firstMeaningfulAuthor(
+                contexts.asSequence().mapNotNull { context ->
+                    context
+                        .selectFirst(
+                            ".workshopItemAuthorName, [class*=AuthorName], [class*=author] a, [class*=author]"
+                        )
+                        ?.text()
+                }
+            )
 
         return PublicWorkshopBrowseItemSkeleton(
             publishedFileId = publishedFileId,
@@ -242,7 +259,8 @@ internal object PublicWorkshopBrowseParser {
 
     private fun parseSectionOptions(document: Document): List<WorkshopBrowseSectionOption> {
         val sectionRoot = findSectionRoot(document) ?: return emptyList()
-        return sectionRoot.select("a[href]")
+        return sectionRoot
+            .select("a[href]")
             .mapNotNull { link ->
                 val candidate = link.toLinkCandidate() ?: return@mapNotNull null
                 val httpUrl = candidate.href.toHttpUrlOrNull() ?: return@mapNotNull null
@@ -251,35 +269,40 @@ internal object PublicWorkshopBrowseParser {
                 if (sectionKey.isBlank()) return@mapNotNull null
                 val label = candidate.label.ifBlank { sectionLabel(sectionKey) }
                 if (label.isBlank() || label.all(Char::isDigit)) return@mapNotNull null
-                WorkshopBrowseSectionOption(
-                    key = sectionKey,
-                    label = label,
-                )
+                WorkshopBrowseSectionOption(key = sectionKey, label = label)
             }
             .distinctBy(WorkshopBrowseSectionOption::key)
     }
 
     private fun parseSortOptions(document: Document): List<WorkshopBrowseSortOption> {
-        val links = findSortingDropdownLinks(document) { link -> extractSortKey(link.href) } ?: return emptyList()
-        return links.mapNotNull { link ->
-            val sortKey = extractSortKey(link.href) ?: return@mapNotNull null
-            WorkshopBrowseSortOption(
-                key = sortKey,
-                label = link.label.ifBlank { sortLabel(sortKey) },
-                supportsPeriod = sortKey == WorkshopBrowseQuery.SORT_TREND,
-            )
-        }.distinctBy(WorkshopBrowseSortOption::key)
+        val links =
+            findSortingDropdownLinks(document) { link -> extractSortKey(link.href) }
+                ?: return emptyList()
+        return links
+            .mapNotNull { link ->
+                val sortKey = extractSortKey(link.href) ?: return@mapNotNull null
+                WorkshopBrowseSortOption(
+                    key = sortKey,
+                    label = link.label.ifBlank { sortLabel(sortKey) },
+                    supportsPeriod = sortKey == WorkshopBrowseQuery.SORT_TREND,
+                )
+            }
+            .distinctBy(WorkshopBrowseSortOption::key)
     }
 
     private fun parsePeriodOptions(document: Document): List<WorkshopBrowsePeriodOption> {
-        val links = findSortingDropdownLinks(document) { link -> extractPeriodDays(link.href) } ?: return emptyList()
-        return links.mapNotNull { link ->
-            val days = extractPeriodDays(link.href) ?: return@mapNotNull null
-            WorkshopBrowsePeriodOption(
-                days = days,
-                label = link.label.ifBlank { periodLabel(days) },
-            )
-        }.distinctBy(WorkshopBrowsePeriodOption::days)
+        val links =
+            findSortingDropdownLinks(document) { link -> extractPeriodDays(link.href) }
+                ?: return emptyList()
+        return links
+            .mapNotNull { link ->
+                val days = extractPeriodDays(link.href) ?: return@mapNotNull null
+                WorkshopBrowsePeriodOption(
+                    days = days,
+                    label = link.label.ifBlank { periodLabel(days) },
+                )
+            }
+            .distinctBy(WorkshopBrowsePeriodOption::days)
     }
 
     private fun parseTagGroups(document: Document): List<WorkshopBrowseTagGroup> {
@@ -293,82 +316,87 @@ internal object PublicWorkshopBrowseParser {
         fun flushCurrentGroup() {
             val label = currentLabel?.takeIf(String::isNotBlank) ?: return
             if (currentTags.isEmpty()) return
-            groups += WorkshopBrowseTagGroup(
-                label = label,
-                tags = currentTags.toList(),
-                selectionMode = currentMode,
-            )
+            groups +=
+                WorkshopBrowseTagGroup(
+                    label = label,
+                    tags = currentTags.toList(),
+                    selectionMode = currentMode,
+                )
             currentLabel = null
             currentMode = WorkshopBrowseTagGroupSelectionMode.IncludeExclude
             currentTags = mutableListOf()
         }
 
-        filterRoot.select(
-            ".tag_category_desc, [class*=tag_category_desc], [class*=tagCategory], " +
-                "[class*=SidebarSectionTitle], [class*=SectionTitle], h3, h4, h5, " +
-                "select.selectTagsFilter, select[class*=TagsFilter], " +
-                ".filterOption, [class*=filterOption], " +
-                "input.inputTagsFilter[name=\"requiredtags[]\"][value], input[name=\"requiredtags[]\"][value], " +
-                "a[href*=\"requiredtags\"]",
-        ).forEach { element ->
-            when {
-                isTagHeadingElement(element) -> {
-                    flushCurrentGroup()
-                    currentLabel = normalizeWhitespace(element.text())
-                }
+        filterRoot
+            .select(
+                ".tag_category_desc, [class*=tag_category_desc], [class*=tagCategory], " +
+                    "[class*=SidebarSectionTitle], [class*=SectionTitle], h3, h4, h5, " +
+                    "select.selectTagsFilter, select[class*=TagsFilter], " +
+                    ".filterOption, [class*=filterOption], " +
+                    "input.inputTagsFilter[name=\"requiredtags[]\"][value], input[name=\"requiredtags[]\"][value], " +
+                    "a[href*=\"requiredtags\"]"
+            )
+            .forEach { element ->
+                when {
+                    isTagHeadingElement(element) -> {
+                        flushCurrentGroup()
+                        currentLabel = normalizeWhitespace(element.text())
+                    }
 
-                element.tagName().equals("select", ignoreCase = true) &&
-                    element.classNames().any { className ->
-                        className.contains("selectTagsFilter", ignoreCase = true) ||
-                            className.contains("TagsFilter", ignoreCase = true)
-                    } -> {
-                    val label = currentLabel?.takeIf(String::isNotBlank) ?: defaultTagGroupLabel()
-                    val options = element.select("option[value]")
-                        .mapNotNull { option ->
-                            val value = option.attr("value").trim()
-                            if (value.isBlank() || value == "-1") {
-                                null
-                            } else {
-                                WorkshopBrowseTagOption(
-                                    value = value,
-                                    label = option.text().trim(),
-                                )
+                    element.tagName().equals("select", ignoreCase = true) &&
+                        element.classNames().any { className ->
+                            className.contains("selectTagsFilter", ignoreCase = true) ||
+                                className.contains("TagsFilter", ignoreCase = true)
+                        } -> {
+                        val label =
+                            currentLabel?.takeIf(String::isNotBlank) ?: defaultTagGroupLabel()
+                        val options =
+                            element.select("option[value]").mapNotNull { option ->
+                                val value = option.attr("value").trim()
+                                if (value.isBlank() || value == "-1") {
+                                    null
+                                } else {
+                                    WorkshopBrowseTagOption(
+                                        value = value,
+                                        label = option.text().trim(),
+                                    )
+                                }
                             }
+                        if (options.isNotEmpty()) {
+                            groups +=
+                                WorkshopBrowseTagGroup(
+                                    label = label,
+                                    tags = options,
+                                    selectionMode = WorkshopBrowseTagGroupSelectionMode.SingleSelect,
+                                )
                         }
-                    if (options.isNotEmpty()) {
-                        groups += WorkshopBrowseTagGroup(
-                            label = label,
-                            tags = options,
-                            selectionMode = WorkshopBrowseTagGroupSelectionMode.SingleSelect,
-                        )
+                        currentLabel = null
                     }
-                    currentLabel = null
-                }
 
-                isFilterOptionElement(element) -> {
-                    val tagOption = parseTagOptionFromElement(element) ?: return@forEach
-                    if (currentLabel.isNullOrBlank()) {
-                        currentLabel = defaultTagGroupLabel()
+                    isFilterOptionElement(element) -> {
+                        val tagOption = parseTagOptionFromElement(element) ?: return@forEach
+                        if (currentLabel.isNullOrBlank()) {
+                            currentLabel = defaultTagGroupLabel()
+                        }
+                        currentMode = WorkshopBrowseTagGroupSelectionMode.IncludeExclude
+                        if (currentTags.none { tag -> tag.value == tagOption.value }) {
+                            currentTags += tagOption
+                        }
                     }
-                    currentMode = WorkshopBrowseTagGroupSelectionMode.IncludeExclude
-                    if (currentTags.none { tag -> tag.value == tagOption.value }) {
-                        currentTags += tagOption
-                    }
-                }
 
-                element.tagName().equals("a", ignoreCase = true) -> {
-                    if (element.parents().any(::isFilterOptionElement)) return@forEach
-                    val tagOption = parseTagOptionFromElement(element) ?: return@forEach
-                    if (currentLabel.isNullOrBlank()) {
-                        currentLabel = defaultTagGroupLabel()
-                    }
-                    currentMode = WorkshopBrowseTagGroupSelectionMode.IncludeExclude
-                    if (currentTags.none { tag -> tag.value == tagOption.value }) {
-                        currentTags += tagOption
+                    element.tagName().equals("a", ignoreCase = true) -> {
+                        if (element.parents().any(::isFilterOptionElement)) return@forEach
+                        val tagOption = parseTagOptionFromElement(element) ?: return@forEach
+                        if (currentLabel.isNullOrBlank()) {
+                            currentLabel = defaultTagGroupLabel()
+                        }
+                        currentMode = WorkshopBrowseTagGroupSelectionMode.IncludeExclude
+                        if (currentTags.none { tag -> tag.value == tagOption.value }) {
+                            currentTags += tagOption
+                        }
                     }
                 }
             }
-        }
 
         flushCurrentGroup()
         return groups
@@ -380,11 +408,7 @@ internal object PublicWorkshopBrowseParser {
         html: String,
     ): SsrBrowsePayload {
         val loaderDataObjects = parseSsrLoaderDataObjects(html)
-        val browseState = parseSsrBrowseState(
-            appId = appId,
-            query = query,
-            html = html,
-        )
+        val browseState = parseSsrBrowseState(appId = appId, query = query, html = html)
         return SsrBrowsePayload(
             items = browseState?.items.orEmpty(),
             totalCount = browseState?.totalCount,
@@ -396,13 +420,11 @@ internal object PublicWorkshopBrowseParser {
     }
 
     private fun parseSsrLoaderDataObjects(html: String): List<JsonObject> {
-        val rawLoaderData = ssrLoaderDataRegex.find(html)
-            ?.groupValues
-            ?.getOrNull(1)
-            ?: return emptyList()
-        val loaderData = runCatching {
-            json.parseToJsonElement(rawLoaderData).jsonArray
-        }.getOrNull() ?: return emptyList()
+        val rawLoaderData =
+            ssrLoaderDataRegex.find(html)?.groupValues?.getOrNull(1) ?: return emptyList()
+        val loaderData =
+            runCatching { json.parseToJsonElement(rawLoaderData).jsonArray }.getOrNull()
+                ?: return emptyList()
         return loaderData.mapNotNull { element ->
             when (element) {
                 is JsonObject -> element
@@ -410,9 +432,8 @@ internal object PublicWorkshopBrowseParser {
                     if (!element.isString) {
                         null
                     } else {
-                        runCatching {
-                            json.parseToJsonElement(element.content).jsonObject
-                        }.getOrNull()
+                        runCatching { json.parseToJsonElement(element.content).jsonObject }
+                            .getOrNull()
                     }
                 }
 
@@ -427,55 +448,64 @@ internal object PublicWorkshopBrowseParser {
         html: String,
     ): SsrBrowseState? {
         val renderContext = parseSsrRenderContext(html) ?: return null
-        val queryData = renderContext.stringOrNull("queryData")
-            ?.let(::parseJsonObject)
-            ?: return null
-        val queries = queryData.jsonArrayOrNull("queries")
-            ?.mapNotNull { element -> element.asJsonObjectOrNull() }
-            .orEmpty()
+        val queryData =
+            renderContext.stringOrNull("queryData")?.let(::parseJsonObject) ?: return null
+        val queries =
+            queryData
+                .jsonArrayOrNull("queries")
+                ?.mapNotNull { element -> element.asJsonObjectOrNull() }
+                .orEmpty()
         if (queries.isEmpty()) return null
 
-        val creatorNames = queries.asSequence()
-            .filter { entry -> entry.queryKeyName() == "PlayerLinkDetails" }
-            .mapNotNull { entry ->
-                val queryKey = entry.jsonArrayOrNull("queryKey") ?: return@mapNotNull null
-                val steamId = queryKey.getOrNull(1)?.asJsonPrimitiveOrNull()?.contentOrNull
-                    ?.takeIf(String::isNotBlank)
-                    ?: return@mapNotNull null
-                val personaName = entry.jsonObjectOrNull("state")
-                    ?.jsonObjectOrNull("data")
-                    ?.jsonObjectOrNull("public_data")
-                    ?.stringOrNull("persona_name")
-                    ?.takeIf(String::isNotBlank)
-                    ?: return@mapNotNull null
-                steamId to personaName
-            }
-            .toMap()
+        val creatorNames =
+            queries
+                .asSequence()
+                .filter { entry -> entry.queryKeyName() == "PlayerLinkDetails" }
+                .mapNotNull { entry ->
+                    val queryKey = entry.jsonArrayOrNull("queryKey") ?: return@mapNotNull null
+                    val steamId =
+                        queryKey
+                            .getOrNull(1)
+                            ?.asJsonPrimitiveOrNull()
+                            ?.contentOrNull
+                            ?.takeIf(String::isNotBlank) ?: return@mapNotNull null
+                    val personaName =
+                        entry
+                            .jsonObjectOrNull("state")
+                            ?.jsonObjectOrNull("data")
+                            ?.jsonObjectOrNull("public_data")
+                            ?.stringOrNull("persona_name")
+                            ?.takeIf(String::isNotBlank) ?: return@mapNotNull null
+                    steamId to personaName
+                }
+                .toMap()
 
-        val browseEntry = queries.firstOrNull { entry ->
-            entry.queryKeyName() == "workshop_browse" && entry.matchesWorkshopBrowseQuery(appId, query)
-        } ?: queries.firstOrNull { entry ->
-            entry.queryKeyName() == "workshop_browse"
-        } ?: return null
-
-        val data = browseEntry.jsonObjectOrNull("state")
-            ?.jsonObjectOrNull("data")
-            ?: return null
-        val items = data.jsonArrayOrNull("results")
-            ?.mapNotNull { result ->
-                val resultObject = result.asJsonObjectOrNull() ?: return@mapNotNull null
-                val publishedFileId = resultObject.stringOrNull("publishedfileid")
-                    ?.toLongOrNull()
-                    ?: return@mapNotNull null
-                val creatorId = resultObject.stringOrNull("creator").orEmpty()
-                PublicWorkshopBrowseItemSkeleton(
-                    publishedFileId = publishedFileId,
-                    title = resultObject.stringOrNull("title").orEmpty(),
-                    previewUrl = resultObject.stringOrNull("preview_url"),
-                    authorName = creatorNames[creatorId].orEmpty(),
-                )
+        val browseEntry =
+            queries.firstOrNull { entry ->
+                entry.queryKeyName() == "workshop_browse" &&
+                    entry.matchesWorkshopBrowseQuery(appId, query)
             }
-            .orEmpty()
+                ?: queries.firstOrNull { entry -> entry.queryKeyName() == "workshop_browse" }
+                ?: return null
+
+        val data = browseEntry.jsonObjectOrNull("state")?.jsonObjectOrNull("data") ?: return null
+        val items =
+            data
+                .jsonArrayOrNull("results")
+                ?.mapNotNull { result ->
+                    val resultObject = result.asJsonObjectOrNull() ?: return@mapNotNull null
+                    val publishedFileId =
+                        resultObject.stringOrNull("publishedfileid")?.toLongOrNull()
+                            ?: return@mapNotNull null
+                    val creatorId = resultObject.stringOrNull("creator").orEmpty()
+                    PublicWorkshopBrowseItemSkeleton(
+                        publishedFileId = publishedFileId,
+                        title = resultObject.stringOrNull("title").orEmpty(),
+                        previewUrl = resultObject.stringOrNull("preview_url"),
+                        authorName = creatorNames[creatorId].orEmpty(),
+                    )
+                }
+                .orEmpty()
 
         val totalCount = data.intOrNull("total_count")
         val maxPage = data.intOrNull("total_pages")
@@ -489,10 +519,8 @@ internal object PublicWorkshopBrowseParser {
     }
 
     private fun parseSsrRenderContext(html: String): JsonObject? {
-        val rawRenderContext = ssrRenderContextRegex.find(html)
-            ?.groupValues
-            ?.getOrNull(1)
-            ?: return null
+        val rawRenderContext =
+            ssrRenderContextRegex.find(html)?.groupValues?.getOrNull(1) ?: return null
         val decodedRenderContext = decodeJsonStringLiteral(rawRenderContext) ?: return null
         return parseJsonObject(decodedRenderContext)
     }
@@ -501,119 +529,125 @@ internal object PublicWorkshopBrowseParser {
         loaderDataObjects: List<JsonObject>,
         sectionKey: String,
     ): List<WorkshopBrowseTagGroup> {
-        val declaredTags = loaderDataObjects.asSequence()
-            .mapNotNull { it.jsonObjectOrNull("declaredTags") }
-            .firstOrNull()
-            ?: return emptyList()
-        val groups = workshopSectionTagKeys(sectionKey).asSequence()
-            .mapNotNull { key ->
-                declaredTags.jsonArrayOrNull(key)?.takeIf(JsonArray::isNotEmpty)
-            }
-            .firstOrNull()
-            ?: declaredTags.entries.asSequence()
-                .filter { (key, _) -> key.endsWith("_tags") && key != "visible_admin_tags" }
-                .mapNotNull { (_, value) ->
-                    value.asJsonArrayOrNull()?.takeIf(JsonArray::isNotEmpty)
+        val declaredTags =
+            loaderDataObjects
+                .asSequence()
+                .mapNotNull { it.jsonObjectOrNull("declaredTags") }
+                .firstOrNull() ?: return emptyList()
+        val groups =
+            workshopSectionTagKeys(sectionKey)
+                .asSequence()
+                .mapNotNull { key ->
+                    declaredTags.jsonArrayOrNull(key)?.takeIf(JsonArray::isNotEmpty)
                 }
                 .firstOrNull()
-            ?: return emptyList()
+                ?: declaredTags.entries
+                    .asSequence()
+                    .filter { (key, _) -> key.endsWith("_tags") && key != "visible_admin_tags" }
+                    .mapNotNull { (_, value) ->
+                        value.asJsonArrayOrNull()?.takeIf(JsonArray::isNotEmpty)
+                    }
+                    .firstOrNull()
+                ?: return emptyList()
 
         return groups.mapNotNull { group ->
             val groupObject = group.asJsonObjectOrNull() ?: return@mapNotNull null
-            val tags = groupObject.jsonArrayOrNull("tags")
-                ?.mapNotNull { tag ->
-                    val tagObject = tag.asJsonObjectOrNull() ?: return@mapNotNull null
-                    if (tagObject.booleanOrNull("admin_only") == true) {
-                        return@mapNotNull null
+            val tags =
+                groupObject
+                    .jsonArrayOrNull("tags")
+                    ?.mapNotNull { tag ->
+                        val tagObject = tag.asJsonObjectOrNull() ?: return@mapNotNull null
+                        if (tagObject.booleanOrNull("admin_only") == true) {
+                            return@mapNotNull null
+                        }
+                        val value = normalizeWhitespace(tagObject.stringOrNull("name"))
+                        if (value.isBlank()) {
+                            return@mapNotNull null
+                        }
+                        WorkshopBrowseTagOption(
+                            value = value,
+                            label =
+                                normalizeWhitespace(tagObject.stringOrNull("display_name"))
+                                    .ifBlank { value },
+                        )
                     }
-                    val value = normalizeWhitespace(tagObject.stringOrNull("name"))
-                    if (value.isBlank()) {
-                        return@mapNotNull null
-                    }
-                    WorkshopBrowseTagOption(
-                        value = value,
-                        label = normalizeWhitespace(tagObject.stringOrNull("display_name")).ifBlank { value },
-                    )
-                }
-                ?.distinctBy(WorkshopBrowseTagOption::value)
-                .orEmpty()
+                    ?.distinctBy(WorkshopBrowseTagOption::value)
+                    .orEmpty()
             if (tags.isEmpty()) {
                 return@mapNotNull null
             }
-            val label = normalizeWhitespace(groupObject.stringOrNull("name"))
-                .ifBlank { defaultTagGroupLabel() }
-            val selectionMode = when {
-                groupObject.stringOrNull("htmlelement")
-                    ?.contains("select", ignoreCase = true) == true -> {
-                    WorkshopBrowseTagGroupSelectionMode.SingleSelect
+            val label =
+                normalizeWhitespace(groupObject.stringOrNull("name")).ifBlank {
+                    defaultTagGroupLabel()
                 }
+            val selectionMode =
+                when {
+                    groupObject
+                        .stringOrNull("htmlelement")
+                        ?.contains("select", ignoreCase = true) == true -> {
+                        WorkshopBrowseTagGroupSelectionMode.SingleSelect
+                    }
 
-                groupObject.stringOrNull("htmlelement")
-                    ?.contains("dropdown", ignoreCase = true) == true -> {
-                    WorkshopBrowseTagGroupSelectionMode.SingleSelect
+                    groupObject
+                        .stringOrNull("htmlelement")
+                        ?.contains("dropdown", ignoreCase = true) == true -> {
+                        WorkshopBrowseTagGroupSelectionMode.SingleSelect
+                    }
+
+                    else -> WorkshopBrowseTagGroupSelectionMode.IncludeExclude
                 }
-
-                else -> WorkshopBrowseTagGroupSelectionMode.IncludeExclude
-            }
-            WorkshopBrowseTagGroup(
-                label = label,
-                tags = tags,
-                selectionMode = selectionMode,
-            )
+            WorkshopBrowseTagGroup(label = label, tags = tags, selectionMode = selectionMode)
         }
     }
 
     private fun parseSsrSupportsIncompatibleFilter(loaderDataObjects: List<JsonObject>): Boolean? {
-        return loaderDataObjects.any { objectNode ->
-            objectNode.jsonObjectOrNull("workshopNumbers")?.containsKey("total_incompatible") == true
-        }.takeIf { it }
+        return loaderDataObjects
+            .any { objectNode ->
+                objectNode.jsonObjectOrNull("workshopNumbers")?.containsKey("total_incompatible") ==
+                    true
+            }
+            .takeIf { it }
     }
 
     private fun workshopSectionTagKeys(sectionKey: String): List<String> {
         val normalizedSectionKey = sectionKey.trim().lowercase(Locale.US)
         return buildList {
-            when {
-                normalizedSectionKey.contains("collection") -> add("collection_tags")
-                normalizedSectionKey.contains("merch") -> add("merch_tags")
-                normalizedSectionKey.contains("mtx") -> add("mtx_tags")
-                else -> add("readytouse_tags")
-            }
-
-            if (normalizedSectionKey.isNotBlank()) {
-                add("${normalizedSectionKey}_tags")
-                if (normalizedSectionKey.endsWith("items")) {
-                    add("${normalizedSectionKey.removeSuffix("items")}_tags")
+                when {
+                    normalizedSectionKey.contains("collection") -> add("collection_tags")
+                    normalizedSectionKey.contains("merch") -> add("merch_tags")
+                    normalizedSectionKey.contains("mtx") -> add("mtx_tags")
+                    else -> add("readytouse_tags")
                 }
-            }
 
-            add("readytouse_tags")
-            add("collection_tags")
-            add("mtx_tags")
-            add("merch_tags")
-        }.distinct()
+                if (normalizedSectionKey.isNotBlank()) {
+                    add("${normalizedSectionKey}_tags")
+                    if (normalizedSectionKey.endsWith("items")) {
+                        add("${normalizedSectionKey.removeSuffix("items")}_tags")
+                    }
+                }
+
+                add("readytouse_tags")
+                add("collection_tags")
+                add("mtx_tags")
+                add("merch_tags")
+            }
+            .distinct()
     }
 
     private fun parseJsonObject(value: String): JsonObject? {
-        return runCatching {
-            json.parseToJsonElement(value).jsonObject
-        }.getOrNull()
+        return runCatching { json.parseToJsonElement(value).jsonObject }.getOrNull()
     }
 
     private fun decodeJsonStringLiteral(value: String): String? {
-        val normalizedValue = value
-            .replace("\r", "\\r")
-            .replace("\n", "\\n")
-        return runCatching {
-            json.parseToJsonElement("\"$normalizedValue\"").jsonPrimitive.content
-        }.getOrNull()
+        val normalizedValue = value.replace("\r", "\\r").replace("\n", "\\n")
+        return runCatching { json.parseToJsonElement("\"$normalizedValue\"").jsonPrimitive.content }
+            .getOrNull()
     }
 
-    private fun parseTotalCount(
-        document: Document,
-        html: String,
-    ): Int? {
+    private fun parseTotalCount(document: Document, html: String): Int? {
         val visibleText = document.text()
-        return totalCountRegexes.asSequence()
+        return totalCountRegexes
+            .asSequence()
             .mapNotNull { regex ->
                 regex.find(visibleText)?.groupValues?.getOrNull(1)
                     ?: regex.find(html)?.groupValues?.getOrNull(1)
@@ -623,29 +657,29 @@ internal object PublicWorkshopBrowseParser {
     }
 
     private fun parseMaxPage(document: Document): Int {
-        return document.select("a[href]")
+        return document
+            .select("a[href]")
             .mapNotNull { link ->
-                val httpUrl = link.absUrl("href").ifBlank { link.attr("href") }.toHttpUrlOrNull()
-                    ?: return@mapNotNull null
+                val httpUrl =
+                    link.absUrl("href").ifBlank { link.attr("href") }.toHttpUrlOrNull()
+                        ?: return@mapNotNull null
                 if (!httpUrl.encodedPath.contains("/workshop/browse")) return@mapNotNull null
                 httpUrl.queryParameter("p")?.toIntOrNull()
             }
-            .maxOrNull()
-            ?: 1
+            .maxOrNull() ?: 1
     }
 
     private fun supportsIncompatibleFilter(document: Document): Boolean {
-        return document.select(
-            "#incompatibleCheckbox, input[name=\"requiredflags[]\"][value=\"incompatible\"], " +
-                "a[href*=\"requiredflags%5B%5D=incompatible\"], a[href*=\"requiredflags[]=incompatible\"], " +
-                "[class*=incompatibleCheckbox]",
-        ).isNotEmpty() || document.text().contains("Show incompatible items", ignoreCase = true)
+        return document
+            .select(
+                "#incompatibleCheckbox, input[name=\"requiredflags[]\"][value=\"incompatible\"], " +
+                    "a[href*=\"requiredflags%5B%5D=incompatible\"], a[href*=\"requiredflags[]=incompatible\"], " +
+                    "[class*=incompatibleCheckbox]"
+            )
+            .isNotEmpty() || document.text().contains("Show incompatible items", ignoreCase = true)
     }
 
-    private fun isExplicitlyEmpty(
-        document: Document,
-        totalCount: Int?,
-    ): Boolean {
+    private fun isExplicitlyEmpty(document: Document, totalCount: Int?): Boolean {
         if (totalCount == 0) return true
         val text = document.text()
         return emptyStateRegexes.any { regex -> regex.containsMatchIn(text) }
@@ -689,7 +723,7 @@ internal object PublicWorkshopBrowseParser {
                 key = currentSortKey,
                 label = sortLabel(currentSortKey),
                 supportsPeriod = currentSortKey == WorkshopBrowseQuery.SORT_TREND,
-            ),
+            )
         ) + options
     }
 
@@ -704,7 +738,7 @@ internal object PublicWorkshopBrowseParser {
             WorkshopBrowsePeriodOption(
                 days = currentPeriodDays,
                 label = periodLabel(currentPeriodDays),
-            ),
+            )
         ) + options
     }
 
@@ -734,19 +768,19 @@ internal object PublicWorkshopBrowseParser {
     }
 
     private fun findSectionRoot(document: Document): Element? {
-        val candidateRoots = document.select(
-            "div.rightDetailsBlock, div[class*=rightDetailsBlock], div[class*=rightDetails], " +
-                "div[class*=BrowseSidebar], div[class*=browseSidebar], aside",
-        )
-        return candidateRoots.maxByOrNull { root ->
-            sectionKeys(root).size
-        }?.takeIf { root ->
-            sectionKeys(root).size >= 2
-        }
+        val candidateRoots =
+            document.select(
+                "div.rightDetailsBlock, div[class*=rightDetailsBlock], div[class*=rightDetails], " +
+                    "div[class*=BrowseSidebar], div[class*=browseSidebar], aside"
+            )
+        return candidateRoots
+            .maxByOrNull { root -> sectionKeys(root).size }
+            ?.takeIf { root -> sectionKeys(root).size >= 2 }
     }
 
     private fun sectionKeys(root: Element): Set<String> {
-        return root.select("a[href]")
+        return root
+            .select("a[href]")
             .mapNotNull { link ->
                 val href = link.absUrl("href").ifBlank { link.attr("href") }
                 val httpUrl = href.toHttpUrlOrNull() ?: return@mapNotNull null
@@ -757,23 +791,30 @@ internal object PublicWorkshopBrowseParser {
     }
 
     private fun findTagFilterRoot(document: Document): Element? {
-        val candidateRoots = document.select(
-            "div.rightDetailsBlock, div[class*=rightDetailsBlock], div[class*=rightDetails], " +
-                "div[class*=BrowseSidebar], div[class*=browseSidebar], aside",
-        )
-        return candidateRoots.maxByOrNull { root ->
-            root.select(
-                "input[name=\"requiredtags[]\"][value], select.selectTagsFilter, select[class*=TagsFilter], " +
-                    "a[href*=\"requiredtags\"], input[name=\"requiredflags[]\"][value=\"incompatible\"], " +
-                    "#incompatibleCheckbox",
-            ).size
-        }?.takeIf { root ->
-            root.select(
-                "input[name=\"requiredtags[]\"][value], select.selectTagsFilter, select[class*=TagsFilter], " +
-                    "a[href*=\"requiredtags\"], input[name=\"requiredflags[]\"][value=\"incompatible\"], " +
-                    "#incompatibleCheckbox",
-            ).isNotEmpty()
-        }
+        val candidateRoots =
+            document.select(
+                "div.rightDetailsBlock, div[class*=rightDetailsBlock], div[class*=rightDetails], " +
+                    "div[class*=BrowseSidebar], div[class*=browseSidebar], aside"
+            )
+        return candidateRoots
+            .maxByOrNull { root ->
+                root
+                    .select(
+                        "input[name=\"requiredtags[]\"][value], select.selectTagsFilter, select[class*=TagsFilter], " +
+                            "a[href*=\"requiredtags\"], input[name=\"requiredflags[]\"][value=\"incompatible\"], " +
+                            "#incompatibleCheckbox"
+                    )
+                    .size
+            }
+            ?.takeIf { root ->
+                root
+                    .select(
+                        "input[name=\"requiredtags[]\"][value], select.selectTagsFilter, select[class*=TagsFilter], " +
+                            "a[href*=\"requiredtags\"], input[name=\"requiredflags[]\"][value=\"incompatible\"], " +
+                            "#incompatibleCheckbox"
+                    )
+                    .isNotEmpty()
+            }
     }
 
     private fun <T> findSortingDropdownLinks(
@@ -781,37 +822,33 @@ internal object PublicWorkshopBrowseParser {
         valueExtractor: (LinkCandidate) -> T?,
     ): List<LinkCandidate>? {
         return parseSortingDropdownGroups(document)
-            .map { group ->
-                group to group.mapNotNull(valueExtractor).distinct()
-            }
+            .map { group -> group to group.mapNotNull(valueExtractor).distinct() }
             .maxByOrNull { (_, values) -> values.size }
             ?.takeIf { (_, values) -> values.size >= 2 }
             ?.first
     }
 
     private fun parseSortingDropdownGroups(document: Document): List<List<LinkCandidate>> {
-        val controlRoot = document.select(
-            "div.workshopBrowseSortingControls, div[class*=workshopBrowseSortingControls], div[class*=BrowseSortingControls]",
-        ).maxByOrNull { root ->
-            root.select("[data-dropdown-html]").size
-        }
-        val dropdownElements = controlRoot
-            ?.select("[data-dropdown-html]")
-            ?.takeIf { it.isNotEmpty() }
-            ?: document.select("[data-dropdown-html]")
+        val controlRoot =
+            document
+                .select(
+                    "div.workshopBrowseSortingControls, div[class*=workshopBrowseSortingControls], div[class*=BrowseSortingControls]"
+                )
+                .maxByOrNull { root -> root.select("[data-dropdown-html]").size }
+        val dropdownElements =
+            controlRoot?.select("[data-dropdown-html]")?.takeIf { it.isNotEmpty() }
+                ?: document.select("[data-dropdown-html]")
 
         return dropdownElements.mapNotNull { element ->
             parseLinksFromHtml(
-                html = Parser.unescapeEntities(element.attr("data-dropdown-html"), false),
-                baseUrl = document.baseUri(),
-            ).takeIf { it.isNotEmpty() }
+                    html = Parser.unescapeEntities(element.attr("data-dropdown-html"), false),
+                    baseUrl = document.baseUri(),
+                )
+                .takeIf { it.isNotEmpty() }
         }
     }
 
-    private fun parseLinksFromHtml(
-        html: String,
-        baseUrl: String,
-    ): List<LinkCandidate> {
+    private fun parseLinksFromHtml(html: String, baseUrl: String): List<LinkCandidate> {
         if (html.isBlank()) return emptyList()
         return Jsoup.parseBodyFragment(html, baseUrl)
             .select("a[href]")
@@ -822,10 +859,7 @@ internal object PublicWorkshopBrowseParser {
     private fun Element.toLinkCandidate(): LinkCandidate? {
         val href = absUrl("href").ifBlank { attr("href") }.trim()
         if (href.isBlank()) return null
-        return LinkCandidate(
-            href = href,
-            label = normalizeWhitespace(text()),
-        )
+        return LinkCandidate(href = href, label = normalizeWhitespace(text()))
     }
 
     private fun isTagHeadingElement(element: Element): Boolean {
@@ -833,7 +867,11 @@ internal object PublicWorkshopBrowseParser {
         if (element.tagName().equals("input", ignoreCase = true)) return false
         if (element.tagName().equals("select", ignoreCase = true)) return false
         if (isFilterOptionElement(element)) return false
-        if (element.select("a[href*=\"requiredtags\"], input[name=\"requiredtags[]\"], select").isNotEmpty()) {
+        if (
+            element
+                .select("a[href*=\"requiredtags\"], input[name=\"requiredtags[]\"], select")
+                .isNotEmpty()
+        ) {
             return false
         }
         val text = normalizeWhitespace(element.text())
@@ -841,7 +879,8 @@ internal object PublicWorkshopBrowseParser {
         if (text.all(Char::isDigit)) return false
         if (text in ignoredTagHeadingLabels) return false
         if (element.hasClass("tag_category_desc")) return true
-        if (element.classNames().any { className ->
+        if (
+            element.classNames().any { className ->
                 className.contains("tag_category", ignoreCase = true) ||
                     className.contains("SectionTitle", ignoreCase = true)
             }
@@ -859,41 +898,46 @@ internal object PublicWorkshopBrowseParser {
     }
 
     private fun parseTagOptionFromElement(element: Element): WorkshopBrowseTagOption? {
-        val link = when {
-            element.tagName().equals("a", ignoreCase = true) -> element
-            else -> element.selectFirst("a[href*=\"requiredtags\"]")
-        }
+        val link =
+            when {
+                element.tagName().equals("a", ignoreCase = true) -> element
+                else -> element.selectFirst("a[href*=\"requiredtags\"]")
+            }
         if (link != null) {
             val href = link.absUrl("href").ifBlank { link.attr("href") }
             val httpUrl = href.toHttpUrlOrNull()
-            val value = httpUrl
-                ?.queryParameterValues("requiredtags[]")
-                ?.firstOrNull()
-                ?.takeIf(String::isNotBlank)
-                ?: Regex("""requiredtags(?:%5B%5D|\[\])=([^&]+)""", RegexOption.IGNORE_CASE)
-                    .find(href)
-                    ?.groupValues
-                    ?.getOrNull(1)
+            val value =
+                httpUrl
+                    ?.queryParameterValues("requiredtags[]")
+                    ?.firstOrNull()
+                    ?.takeIf(String::isNotBlank)
+                    ?: Regex("""requiredtags(?:%5B%5D|\[\])=([^&]+)""", RegexOption.IGNORE_CASE)
+                        .find(href)
+                        ?.groupValues
+                        ?.getOrNull(1)
             val label = normalizeWhitespace(link.text())
             if (!value.isNullOrBlank() && label.isNotBlank()) {
                 return WorkshopBrowseTagOption(value = value, label = label)
             }
         }
 
-        val input = when {
-            element.tagName().equals("input", ignoreCase = true) &&
-                element.attr("name") == "requiredtags[]" -> element
-            else -> element.selectFirst(
-                "input.inputTagsFilter[name=\"requiredtags[]\"][value], input[name=\"requiredtags[]\"][value]",
-            )
-        } ?: return null
+        val input =
+            when {
+                element.tagName().equals("input", ignoreCase = true) &&
+                    element.attr("name") == "requiredtags[]" -> element
+                else ->
+                    element.selectFirst(
+                        "input.inputTagsFilter[name=\"requiredtags[]\"][value], input[name=\"requiredtags[]\"][value]"
+                    )
+            } ?: return null
         val value = input.attr("value").trim()
         if (value.isBlank() || value == "-1") return null
-        val label = normalizeWhitespace(
-            input.closest("label")?.text()
-                ?: element.selectFirst("label")?.text()
-                ?: element.text(),
-        )
+        val label =
+            normalizeWhitespace(
+                input.closest("label")?.text()
+                    ?: element.selectFirst("label")?.text()
+                    ?: element.text()
+            )
         return label.takeIf(String::isNotBlank)?.let {
             WorkshopBrowseTagOption(value = value, label = it)
         }
@@ -902,10 +946,7 @@ internal object PublicWorkshopBrowseParser {
     private fun defaultTagGroupLabel(): String = "标签"
 
     private fun JsonObject.queryKeyName(): String? {
-        return jsonArrayOrNull("queryKey")
-            ?.firstOrNull()
-            ?.asJsonPrimitiveOrNull()
-            ?.contentOrNull
+        return jsonArrayOrNull("queryKey")?.firstOrNull()?.asJsonPrimitiveOrNull()?.contentOrNull
     }
 
     private fun JsonObject.matchesWorkshopBrowseQuery(
@@ -930,11 +971,13 @@ internal object PublicWorkshopBrowseParser {
 
     private fun JsonElement.asJsonPrimitiveOrNull(): JsonPrimitive? = this as? JsonPrimitive
 
-    private fun JsonObject.jsonObjectOrNull(key: String): JsonObject? = this[key]?.asJsonObjectOrNull()
+    private fun JsonObject.jsonObjectOrNull(key: String): JsonObject? =
+        this[key]?.asJsonObjectOrNull()
 
     private fun JsonObject.jsonArrayOrNull(key: String): JsonArray? = this[key]?.asJsonArrayOrNull()
 
-    private fun JsonObject.stringOrNull(key: String): String? = this[key]?.asJsonPrimitiveOrNull()?.contentOrNull
+    private fun JsonObject.stringOrNull(key: String): String? =
+        this[key]?.asJsonPrimitiveOrNull()?.contentOrNull
 
     private fun JsonObject.intOrNull(key: String): Int? = stringOrNull(key)?.toIntOrNull()
 
@@ -949,12 +992,8 @@ internal object PublicWorkshopBrowseParser {
     private fun extractSortKey(rawHref: String): String? {
         val httpUrl = rawHref.toHttpUrlOrNull() ?: return null
         if (!isWorkshopBrowseUrl(httpUrl.encodedPath)) return null
-        return httpUrl.queryParameter("browsesort")
-            ?.trim()
-            ?.ifBlank { null }
-            ?: httpUrl.queryParameter("actualsort")
-                ?.trim()
-                ?.ifBlank { null }
+        return httpUrl.queryParameter("browsesort")?.trim()?.ifBlank { null }
+            ?: httpUrl.queryParameter("actualsort")?.trim()?.ifBlank { null }
     }
 
     private fun extractPeriodDays(rawHref: String): Int? {
@@ -1000,11 +1039,12 @@ internal object PublicWorkshopBrowseParser {
 
     private fun firstMeaningfulAuthor(source: Sequence<String?>): String {
         source.forEach { candidate ->
-            val normalized = normalizeWhitespace(candidate)
-                .removePrefix("by ")
-                .removePrefix("By ")
-                .removePrefix("BY ")
-                .trim()
+            val normalized =
+                normalizeWhitespace(candidate)
+                    .removePrefix("by ")
+                    .removePrefix("By ")
+                    .removePrefix("BY ")
+                    .trim()
             if (normalized.isNotBlank() && normalized.length > 1) {
                 return normalized
             }
@@ -1013,10 +1053,7 @@ internal object PublicWorkshopBrowseParser {
     }
 
     private fun normalizeWhitespace(value: String?): String {
-        return value
-            .orEmpty()
-            .replace(Regex("\\s+"), " ")
-            .trim()
+        return value.orEmpty().replace(Regex("\\s+"), " ").trim()
     }
 
     private fun sectionLabel(sectionKey: String): String {
@@ -1052,12 +1089,13 @@ internal object PublicWorkshopBrowseParser {
         }
     }
 
-    private val ignoredTagHeadingLabels = setOf(
-        "Special Filters:",
-        "None",
-        "Filter by Date",
-        "Show items tagged with all of the selected terms:",
-        "Show items tagged with any of the selected terms:",
-        "Show incompatible items",
-    )
+    private val ignoredTagHeadingLabels =
+        setOf(
+            "Special Filters:",
+            "None",
+            "Filter by Date",
+            "Show items tagged with all of the selected terms:",
+            "Show items tagged with any of the selected terms:",
+            "Show incompatible items",
+        )
 }

@@ -16,21 +16,13 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
 
-    @Binds
-    @Singleton
-    abstract fun bindSteamRepository(
-        impl: SteamRepositoryImpl,
-    ): SteamRepository
+    @Binds @Singleton abstract fun bindSteamRepository(impl: SteamRepositoryImpl): SteamRepository
 
     @Binds
     @Singleton
-    abstract fun bindDownloadsRepository(
-        impl: DownloadsRepositoryImpl,
-    ): DownloadsRepository
+    abstract fun bindDownloadsRepository(impl: DownloadsRepositoryImpl): DownloadsRepository
 
     @Binds
     @Singleton
-    abstract fun bindTranslationRepository(
-        impl: TranslationRepositoryImpl,
-    ): TranslationRepository
+    abstract fun bindTranslationRepository(impl: TranslationRepositoryImpl): TranslationRepository
 }

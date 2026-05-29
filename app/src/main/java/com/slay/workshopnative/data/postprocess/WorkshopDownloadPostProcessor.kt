@@ -32,10 +32,7 @@ data class WorkshopDownloadPostProcessorConfig(
     val wallpaperEngineKeepConvertedTexOriginal: Boolean = true,
 )
 
-data class WorkshopDownloadPostProcessorResult(
-    val artifact: File,
-    val summary: String? = null,
-)
+data class WorkshopDownloadPostProcessorResult(val artifact: File, val summary: String? = null)
 
 interface WorkshopDownloadPostProcessor {
     val id: String
@@ -63,9 +60,10 @@ class WorkshopDownloadPostProcessorRegistry @Inject constructor() {
                 WorkshopDownloadPostProcessorSelection(
                     id = terrariaArchivePostProcessor.id,
                     displayName = terrariaArchivePostProcessor.displayName,
-                    config = WorkshopDownloadPostProcessorConfig(
-                        keepOriginal = prefs.terrariaArchiveKeepOriginal,
-                    ),
+                    config =
+                        WorkshopDownloadPostProcessorConfig(
+                            keepOriginal = prefs.terrariaArchiveKeepOriginal
+                        ),
                     processor = terrariaArchivePostProcessor,
                 )
             }
@@ -73,12 +71,14 @@ class WorkshopDownloadPostProcessorRegistry @Inject constructor() {
                 WorkshopDownloadPostProcessorSelection(
                     id = wallpaperEnginePkgExtractPostProcessor.id,
                     displayName = wallpaperEnginePkgExtractPostProcessor.displayName,
-                    config = WorkshopDownloadPostProcessorConfig(
-                        keepOriginal = prefs.wallpaperEnginePkgKeepOriginal,
-                        wallpaperEngineTexConversionEnabled = prefs.wallpaperEngineTexConversionEnabled,
-                        wallpaperEngineKeepConvertedTexOriginal =
-                            prefs.wallpaperEngineKeepConvertedTexOriginal,
-                    ),
+                    config =
+                        WorkshopDownloadPostProcessorConfig(
+                            keepOriginal = prefs.wallpaperEnginePkgKeepOriginal,
+                            wallpaperEngineTexConversionEnabled =
+                                prefs.wallpaperEngineTexConversionEnabled,
+                            wallpaperEngineKeepConvertedTexOriginal =
+                                prefs.wallpaperEngineKeepConvertedTexOriginal,
+                        ),
                     processor = wallpaperEnginePkgExtractPostProcessor,
                 )
             }
@@ -101,51 +101,52 @@ private class TerrariaArchivePostProcessor : WorkshopDownloadPostProcessor {
         outputBaseName: String,
         config: WorkshopDownloadPostProcessorConfig,
         onPhaseChanged: suspend (String?) -> Unit,
-    ): WorkshopDownloadPostProcessorResult = withContext(Dispatchers.IO) {
-        check(inputRoot.exists() && inputRoot.isDirectory) { "Terraria 压缩导出需要目录结果" }
-        val parentDir = inputRoot.parentFile ?: error("无法访问下载暂存目录")
-        val safeOutputBaseName = sanitizeFileName("${outputBaseName}_Post", "${outputBaseName}_Post")
-        val archiveFileName = "$safeOutputBaseName.zip"
-        onPhaseChanged("正在执行 Terraria 压缩导出…")
+    ): WorkshopDownloadPostProcessorResult =
+        withContext(Dispatchers.IO) {
+            check(inputRoot.exists() && inputRoot.isDirectory) { "Terraria 压缩导出需要目录结果" }
+            val parentDir = inputRoot.parentFile ?: error("无法访问下载暂存目录")
+            val safeOutputBaseName =
+                sanitizeFileName("${outputBaseName}_Post", "${outputBaseName}_Post")
+            val archiveFileName = "$safeOutputBaseName.zip"
+            onPhaseChanged("正在执行 Terraria 压缩导出…")
 
-        if (config.keepOriginal) {
-            val outputDir = File(parentDir, safeOutputBaseName)
-            recreatePath(outputDir)
-            inputRoot.copyRecursively(
-                target = File(outputDir, inputRoot.name),
-                overwrite = true,
-            )
-            val archiveFile = File(outputDir, archiveFileName)
-            createArchive(inputRoot, archiveFile)
-            WorkshopDownloadPostProcessorResult(
-                artifact = outputDir,
-                summary = "已生成 Terraria 压缩结果",
-            )
-        } else {
-            val archiveFile = File(parentDir, archiveFileName)
-            recreatePath(archiveFile)
-            createArchive(inputRoot, archiveFile)
-            WorkshopDownloadPostProcessorResult(
-                artifact = archiveFile,
-                summary = "已生成 Terraria 压缩结果",
-            )
+            if (config.keepOriginal) {
+                val outputDir = File(parentDir, safeOutputBaseName)
+                recreatePath(outputDir)
+                inputRoot.copyRecursively(
+                    target = File(outputDir, inputRoot.name),
+                    overwrite = true,
+                )
+                val archiveFile = File(outputDir, archiveFileName)
+                createArchive(inputRoot, archiveFile)
+                WorkshopDownloadPostProcessorResult(
+                    artifact = outputDir,
+                    summary = "已生成 Terraria 压缩结果",
+                )
+            } else {
+                val archiveFile = File(parentDir, archiveFileName)
+                recreatePath(archiveFile)
+                createArchive(inputRoot, archiveFile)
+                WorkshopDownloadPostProcessorResult(
+                    artifact = archiveFile,
+                    summary = "已生成 Terraria 压缩结果",
+                )
+            }
         }
-    }
 
-    private suspend fun createArchive(
-        sourceRoot: File,
-        archiveFile: File,
-    ) {
+    private suspend fun createArchive(sourceRoot: File, archiveFile: File) {
         archiveFile.parentFile?.mkdirs()
-        ZipOutputStream(
-            BufferedOutputStream(FileOutputStream(archiveFile)),
-        ).use { zipOutput ->
+        ZipOutputStream(BufferedOutputStream(FileOutputStream(archiveFile))).use { zipOutput ->
             zipOutput.setLevel(Deflater.DEFAULT_COMPRESSION)
             sourceRoot.walkTopDown().forEach { entry ->
                 currentCoroutineContext().ensureActive()
-                val relativePath = sourceRoot.toPath().relativize(entry.toPath()).toString()
-                    .replace(File.separatorChar, '/')
-                    .trim('/')
+                val relativePath =
+                    sourceRoot
+                        .toPath()
+                        .relativize(entry.toPath())
+                        .toString()
+                        .replace(File.separatorChar, '/')
+                        .trim('/')
                 if (relativePath.isBlank()) return@forEach
 
                 if (entry.isDirectory) {
@@ -179,76 +180,83 @@ internal class WallpaperEnginePkgExtractPostProcessor : WorkshopDownloadPostProc
         outputBaseName: String,
         config: WorkshopDownloadPostProcessorConfig,
         onPhaseChanged: suspend (String?) -> Unit,
-    ): WorkshopDownloadPostProcessorResult = withContext(Dispatchers.IO) {
-        check(inputRoot.exists() && inputRoot.isDirectory) { "Wallpaper Engine PKG 提取需要目录结果" }
-        val coroutineContext = currentCoroutineContext()
-        onPhaseChanged("正在扫描 Wallpaper Engine PKG…")
-        val pkgFiles = inputRoot.walkTopDown()
-            .filter { it.isFile && it.extension.equals("pkg", ignoreCase = true) }
-            .toList()
-        if (pkgFiles.isEmpty()) {
-            onPhaseChanged(null)
-            return@withContext WorkshopDownloadPostProcessorResult(
-                artifact = inputRoot,
-                summary = "未发现 PKG 文件，已保留原始结果",
+    ): WorkshopDownloadPostProcessorResult =
+        withContext(Dispatchers.IO) {
+            check(inputRoot.exists() && inputRoot.isDirectory) { "Wallpaper Engine PKG 提取需要目录结果" }
+            val coroutineContext = currentCoroutineContext()
+            onPhaseChanged("正在扫描 Wallpaper Engine PKG…")
+            val pkgFiles =
+                inputRoot
+                    .walkTopDown()
+                    .filter { it.isFile && it.extension.equals("pkg", ignoreCase = true) }
+                    .toList()
+            if (pkgFiles.isEmpty()) {
+                onPhaseChanged(null)
+                return@withContext WorkshopDownloadPostProcessorResult(
+                    artifact = inputRoot,
+                    summary = "未发现 PKG 文件，已保留原始结果",
+                )
+            }
+
+            val parentDir = inputRoot.parentFile ?: error("无法访问下载暂存目录")
+            val safeOutputBaseName =
+                sanitizeFileName("${outputBaseName}_Post", "${outputBaseName}_Post")
+            val outputDir = File(parentDir, safeOutputBaseName)
+            recreatePath(outputDir)
+
+            if (config.keepOriginal) {
+                onPhaseChanged("正在复制原始结果…")
+                inputRoot.copyRecursively(target = File(outputDir, "Original"), overwrite = true)
+            }
+
+            val extractionRoot =
+                if (config.keepOriginal) {
+                        File(outputDir, "Extracted")
+                    } else {
+                        outputDir
+                    }
+                    .also { it.mkdirs() }
+
+            pkgFiles.forEachIndexed { index, pkgFile ->
+                currentCoroutineContext().ensureActive()
+                onPhaseChanged("正在提取 PKG（${index + 1}/${pkgFiles.size}）…")
+                val relativeParent =
+                    pkgFile.parentFile?.relativeTo(inputRoot)?.invariantSeparatorsPath?.takeIf {
+                        it.isNotBlank()
+                    }
+                val pkgStem = sanitizeFileName(pkgFile.nameWithoutExtension, "pkg")
+                val pkgOutputDir =
+                    sequenceOf(relativeParent, pkgStem)
+                        .filterNotNull()
+                        .filter { it.isNotBlank() }
+                        .fold(extractionRoot) { current, segment -> File(current, segment) }
+                WallpaperEnginePkgExtractor.extract(
+                    pkgFile = pkgFile,
+                    outputDir = pkgOutputDir,
+                    ensureActive = { coroutineContext.ensureActive() },
+                )
+            }
+            val texSummary =
+                if (config.wallpaperEngineTexConversionEnabled) {
+                    convertExtractedTexFiles(
+                        extractionRoot = extractionRoot,
+                        keepOriginalTex = config.wallpaperEngineKeepConvertedTexOriginal,
+                        onPhaseChanged = onPhaseChanged,
+                    )
+                } else {
+                    null
+                }
+            onPhaseChanged("正在整理 PKG 提取结果…")
+            WorkshopDownloadPostProcessorResult(
+                artifact = outputDir,
+                summary =
+                    buildList {
+                            add("已提取 ${pkgFiles.size} 个 PKG")
+                            texSummary?.takeIf { it.isNotBlank() }?.let(::add)
+                        }
+                        .joinToString("；"),
             )
         }
-
-        val parentDir = inputRoot.parentFile ?: error("无法访问下载暂存目录")
-        val safeOutputBaseName = sanitizeFileName("${outputBaseName}_Post", "${outputBaseName}_Post")
-        val outputDir = File(parentDir, safeOutputBaseName)
-        recreatePath(outputDir)
-
-        if (config.keepOriginal) {
-            onPhaseChanged("正在复制原始结果…")
-            inputRoot.copyRecursively(
-                target = File(outputDir, "Original"),
-                overwrite = true,
-            )
-        }
-
-        val extractionRoot = if (config.keepOriginal) {
-            File(outputDir, "Extracted")
-        } else {
-            outputDir
-        }.also { it.mkdirs() }
-
-        pkgFiles.forEachIndexed { index, pkgFile ->
-            currentCoroutineContext().ensureActive()
-            onPhaseChanged("正在提取 PKG（${index + 1}/${pkgFiles.size}）…")
-            val relativeParent = pkgFile.parentFile
-                ?.relativeTo(inputRoot)
-                ?.invariantSeparatorsPath
-                ?.takeIf { it.isNotBlank() }
-            val pkgStem = sanitizeFileName(pkgFile.nameWithoutExtension, "pkg")
-            val pkgOutputDir = sequenceOf(relativeParent, pkgStem)
-                .filterNotNull()
-                .filter { it.isNotBlank() }
-                .fold(extractionRoot) { current, segment -> File(current, segment) }
-            WallpaperEnginePkgExtractor.extract(
-                pkgFile = pkgFile,
-                outputDir = pkgOutputDir,
-                ensureActive = { coroutineContext.ensureActive() },
-            )
-        }
-        val texSummary = if (config.wallpaperEngineTexConversionEnabled) {
-            convertExtractedTexFiles(
-                extractionRoot = extractionRoot,
-                keepOriginalTex = config.wallpaperEngineKeepConvertedTexOriginal,
-                onPhaseChanged = onPhaseChanged,
-            )
-        } else {
-            null
-        }
-        onPhaseChanged("正在整理 PKG 提取结果…")
-        WorkshopDownloadPostProcessorResult(
-            artifact = outputDir,
-            summary = buildList {
-                add("已提取 ${pkgFiles.size} 个 PKG")
-                texSummary?.takeIf { it.isNotBlank() }?.let(::add)
-            }.joinToString("；"),
-        )
-    }
 
     private suspend fun convertExtractedTexFiles(
         extractionRoot: File,
@@ -256,9 +264,11 @@ internal class WallpaperEnginePkgExtractPostProcessor : WorkshopDownloadPostProc
         onPhaseChanged: suspend (String?) -> Unit,
     ): String? {
         onPhaseChanged("正在扫描 TEX 资源…")
-        val texFiles = extractionRoot.walkTopDown()
-            .filter { it.isFile && it.extension.equals("tex", ignoreCase = true) }
-            .toList()
+        val texFiles =
+            extractionRoot
+                .walkTopDown()
+                .filter { it.isFile && it.extension.equals("tex", ignoreCase = true) }
+                .toList()
         if (texFiles.isEmpty()) return "未发现 TEX 资源"
         val coroutineContext = currentCoroutineContext()
 
@@ -269,29 +279,33 @@ internal class WallpaperEnginePkgExtractPostProcessor : WorkshopDownloadPostProc
         texFiles.forEachIndexed { index, texFile ->
             currentCoroutineContext().ensureActive()
             onPhaseChanged("正在转换 TEX（${index + 1}/${texFiles.size}）：${texFile.name}…")
-            val header = runCatching {
-                WallpaperEngineTexFastPathInspector.inspectHeader(texFile)
-            }.getOrNull()
-            val fastPath = runCatching {
-                WallpaperEngineTexFastPathInspector.inspect(texFile)
-            }.onFailure { error ->
-                safeLogWarn("inspect raw TEX fast path failed file=${texFile.name}", error)
-            }.getOrNull()
+            val header =
+                runCatching { WallpaperEngineTexFastPathInspector.inspectHeader(texFile) }
+                    .getOrNull()
+            val fastPath =
+                runCatching { WallpaperEngineTexFastPathInspector.inspect(texFile) }
+                    .onFailure { error ->
+                        safeLogWarn("inspect raw TEX fast path failed file=${texFile.name}", error)
+                    }
+                    .getOrNull()
             if (fastPath != null) {
                 val outputFile = createUniqueConvertedSibling(texFile, fastPath.extension)
                 runCatching {
-                    WallpaperEngineTexFastPathInspector.copyPayload(
-                        sourceFile = texFile,
-                        targetFile = outputFile,
-                        fastPath = fastPath,
-                        ensureActive = { coroutineContext.ensureActive() },
-                    )
-                }.onFailure { error ->
-                    safeLogWarn("copy raw TEX fast path failed file=${texFile.name}", error)
-                }.getOrNull() ?: run {
-                    failedCount++
-                    return@forEachIndexed
-                }
+                        WallpaperEngineTexFastPathInspector.copyPayload(
+                            sourceFile = texFile,
+                            targetFile = outputFile,
+                            fastPath = fastPath,
+                            ensureActive = { coroutineContext.ensureActive() },
+                        )
+                    }
+                    .onFailure { error ->
+                        safeLogWarn("copy raw TEX fast path failed file=${texFile.name}", error)
+                    }
+                    .getOrNull()
+                    ?: run {
+                        failedCount++
+                        return@forEachIndexed
+                    }
                 convertedCount++
                 if (!keepOriginalTex) {
                     texFile.delete()
@@ -300,20 +314,25 @@ internal class WallpaperEnginePkgExtractPostProcessor : WorkshopDownloadPostProc
             }
             if (header != null && header.isCompressedRaw) {
                 skippedCount++
-                safeLogWarn("skip compressed raw TEX conversion file=${texFile.name} payloadSize=${header.payloadSize}")
+                safeLogWarn(
+                    "skip compressed raw TEX conversion file=${texFile.name} payloadSize=${header.payloadSize}"
+                )
                 return@forEachIndexed
             }
             if (texFile.length() > MAX_IN_MEMORY_TEX_SIZE_BYTES) {
                 skippedCount++
-                safeLogWarn("skip oversized TEX conversion file=${texFile.name} size=${texFile.length()}")
+                safeLogWarn(
+                    "skip oversized TEX conversion file=${texFile.name} size=${texFile.length()}"
+                )
                 return@forEachIndexed
             }
 
-            val conversion = runCatching {
-                WallpaperEngineTexConverter.convert(texFile.readBytes())
-            }.onFailure { error ->
-                safeLogWarn("convert TEX failed file=${texFile.name}", error)
-            }.getOrNull()
+            val conversion =
+                runCatching { WallpaperEngineTexConverter.convert(texFile.readBytes()) }
+                    .onFailure { error ->
+                        safeLogWarn("convert TEX failed file=${texFile.name}", error)
+                    }
+                    .getOrNull()
             if (conversion == null) {
                 skippedCount++
                 return@forEachIndexed
@@ -335,10 +354,7 @@ internal class WallpaperEnginePkgExtractPostProcessor : WorkshopDownloadPostProc
         )
     }
 
-    private fun createUniqueConvertedSibling(
-        texFile: File,
-        extension: String,
-    ): File {
+    private fun createUniqueConvertedSibling(texFile: File, extension: String): File {
         val parent = texFile.parentFile ?: return texFile
         val baseName = sanitizeFileName(texFile.nameWithoutExtension, "converted")
         var candidate = File(parent, "$baseName.$extension")
@@ -372,24 +388,24 @@ private fun buildTexSummary(
 ): String {
     if (totalCount <= 0) return "未发现 TEX 资源"
     return buildList {
-        if (convertedCount > 0) {
-            add(
-                if (keepOriginalTex) {
-                    "TEX 已转换 $convertedCount 项，并保留原 TEX"
-                } else {
-                    "TEX 已转换 $convertedCount 项"
-                },
-            )
+            if (convertedCount > 0) {
+                add(
+                    if (keepOriginalTex) {
+                        "TEX 已转换 $convertedCount 项，并保留原 TEX"
+                    } else {
+                        "TEX 已转换 $convertedCount 项"
+                    }
+                )
+            }
+            if (skippedCount > 0) {
+                add("保留原 TEX $skippedCount 项")
+            }
+            if (failedCount > 0) {
+                add("转换失败 $failedCount 项")
+            }
         }
-        if (skippedCount > 0) {
-            add("保留原 TEX $skippedCount 项")
-        }
-        if (failedCount > 0) {
-            add("转换失败 $failedCount 项")
-        }
-    }.ifEmpty {
-        listOf("未发现可转换的 TEX 资源")
-    }.joinToString("，")
+        .ifEmpty { listOf("未发现可转换的 TEX 资源") }
+        .joinToString("，")
 }
 
 private suspend fun copyStreamWithCancellation(
@@ -407,10 +423,7 @@ private suspend fun copyStreamWithCancellation(
     }
 }
 
-private fun safeLogWarn(
-    message: String,
-    throwable: Throwable? = null,
-) {
+private fun safeLogWarn(message: String, throwable: Throwable? = null) {
     runCatching { Log.w("WEPkgPostProcessor", message, throwable) }
 }
 
@@ -420,17 +433,9 @@ internal object WallpaperEnginePkgExtractor {
     private const val MAX_PATH_LENGTH = 16_384L
     private const val COPY_BUFFER_SIZE = 1024 * 1024
 
-    private data class PkgEntry(
-        val path: String,
-        val offset: Long,
-        val size: Long,
-    )
+    private data class PkgEntry(val path: String, val offset: Long, val size: Long)
 
-    suspend fun extract(
-        pkgFile: File,
-        outputDir: File,
-        ensureActive: () -> Unit = {},
-    ) {
+    suspend fun extract(pkgFile: File, outputDir: File, ensureActive: () -> Unit = {}) {
         RandomAccessFile(pkgFile, "r").use { file ->
             val versionLength = file.readUInt32Le()
             require(versionLength in 1..MAX_HEADER_LENGTH) { "无效的 PKG 头长度: $versionLength" }
@@ -452,11 +457,12 @@ internal object WallpaperEnginePkgExtractor {
                 val rawPath = pathBytes.toString(Charsets.UTF_8)
                 val offset = file.readUInt32Le()
                 val size = file.readUInt32Le()
-                entries += PkgEntry(
-                    path = sanitizePkgRelativePath(rawPath, index),
-                    offset = offset,
-                    size = size,
-                )
+                entries +=
+                    PkgEntry(
+                        path = sanitizePkgRelativePath(rawPath, index),
+                        offset = offset,
+                        size = size,
+                    )
             }
 
             val dataStart = file.filePointer
@@ -480,26 +486,22 @@ internal object WallpaperEnginePkgExtractor {
         }
     }
 
-    private fun sanitizePkgRelativePath(
-        rawPath: String,
-        index: Int,
-    ): String {
+    private fun sanitizePkgRelativePath(rawPath: String, index: Int): String {
         val normalized = rawPath.replace('\\', '/')
-        val segments = normalized.split('/')
-            .filter { it.isNotBlank() && it != "." && it != ".." }
-            .mapIndexed { segmentIndex, segment ->
-                sanitizeFileName(
-                    raw = segment,
-                    fallback = if (segmentIndex == 0) "entry_$index" else "file",
-                )
-            }
+        val segments =
+            normalized
+                .split('/')
+                .filter { it.isNotBlank() && it != "." && it != ".." }
+                .mapIndexed { segmentIndex, segment ->
+                    sanitizeFileName(
+                        raw = segment,
+                        fallback = if (segmentIndex == 0) "entry_$index" else "file",
+                    )
+                }
         return segments.joinToString("/").ifBlank { "entry_$index.bin" }
     }
 
-    private fun ensureUniqueTarget(
-        targetFile: File,
-        index: Int,
-    ): File {
+    private fun ensureUniqueTarget(targetFile: File, index: Int): File {
         if (!targetFile.exists()) return targetFile
         val parent = targetFile.parentFile ?: return targetFile
         val baseName = targetFile.nameWithoutExtension.ifBlank { "entry_$index" }

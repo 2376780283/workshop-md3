@@ -34,9 +34,7 @@ fun ExpandableBodyText(
     var canExpand by remember(text) { mutableStateOf(false) }
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize(),
+        modifier = modifier.fillMaxWidth().animateContentSize(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
@@ -52,10 +50,7 @@ fun ExpandableBodyText(
             },
         )
         if (canExpand || expanded) {
-            TextButton(
-                onClick = { expanded = !expanded },
-                contentPadding = PaddingValues(0.dp),
-            ) {
+            TextButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(0.dp)) {
                 Text(
                     text = if (expanded) collapseLabel else expandLabel,
                     style = MaterialTheme.typography.labelLarge,

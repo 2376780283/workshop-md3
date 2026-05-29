@@ -2,9 +2,9 @@ package com.slay.workshopnative.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.work.WorkManager
 import com.slay.workshopnative.BuildConfig
@@ -41,15 +41,18 @@ object AppModule {
         @ApplicationContext context: Context,
         supportDiagnosticsStore: SupportDiagnosticsStore,
     ): OkHttpClient {
-        val logging = HttpLoggingInterceptor { message ->
-            AppLog.i("OkHttp", sanitizeOkHttpLogMessage(message))
-        }.apply {
-            level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BASIC
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
-        }
+        val logging =
+            HttpLoggingInterceptor { message ->
+                    AppLog.i("OkHttp", sanitizeOkHttpLogMessage(message))
+                }
+                .apply {
+                    level =
+                        if (BuildConfig.DEBUG) {
+                            HttpLoggingInterceptor.Level.BASIC
+                        } else {
+                            HttpLoggingInterceptor.Level.NONE
+                        }
+                }
         return OkHttpClient.Builder()
             .cache(Cache(context.cacheDir.resolve("http-cache"), 64L * 1024L * 1024L))
             .addInterceptor { chain ->
@@ -73,24 +76,16 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providePreferencesStore(
-        @ApplicationContext context: Context,
-    ): DataStore<Preferences> {
+    fun providePreferencesStore(@ApplicationContext context: Context): DataStore<Preferences> {
         return PreferenceDataStoreFactory.create(
-            produceFile = { context.preferencesDataStoreFile("workshop_native.preferences_pb") },
+            produceFile = { context.preferencesDataStoreFile("workshop_native.preferences_pb") }
         )
     }
 
     @Provides
     @Singleton
-    fun provideDatabase(
-        @ApplicationContext context: Context,
-    ): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "workshop_native.db",
-        )
+    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+        return Room.databaseBuilder(context, AppDatabase::class.java, "workshop_native.db")
             .addMigrations(
                 AppDatabase.MIGRATION_5_6,
                 AppDatabase.MIGRATION_6_7,
@@ -108,7 +103,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideWorkManager(
-        @ApplicationContext context: Context,
-    ): WorkManager = WorkManager.getInstance(context)
+    fun provideWorkManager(@ApplicationContext context: Context): WorkManager =
+        WorkManager.getInstance(context)
 }

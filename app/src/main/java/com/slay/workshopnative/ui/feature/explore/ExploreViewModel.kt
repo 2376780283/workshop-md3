@@ -9,10 +9,10 @@ import com.slay.workshopnative.core.util.toUserMessage
 import com.slay.workshopnative.data.model.FavoriteWorkshopGame
 import com.slay.workshopnative.data.model.GameDetails
 import com.slay.workshopnative.data.model.WorkshopGameEntry
+import com.slay.workshopnative.data.preferences.displayLabel
 import com.slay.workshopnative.data.repository.SteamRepository
 import com.slay.workshopnative.data.repository.TranslationRepository
 import com.slay.workshopnative.data.repository.WorkshopFavoritesRepository
-import com.slay.workshopnative.data.preferences.displayLabel
 import com.slay.workshopnative.ui.InlineTranslationState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -47,7 +47,9 @@ data class ExploreUiState(
 }
 
 @HiltViewModel
-class ExploreViewModel @Inject constructor(
+class ExploreViewModel
+@Inject
+constructor(
     private val steamRepository: SteamRepository,
     private val translationRepository: TranslationRepository,
     private val favoritesRepository: WorkshopFavoritesRepository,
@@ -70,15 +72,11 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun toggleFavorite(game: WorkshopGameEntry) {
-        viewModelScope.launch {
-            favoritesRepository.toggleFavorite(game)
-        }
+        viewModelScope.launch { favoritesRepository.toggleFavorite(game) }
     }
 
     fun markWorkshopOpened(appId: Int) {
-        viewModelScope.launch {
-            favoritesRepository.markOpened(appId)
-        }
+        viewModelScope.launch { favoritesRepository.markOpened(appId) }
     }
 
     fun setQuery(value: String) {
@@ -101,19 +99,16 @@ class ExploreViewModel @Inject constructor(
 
         if (normalized.length < MIN_REMOTE_SEARCH_LENGTH) {
             _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    searchResults = emptyList(),
-                    errorMessage = null,
-                )
+                it.copy(isLoading = false, searchResults = emptyList(), errorMessage = null)
             }
             return
         }
 
-        searchJob = viewModelScope.launch {
-            delay(REMOTE_SEARCH_DEBOUNCE_MS)
-            runSearch(normalized, triggerSource = "input")
-        }
+        searchJob =
+            viewModelScope.launch {
+                delay(REMOTE_SEARCH_DEBOUNCE_MS)
+                runSearch(normalized, triggerSource = "input")
+            }
     }
 
     fun refresh() {
@@ -122,7 +117,9 @@ class ExploreViewModel @Inject constructor(
         val normalized = state.query.trim()
         if (normalized.isNotBlank()) {
             if (normalized.length < MIN_REMOTE_SEARCH_LENGTH) {
-                _uiState.update { it.copy(isLoading = false, searchResults = emptyList(), errorMessage = null) }
+                _uiState.update {
+                    it.copy(isLoading = false, searchResults = emptyList(), errorMessage = null)
+                }
                 return
             }
             searchJob?.cancel()
@@ -147,48 +144,53 @@ class ExploreViewModel @Inject constructor(
     fun loadGameDetails(appId: Int) {
         if (appId <= 0) return
         val current = _uiState.value
-        if (current.gameDetailsByAppId.containsKey(appId) || current.loadingDetailsAppId == appId) return
+        if (current.gameDetailsByAppId.containsKey(appId) || current.loadingDetailsAppId == appId)
+            return
 
         viewModelScope.launch {
             _uiState.update { it.copy(loadingDetailsAppId = appId) }
-            steamRepository.loadGameDetails(appId)
+            steamRepository
+                .loadGameDetails(appId)
                 .onSuccess { details ->
                     _uiState.update {
                         it.copy(
                             gameDetailsByAppId = it.gameDetailsByAppId + (appId to details),
-                            loadingDetailsAppId = it.loadingDetailsAppId.takeUnless { loadingAppId -> loadingAppId == appId },
+                            loadingDetailsAppId =
+                                it.loadingDetailsAppId.takeUnless { loadingAppId ->
+                                    loadingAppId == appId
+                                },
                         )
                     }
                 }
                 .onFailure {
                     _uiState.update {
                         it.copy(
-                            loadingDetailsAppId = it.loadingDetailsAppId.takeUnless { loadingAppId -> loadingAppId == appId },
+                            loadingDetailsAppId =
+                                it.loadingDetailsAppId.takeUnless { loadingAppId ->
+                                    loadingAppId == appId
+                                }
                         )
                     }
                 }
         }
     }
 
-    fun translateGameDescription(
-        appId: Int,
-        sourceText: String,
-        forceRefresh: Boolean = false,
-    ) {
+    fun translateGameDescription(appId: Int, sourceText: String, forceRefresh: Boolean = false) {
         val normalized = sourceText.trim()
         if (appId <= 0 || normalized.isBlank()) return
         val fingerprint = textFingerprint(normalized)
         val current = _uiState.value.descriptionTranslationByAppId[appId]
         val reusableState = current?.takeIf { it.sourceFingerprint == fingerprint }
-        if (!forceRefresh &&
-            current?.sourceFingerprint == fingerprint &&
-            !current.translatedText.isNullOrBlank()
+        if (
+            !forceRefresh &&
+                current?.sourceFingerprint == fingerprint &&
+                !current.translatedText.isNullOrBlank()
         ) {
             _uiState.update {
                 it.copy(
-                    descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                        appId to current.copy(showTranslated = true, errorMessage = null)
-                    ),
+                    descriptionTranslationByAppId =
+                        it.descriptionTranslationByAppId +
+                            (appId to current.copy(showTranslated = true, errorMessage = null))
                 )
             }
             return
@@ -197,51 +199,57 @@ class ExploreViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                        appId to InlineTranslationState(
-                            sourceFingerprint = fingerprint,
-                            translatedText = reusableState?.translatedText,
-                            providerLabel = reusableState?.providerLabel,
-                            sourceLanguageLabel = reusableState?.sourceLanguageLabel,
-                            isTranslating = true,
-                            showTranslated = false,
-                            errorMessage = null,
-                        )
-                    ),
+                    descriptionTranslationByAppId =
+                        it.descriptionTranslationByAppId +
+                            (appId to
+                                InlineTranslationState(
+                                    sourceFingerprint = fingerprint,
+                                    translatedText = reusableState?.translatedText,
+                                    providerLabel = reusableState?.providerLabel,
+                                    sourceLanguageLabel = reusableState?.sourceLanguageLabel,
+                                    isTranslating = true,
+                                    showTranslated = false,
+                                    errorMessage = null,
+                                ))
                 )
             }
-            translationRepository.translateToChinese(normalized, forceRefresh = forceRefresh)
+            translationRepository
+                .translateToChinese(normalized, forceRefresh = forceRefresh)
                 .onSuccess { result ->
                     _uiState.update {
                         it.copy(
-                            descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                                appId to InlineTranslationState(
-                                    sourceFingerprint = fingerprint,
-                                    translatedText = result.translatedText,
-                                    providerLabel = result.provider.displayLabel(),
-                                    sourceLanguageLabel = result.detectedSourceLanguageLabel,
-                                    isTranslating = false,
-                                    showTranslated = true,
-                                    errorMessage = null,
-                                )
-                            ),
+                            descriptionTranslationByAppId =
+                                it.descriptionTranslationByAppId +
+                                    (appId to
+                                        InlineTranslationState(
+                                            sourceFingerprint = fingerprint,
+                                            translatedText = result.translatedText,
+                                            providerLabel = result.provider.displayLabel(),
+                                            sourceLanguageLabel =
+                                                result.detectedSourceLanguageLabel,
+                                            isTranslating = false,
+                                            showTranslated = true,
+                                            errorMessage = null,
+                                        ))
                         )
                     }
                 }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(
-                    descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                                appId to InlineTranslationState(
-                                    sourceFingerprint = fingerprint,
-                                    translatedText = reusableState?.translatedText,
-                                    providerLabel = reusableState?.providerLabel,
-                                    sourceLanguageLabel = reusableState?.sourceLanguageLabel,
-                                    isTranslating = false,
-                                    showTranslated = false,
-                                    errorMessage = error.toUserMessage("翻译失败"),
-                                )
-                            ),
+                            descriptionTranslationByAppId =
+                                it.descriptionTranslationByAppId +
+                                    (appId to
+                                        InlineTranslationState(
+                                            sourceFingerprint = fingerprint,
+                                            translatedText = reusableState?.translatedText,
+                                            providerLabel = reusableState?.providerLabel,
+                                            sourceLanguageLabel =
+                                                reusableState?.sourceLanguageLabel,
+                                            isTranslating = false,
+                                            showTranslated = false,
+                                            errorMessage = error.toUserMessage("翻译失败"),
+                                        ))
                         )
                     }
                 }
@@ -252,9 +260,9 @@ class ExploreViewModel @Inject constructor(
         val current = _uiState.value.descriptionTranslationByAppId[appId] ?: return
         _uiState.update {
             it.copy(
-                descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                    appId to current.copy(showTranslated = false, errorMessage = null)
-                ),
+                descriptionTranslationByAppId =
+                    it.descriptionTranslationByAppId +
+                        (appId to current.copy(showTranslated = false, errorMessage = null))
             )
         }
     }
@@ -264,9 +272,9 @@ class ExploreViewModel @Inject constructor(
         if (current.translatedText.isNullOrBlank()) return
         _uiState.update {
             it.copy(
-                descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                    appId to current.copy(showTranslated = true, errorMessage = null)
-                ),
+                descriptionTranslationByAppId =
+                    it.descriptionTranslationByAppId +
+                        (appId to current.copy(showTranslated = true, errorMessage = null))
             )
         }
     }
@@ -274,13 +282,10 @@ class ExploreViewModel @Inject constructor(
     private fun loadExplorePage(page: Int) {
         viewModelScope.launch {
             _uiState.update {
-                it.copy(
-                    isLoading = true,
-                    errorMessage = null,
-                    browsePage = page.coerceAtLeast(1),
-                )
+                it.copy(isLoading = true, errorMessage = null, browsePage = page.coerceAtLeast(1))
             }
-            steamRepository.loadWorkshopExplorePage(page)
+            steamRepository
+                .loadWorkshopExplorePage(page)
                 .onSuccess { result ->
                     _uiState.update {
                         it.copy(
@@ -307,12 +312,10 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    private suspend fun runSearch(
-        normalized: String,
-        triggerSource: String,
-    ) {
+    private suspend fun runSearch(normalized: String, triggerSource: String) {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        steamRepository.searchWorkshopGames(normalized)
+        steamRepository
+            .searchWorkshopGames(normalized)
             .onSuccess { games ->
                 supportDiagnosticsStore.recordSearchSample(
                     triggerSource = triggerSource,
@@ -322,11 +325,7 @@ class ExploreViewModel @Inject constructor(
                 )
                 if (_uiState.value.query.trim() == normalized) {
                     _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            searchResults = games,
-                            errorMessage = null,
-                        )
+                        it.copy(isLoading = false, searchResults = games, errorMessage = null)
                     }
                 }
             }

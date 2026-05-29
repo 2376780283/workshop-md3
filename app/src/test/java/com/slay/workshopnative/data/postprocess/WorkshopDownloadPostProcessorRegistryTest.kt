@@ -20,32 +20,41 @@ class WorkshopDownloadPostProcessorRegistryTest {
         val pkgFile = File(inputRoot, "scene.pkg")
         writePkg(
             target = pkgFile,
-            entries = listOf(
-                "scene.json" to """{"title":"demo"}""".toByteArray(),
-                "scripts/main.js" to "console.log('demo');".toByteArray(),
-            ),
+            entries =
+                listOf(
+                    "scene.json" to """{"title":"demo"}""".toByteArray(),
+                    "scripts/main.js" to "console.log('demo');".toByteArray(),
+                ),
         )
 
         val registry = WorkshopDownloadPostProcessorRegistry()
-        val selection = registry.resolveSelection(
-            appId = WorkshopDownloadPostProcessorRegistry.WALLPAPER_ENGINE_APP_ID,
-            prefs = UserPreferences(
-                wallpaperEnginePkgExtractEnabled = true,
-                wallpaperEnginePkgKeepOriginal = false,
-            ),
-        )
+        val selection =
+            registry.resolveSelection(
+                appId = WorkshopDownloadPostProcessorRegistry.WALLPAPER_ENGINE_APP_ID,
+                prefs =
+                    UserPreferences(
+                        wallpaperEnginePkgExtractEnabled = true,
+                        wallpaperEnginePkgKeepOriginal = false,
+                    ),
+            )
         assertNotNull(selection)
 
-        val result = requireNotNull(selection).processor.process(
-            inputRoot = inputRoot,
-            outputBaseName = "Wallpaper Demo",
-            config = requireNotNull(selection).config,
-            onPhaseChanged = {},
-        )
+        val result =
+            requireNotNull(selection)
+                .processor
+                .process(
+                    inputRoot = inputRoot,
+                    outputBaseName = "Wallpaper Demo",
+                    config = requireNotNull(selection).config,
+                    onPhaseChanged = {},
+                )
 
         assertTrue(result.artifact.isDirectory)
         assertEquals("""{"title":"demo"}""", File(result.artifact, "scene/scene.json").readText())
-        assertEquals("console.log('demo');", File(result.artifact, "scene/scripts/main.js").readText())
+        assertEquals(
+            "console.log('demo');",
+            File(result.artifact, "scene/scripts/main.js").readText(),
+        )
         assertEquals("已提取 1 个 PKG", result.summary)
     }
 
@@ -56,21 +65,26 @@ class WorkshopDownloadPostProcessorRegistryTest {
         File(inputRoot, "preview.jpg").writeText("not-a-pkg")
 
         val registry = WorkshopDownloadPostProcessorRegistry()
-        val selection = registry.resolveSelection(
-            appId = WorkshopDownloadPostProcessorRegistry.WALLPAPER_ENGINE_APP_ID,
-            prefs = UserPreferences(
-                wallpaperEnginePkgExtractEnabled = true,
-                wallpaperEnginePkgKeepOriginal = true,
-            ),
-        )
+        val selection =
+            registry.resolveSelection(
+                appId = WorkshopDownloadPostProcessorRegistry.WALLPAPER_ENGINE_APP_ID,
+                prefs =
+                    UserPreferences(
+                        wallpaperEnginePkgExtractEnabled = true,
+                        wallpaperEnginePkgKeepOriginal = true,
+                    ),
+            )
         assertNotNull(selection)
 
-        val result = requireNotNull(selection).processor.process(
-            inputRoot = inputRoot,
-            outputBaseName = "Wallpaper Demo",
-            config = requireNotNull(selection).config,
-            onPhaseChanged = {},
-        )
+        val result =
+            requireNotNull(selection)
+                .processor
+                .process(
+                    inputRoot = inputRoot,
+                    outputBaseName = "Wallpaper Demo",
+                    config = requireNotNull(selection).config,
+                    onPhaseChanged = {},
+                )
 
         assertEquals(inputRoot.absolutePath, result.artifact.absolutePath)
         assertEquals("未发现 PKG 文件，已保留原始结果", result.summary)
@@ -83,34 +97,36 @@ class WorkshopDownloadPostProcessorRegistryTest {
         val pkgFile = File(inputRoot, "scene.pkg")
         writePkg(
             target = pkgFile,
-            entries = listOf(
-                "scene.tex" to buildTex(
-                    formatId = 9,
-                    width = 1,
-                    height = 1,
-                    payload = byteArrayOf(0x55),
+            entries =
+                listOf(
+                    "scene.tex" to
+                        buildTex(formatId = 9, width = 1, height = 1, payload = byteArrayOf(0x55))
                 ),
-            ),
         )
 
         val registry = WorkshopDownloadPostProcessorRegistry()
-        val selection = registry.resolveSelection(
-            appId = WorkshopDownloadPostProcessorRegistry.WALLPAPER_ENGINE_APP_ID,
-            prefs = UserPreferences(
-                wallpaperEnginePkgExtractEnabled = true,
-                wallpaperEnginePkgKeepOriginal = false,
-                wallpaperEngineTexConversionEnabled = true,
-                wallpaperEngineKeepConvertedTexOriginal = false,
-            ),
-        )
+        val selection =
+            registry.resolveSelection(
+                appId = WorkshopDownloadPostProcessorRegistry.WALLPAPER_ENGINE_APP_ID,
+                prefs =
+                    UserPreferences(
+                        wallpaperEnginePkgExtractEnabled = true,
+                        wallpaperEnginePkgKeepOriginal = false,
+                        wallpaperEngineTexConversionEnabled = true,
+                        wallpaperEngineKeepConvertedTexOriginal = false,
+                    ),
+            )
         assertNotNull(selection)
 
-        val result = requireNotNull(selection).processor.process(
-            inputRoot = inputRoot,
-            outputBaseName = "Wallpaper Demo",
-            config = selection.config,
-            onPhaseChanged = {},
-        )
+        val result =
+            requireNotNull(selection)
+                .processor
+                .process(
+                    inputRoot = inputRoot,
+                    outputBaseName = "Wallpaper Demo",
+                    config = selection.config,
+                    onPhaseChanged = {},
+                )
 
         assertTrue(File(result.artifact, "scene/scene.png").isFile)
         assertTrue(!File(result.artifact, "scene/scene.tex").exists())
@@ -124,57 +140,62 @@ class WorkshopDownloadPostProcessorRegistryTest {
         val pkgFile = File(inputRoot, "scene.pkg")
         writePkg(
             target = pkgFile,
-            entries = listOf(
-                "scene.tex" to buildTex(
-                    formatId = 0,
-                    width = 1,
-                    height = 1,
-                    payload = byteArrayOf(1, 2, 3, 4),
-                    lz4Flag = 1,
-                    decompressedSize = 4,
+            entries =
+                listOf(
+                    "scene.tex" to
+                        buildTex(
+                            formatId = 0,
+                            width = 1,
+                            height = 1,
+                            payload = byteArrayOf(1, 2, 3, 4),
+                            lz4Flag = 1,
+                            decompressedSize = 4,
+                        )
                 ),
-            ),
         )
 
-        val selection = requireNotNull(
-            WorkshopDownloadPostProcessorRegistry().resolveSelection(
-                appId = WorkshopDownloadPostProcessorRegistry.WALLPAPER_ENGINE_APP_ID,
-                prefs = UserPreferences(
-                    wallpaperEnginePkgExtractEnabled = true,
-                    wallpaperEnginePkgKeepOriginal = false,
-                    wallpaperEngineTexConversionEnabled = true,
-                    wallpaperEngineKeepConvertedTexOriginal = true,
-                ),
-            ),
-        )
+        val selection =
+            requireNotNull(
+                WorkshopDownloadPostProcessorRegistry()
+                    .resolveSelection(
+                        appId = WorkshopDownloadPostProcessorRegistry.WALLPAPER_ENGINE_APP_ID,
+                        prefs =
+                            UserPreferences(
+                                wallpaperEnginePkgExtractEnabled = true,
+                                wallpaperEnginePkgKeepOriginal = false,
+                                wallpaperEngineTexConversionEnabled = true,
+                                wallpaperEngineKeepConvertedTexOriginal = true,
+                            ),
+                    )
+            )
 
-        val result = selection.processor.process(
-            inputRoot = inputRoot,
-            outputBaseName = "Wallpaper Demo",
-            config = selection.config,
-            onPhaseChanged = {},
-        )
+        val result =
+            selection.processor.process(
+                inputRoot = inputRoot,
+                outputBaseName = "Wallpaper Demo",
+                config = selection.config,
+                onPhaseChanged = {},
+            )
 
         assertTrue(File(result.artifact, "scene/scene.tex").isFile)
         assertNull(File(result.artifact, "scene/scene.mp4").takeIf { it.exists() })
         assertEquals("已提取 1 个 PKG；保留原 TEX 1 项", result.summary)
     }
 
-    private fun writePkg(
-        target: File,
-        entries: List<Pair<String, ByteArray>>,
-    ) {
+    private fun writePkg(target: File, entries: List<Pair<String, ByteArray>>) {
         val version = "PKGV0022".toByteArray()
-        val entryMetadata = entries.map { (path, payload) ->
-            val pathBytes = path.toByteArray()
-            Triple(pathBytes, payload, payload.size)
-        }
+        val entryMetadata =
+            entries.map { (path, payload) ->
+                val pathBytes = path.toByteArray()
+                Triple(pathBytes, payload, payload.size)
+            }
         var runningOffset = 0
-        val offsets = entryMetadata.map { (_, _, size) ->
-            val current = runningOffset
-            runningOffset += size
-            current
-        }
+        val offsets =
+            entryMetadata.map { (_, _, size) ->
+                val current = runningOffset
+                runningOffset += size
+                current
+            }
 
         val output = ByteArrayOutputStream()
         DataOutputStream(output).use { stream ->
@@ -187,9 +208,7 @@ class WorkshopDownloadPostProcessorRegistryTest {
                 stream.writeInt(Integer.reverseBytes(offsets[index]))
                 stream.writeInt(Integer.reverseBytes(size))
             }
-            entryMetadata.forEach { (_, payload, _) ->
-                stream.write(payload)
-            }
+            entryMetadata.forEach { (_, payload, _) -> stream.write(payload) }
         }
         target.writeBytes(output.toByteArray())
     }

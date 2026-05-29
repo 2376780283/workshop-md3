@@ -16,10 +16,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 @Singleton
-class AppUpdateService @Inject constructor(
-    baseClient: OkHttpClient,
-    private val json: Json,
-) {
+class AppUpdateService @Inject constructor(baseClient: OkHttpClient, private val json: Json) {
     private companion object {
         const val LOG_TAG = "AppUpdateService"
         const val CONNECT_TIMEOUT_SECONDS = 8L
@@ -27,113 +24,119 @@ class AppUpdateService @Inject constructor(
         const val USER_AGENT = "WorkshopNative-Update"
     }
 
-    private class HttpStatusException(
-        val statusCode: Int,
-        message: String,
-    ) : IOException(message)
+    private class HttpStatusException(val statusCode: Int, message: String) : IOException(message)
 
-    private val client = baseClient.newBuilder()
-        .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .build()
+    private val client =
+        baseClient
+            .newBuilder()
+            .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .build()
 
     suspend fun checkForUpdates(
         currentVersion: String,
         preferredSource: AppUpdateSource,
         validateReachability: Boolean = true,
-    ): AppUpdateCheckResult = withContext(Dispatchers.IO) {
-        AppLog.i(
-            LOG_TAG,
-            "checkForUpdates currentVersion=$currentVersion preferredSource=${preferredSource.name}",
-        )
-        if (!isConfigured()) {
-            return@withContext AppUpdateCheckResult.Failure(
-                errorSummary = "尚未配置更新仓库。",
+    ): AppUpdateCheckResult =
+        withContext(Dispatchers.IO) {
+            AppLog.i(
+                LOG_TAG,
+                "checkForUpdates currentVersion=$currentVersion preferredSource=${preferredSource.name}",
             )
-        }
-
-        var lastErrorSummary = "无法连接 GitHub 官方更新源。"
-        var successfulMetadataSource: AppUpdateSource? = null
-        var releaseInfo: AppUpdateReleaseInfo? = null
-
-        for (source in AppUpdateSource.metadataCandidates(preferredSource)) {
-            try {
-                val parsed = fetchLatestRelease(source)
-                successfulMetadataSource = source
-                releaseInfo = parsed
-                break
-            } catch (error: Throwable) {
-                AppLog.w(LOG_TAG, "fetchLatestRelease failed source=${source.name}", error)
-                lastErrorSummary = "${source.displayName}: ${summarizeError(error)}"
+            if (!isConfigured()) {
+                return@withContext AppUpdateCheckResult.Failure(errorSummary = "尚未配置更新仓库。")
             }
-        }
 
-        val metadataSource = successfulMetadataSource
-        val release = releaseInfo
-        if (metadataSource == null || release == null) {
-            AppLog.w(LOG_TAG, "checkForUpdates failed because metadata is unavailable: $lastErrorSummary")
-            return@withContext AppUpdateCheckResult.Failure(
-                errorSummary = lastErrorSummary,
+            var lastErrorSummary = "无法连接 GitHub 官方更新源。"
+            var successfulMetadataSource: AppUpdateSource? = null
+            var releaseInfo: AppUpdateReleaseInfo? = null
+
+            for (source in AppUpdateSource.metadataCandidates(preferredSource)) {
+                try {
+                    val parsed = fetchLatestRelease(source)
+                    successfulMetadataSource = source
+                    releaseInfo = parsed
+                    break
+                } catch (error: Throwable) {
+                    AppLog.w(LOG_TAG, "fetchLatestRelease failed source=${source.name}", error)
+                    lastErrorSummary = "${source.displayName}: ${summarizeError(error)}"
+                }
+            }
+
+            val metadataSource = successfulMetadataSource
+            val release = releaseInfo
+            if (metadataSource == null || release == null) {
+                AppLog.w(
+                    LOG_TAG,
+                    "checkForUpdates failed because metadata is unavailable: $lastErrorSummary",
+                )
+                return@withContext AppUpdateCheckResult.Failure(errorSummary = lastErrorSummary)
+            }
+
+            val hasUpdate =
+                AppUpdateVersioning.isRemoteNewer(
+                    currentVersion = currentVersion,
+                    remoteVersionTag = release.normalizedVersion,
+                )
+            if (!hasUpdate) {
+                AppLog.i(
+                    LOG_TAG,
+                    "checkForUpdates no update available remote=${release.rawTagName}",
+                )
+                return@withContext AppUpdateCheckResult.Success(
+                    currentVersion = currentVersion,
+                    release = release,
+                    metadataSource = metadataSource,
+                    downloadResolution = null,
+                    hasUpdate = false,
+                )
+            }
+
+            val downloadResolution =
+                resolveDownloadResolution(
+                    release = release,
+                    preferredSource = preferredSource,
+                    metadataSource = metadataSource,
+                    validateReachability = validateReachability,
+                )
+                    ?: return@withContext AppUpdateCheckResult.Failure(
+                        errorSummary =
+                            if (release.assets.isEmpty()) {
+                                "找到了新版本，但该 Release 还没有上传 APK 资产。"
+                            } else if (selectPreferredAsset(release.assets) == null) {
+                                "找到了新版本，但当前安装通道没有匹配的 APK 资产。"
+                            } else {
+                                "找到了新版本，但没有解析到可访问的 APK 下载地址。"
+                            },
+                        release = release,
+                        metadataSource = metadataSource,
+                    )
+
+            AppLog.i(
+                LOG_TAG,
+                "checkForUpdates found update remote=${release.rawTagName} asset=${downloadResolution.assetName}",
             )
-        }
 
-        val hasUpdate = AppUpdateVersioning.isRemoteNewer(
-            currentVersion = currentVersion,
-            remoteVersionTag = release.normalizedVersion,
-        )
-        if (!hasUpdate) {
-            AppLog.i(LOG_TAG, "checkForUpdates no update available remote=${release.rawTagName}")
-            return@withContext AppUpdateCheckResult.Success(
+            AppUpdateCheckResult.Success(
                 currentVersion = currentVersion,
                 release = release,
                 metadataSource = metadataSource,
-                downloadResolution = null,
-                hasUpdate = false,
+                downloadResolution = downloadResolution,
+                hasUpdate = true,
             )
         }
-
-        val downloadResolution = resolveDownloadResolution(
-            release = release,
-            preferredSource = preferredSource,
-            metadataSource = metadataSource,
-            validateReachability = validateReachability,
-        ) ?: return@withContext AppUpdateCheckResult.Failure(
-            errorSummary = if (release.assets.isEmpty()) {
-                "找到了新版本，但该 Release 还没有上传 APK 资产。"
-            } else if (selectPreferredAsset(release.assets) == null) {
-                "找到了新版本，但当前安装通道没有匹配的 APK 资产。"
-            } else {
-                "找到了新版本，但没有解析到可访问的 APK 下载地址。"
-            },
-            release = release,
-            metadataSource = metadataSource,
-        )
-
-        AppLog.i(
-            LOG_TAG,
-            "checkForUpdates found update remote=${release.rawTagName} asset=${downloadResolution.assetName}",
-        )
-
-        AppUpdateCheckResult.Success(
-            currentVersion = currentVersion,
-            release = release,
-            metadataSource = metadataSource,
-            downloadResolution = downloadResolution,
-            hasUpdate = true,
-        )
-    }
 
     private fun fetchLatestRelease(source: AppUpdateSource): AppUpdateReleaseInfo {
         val latestUrl = source.buildUrl(latestReleaseApiUrl())
         val releasesUrl = source.buildUrl(releasesApiUrl())
 
         val latestResult = runCatching {
-            parseReleasePayload(
-                requestText(latestUrl),
-            ) ?: throw IOException("更新元数据格式无效。")
+            parseReleasePayload(requestText(latestUrl)) ?: throw IOException("更新元数据格式无效。")
         }
-        latestResult.getOrNull()?.let { return it }
+        latestResult.getOrNull()?.let {
+            return it
+        }
 
         val latestError = latestResult.exceptionOrNull()
         val fallbackNeeded = latestError is HttpStatusException && latestError.statusCode == 404
@@ -141,9 +144,7 @@ class AppUpdateService @Inject constructor(
             throw latestError ?: IOException("无法读取最新 Release。")
         }
 
-        val fallbackRelease = parseReleaseList(
-            requestText(releasesUrl),
-        )
+        val fallbackRelease = parseReleaseList(requestText(releasesUrl))
         if (fallbackRelease != null) {
             return fallbackRelease
         }
@@ -151,19 +152,25 @@ class AppUpdateService @Inject constructor(
     }
 
     internal fun parseReleasePayload(responseText: String): AppUpdateReleaseInfo? {
-        val payload = runCatching {
-            json.decodeFromString(GithubReleasePayload.serializer(), responseText)
-        }.getOrNull() ?: return null
+        val payload =
+            runCatching { json.decodeFromString(GithubReleasePayload.serializer(), responseText) }
+                .getOrNull() ?: return null
         return payload.toReleaseInfo()
     }
 
     internal fun parseReleaseList(responseText: String): AppUpdateReleaseInfo? {
-        val payloads = runCatching {
-            json.decodeFromString(ListSerializer(GithubReleasePayload.serializer()), responseText)
-        }.getOrNull() ?: return null
-        val preferred = payloads.firstOrNull { !it.draft && !it.prerelease }
-            ?: payloads.firstOrNull { !it.draft }
-            ?: return null
+        val payloads =
+            runCatching {
+                    json.decodeFromString(
+                        ListSerializer(GithubReleasePayload.serializer()),
+                        responseText,
+                    )
+                }
+                .getOrNull() ?: return null
+        val preferred =
+            payloads.firstOrNull { !it.draft && !it.prerelease }
+                ?: payloads.firstOrNull { !it.draft }
+                ?: return null
         return preferred.toReleaseInfo()
     }
 
@@ -171,25 +178,26 @@ class AppUpdateService @Inject constructor(
         val rawTagName = tagName.trim()
         if (rawTagName.isEmpty()) return null
         val releasePageUrl = htmlUrl.trim().ifEmpty { githubReleasesPageUrl() }
-        val apkAssets = assets
-            .mapNotNull { asset ->
-                val assetName = asset.name.trim()
-                val assetDownloadUrl = asset.browserDownloadUrl.trim()
-                if (
-                    assetName.isEmpty() ||
-                    assetDownloadUrl.isEmpty() ||
-                    !assetName.endsWith(".apk", ignoreCase = true)
-                ) {
-                    null
-                } else {
-                    AppUpdateAsset(
-                        name = assetName,
-                        downloadUrl = assetDownloadUrl,
-                        sizeBytes = asset.size.coerceAtLeast(0L),
-                    )
+        val apkAssets =
+            assets
+                .mapNotNull { asset ->
+                    val assetName = asset.name.trim()
+                    val assetDownloadUrl = asset.browserDownloadUrl.trim()
+                    if (
+                        assetName.isEmpty() ||
+                            assetDownloadUrl.isEmpty() ||
+                            !assetName.endsWith(".apk", ignoreCase = true)
+                    ) {
+                        null
+                    } else {
+                        AppUpdateAsset(
+                            name = assetName,
+                            downloadUrl = assetDownloadUrl,
+                            sizeBytes = asset.size.coerceAtLeast(0L),
+                        )
+                    }
                 }
-            }
-            .sortedWith(apkAssetComparator())
+                .sortedWith(apkAssetComparator())
         return AppUpdateReleaseInfo(
             rawTagName = rawTagName,
             normalizedVersion = AppUpdateVersioning.normalizeVersionTag(rawTagName),
@@ -228,13 +236,14 @@ class AppUpdateService @Inject constructor(
     }
 
     private fun requestText(requestUrl: String): String {
-        val request = Request.Builder()
-            .url(requestUrl)
-            .get()
-            .header("Accept", "application/vnd.github+json")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .header("User-Agent", USER_AGENT)
-            .build()
+        val request =
+            Request.Builder()
+                .url(requestUrl)
+                .get()
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", "2022-11-28")
+                .header("User-Agent", USER_AGENT)
+                .build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw HttpStatusException(response.code, "HTTP ${response.code}")
@@ -248,27 +257,28 @@ class AppUpdateService @Inject constructor(
     }
 
     private fun requestProbe(requestUrl: String, head: Boolean): Boolean {
-        val requestBuilder = Request.Builder()
-            .url(requestUrl)
-            .header("User-Agent", USER_AGENT)
+        val requestBuilder = Request.Builder().url(requestUrl).header("User-Agent", USER_AGENT)
         val request = if (head) requestBuilder.head().build() else requestBuilder.get().build()
         return runCatching {
-            client.newCall(request).execute().use { response -> response.isSuccessful }
-        }.getOrDefault(false)
+                client.newCall(request).execute().use { response -> response.isSuccessful }
+            }
+            .getOrDefault(false)
     }
 
     private fun requestRangeProbe(requestUrl: String): Boolean {
-        val request = Request.Builder()
-            .url(requestUrl)
-            .get()
-            .header("User-Agent", USER_AGENT)
-            .header("Range", "bytes=0-0")
-            .build()
+        val request =
+            Request.Builder()
+                .url(requestUrl)
+                .get()
+                .header("User-Agent", USER_AGENT)
+                .header("Range", "bytes=0-0")
+                .build()
         return runCatching {
-            client.newCall(request).execute().use { response ->
-                response.isSuccessful || response.code == 206
+                client.newCall(request).execute().use { response ->
+                    response.isSuccessful || response.code == 206
+                }
             }
-        }.getOrDefault(false)
+            .getOrDefault(false)
     }
 
     private fun latestReleaseApiUrl(): String {
@@ -341,12 +351,9 @@ class AppUpdateService @Inject constructor(
 
     @Serializable
     private data class GithubReleasePayload(
-        @SerialName("tag_name")
-        val tagName: String = "",
-        @SerialName("html_url")
-        val htmlUrl: String = "",
-        @SerialName("published_at")
-        val publishedAt: String? = null,
+        @SerialName("tag_name") val tagName: String = "",
+        @SerialName("html_url") val htmlUrl: String = "",
+        @SerialName("published_at") val publishedAt: String? = null,
         val draft: Boolean = false,
         val prerelease: Boolean = false,
         val body: String? = null,
@@ -357,7 +364,6 @@ class AppUpdateService @Inject constructor(
     private data class GithubReleaseAsset(
         val name: String = "",
         val size: Long = 0L,
-        @SerialName("browser_download_url")
-        val browserDownloadUrl: String = "",
+        @SerialName("browser_download_url") val browserDownloadUrl: String = "",
     )
 }

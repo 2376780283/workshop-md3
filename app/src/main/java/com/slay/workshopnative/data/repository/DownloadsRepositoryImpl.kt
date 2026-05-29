@@ -30,7 +30,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Singleton
-class DownloadsRepositoryImpl @Inject constructor(
+class DownloadsRepositoryImpl
+@Inject
+constructor(
     private val workManager: WorkManager,
     private val downloadTaskDao: DownloadTaskDao,
     private val preferencesStore: UserPreferencesStore,
@@ -46,30 +48,26 @@ class DownloadsRepositoryImpl @Inject constructor(
         val boundAccountKeyHash: String?,
     )
 
-    private val activeStatuses = setOf(
-        DownloadStatus.Queued,
-        DownloadStatus.Running,
-        DownloadStatus.Paused,
-    )
+    private val activeStatuses =
+        setOf(DownloadStatus.Queued, DownloadStatus.Running, DownloadStatus.Paused)
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val downloads: Flow<List<DownloadTaskEntity>> = downloadTaskDao.observeAll()
 
     init {
-        repositoryScope.launch {
-            sanitizeLegacyTaskBindings()
-        }
+        repositoryScope.launch { sanitizeLegacyTaskBindings() }
     }
 
     override suspend fun enqueue(item: WorkshopItem): Result<Unit> {
         supportDiagnosticsStore.recordDownloadEvent(
             action = "enqueue_requested",
             taskId = item.publishedFileId.takeIf { it > 0L }?.let { "pf:$it" },
-            fields = mapOf(
-                "publishedFileId" to item.publishedFileId.toString(),
-                "appId" to item.appId.toString(),
-                "canDownload" to item.canDownload.toString(),
-            ),
+            fields =
+                mapOf(
+                    "publishedFileId" to item.publishedFileId.toString(),
+                    "appId" to item.appId.toString(),
+                    "canDownload" to item.canDownload.toString(),
+                ),
         )
         AppLog.i(
             LOG_TAG,
@@ -82,7 +80,8 @@ class DownloadsRepositoryImpl @Inject constructor(
                 .distinct()
                 .filter { it > 0L }
                 .forEach { publishedFileId ->
-                    val childItem = steamRepository.resolveWorkshopItemForDownload(publishedFileId).getOrThrow()
+                    val childItem =
+                        steamRepository.resolveWorkshopItemForDownload(publishedFileId).getOrThrow()
                     enqueue(childItem).getOrThrow()
                 }
             return Result.success(Unit)
@@ -92,10 +91,11 @@ class DownloadsRepositoryImpl @Inject constructor(
             supportDiagnosticsStore.recordDownloadEvent(
                 action = "enqueue_unavailable",
                 taskId = preparedItem.publishedFileId.takeIf { it > 0L }?.let { "pf:$it" },
-                fields = mapOf(
-                    "publishedFileId" to preparedItem.publishedFileId.toString(),
-                    "reason" to "cannot_download",
-                ),
+                fields =
+                    mapOf(
+                        "publishedFileId" to preparedItem.publishedFileId.toString(),
+                        "reason" to "cannot_download",
+                    ),
             )
             AppLog.w(
                 LOG_TAG,
@@ -109,7 +109,9 @@ class DownloadsRepositoryImpl @Inject constructor(
                     appId = preparedItem.appId,
                     title = preparedItem.title,
                     previewUrl = preparedItem.previewUrl,
-                    sourceUrl = preparedItem.fileUrl ?: "steam://publishedfile/${preparedItem.publishedFileId}",
+                    sourceUrl =
+                        preparedItem.fileUrl
+                            ?: "steam://publishedfile/${preparedItem.publishedFileId}",
                     fileName = preparedItem.fileName ?: sanitizeFileName(preparedItem.title),
                     downloadFolderName = null,
                     targetTreeUri = null,
@@ -136,12 +138,12 @@ class DownloadsRepositoryImpl @Inject constructor(
                     postProcessSummary = null,
                     errorMessage = "该条目既没有公开直链，也没有可用的 Steam 内容 manifest",
                     remoteUpdatedAt = preparedItem.timeUpdated.takeIf { it > 0L },
-                lastUpdateCheckAt = null,
-                hasUpdateAvailable = false,
-                updateCheckError = null,
-                createdAt = now,
-                updatedAt = now,
-            ),
+                    lastUpdateCheckAt = null,
+                    hasUpdateAvailable = false,
+                    updateCheckError = null,
+                    createdAt = now,
+                    updatedAt = now,
+                )
             )
             return Result.failure(IllegalStateException("该条目当前不可下载"))
         }
@@ -150,29 +152,32 @@ class DownloadsRepositoryImpl @Inject constructor(
 
         val prefs = preferencesStore.snapshot()
         val taskId = UUID.randomUUID().toString()
-        val fileName = sanitizeFileName(
-            preparedItem.fileName ?: preparedItem.title,
-            "workshop-${preparedItem.publishedFileId}",
-        )
+        val fileName =
+            sanitizeFileName(
+                preparedItem.fileName ?: preparedItem.title,
+                "workshop-${preparedItem.publishedFileId}",
+            )
         val downloadFolderName = prefs.downloadFolderName
         val session = steamRepository.sessionState.value
         val allowLoggedInDownload =
             prefs.isLoginFeatureEnabled &&
                 prefs.isLoggedInDownloadEnabled &&
                 steamRepository.isAuthenticatedDownloadReady()
-        val authMode = when {
-            !allowLoggedInDownload -> DownloadAuthMode.Anonymous
-            prefs.preferAnonymousDownloads -> DownloadAuthMode.Auto
-            else -> DownloadAuthMode.Authenticated
-        }
-        val boundAccountKeyHash = if (authMode == DownloadAuthMode.Anonymous) {
-            null
-        } else {
-            buildAccountBindingHash(
-                accountName = session.account?.accountName,
-                steamId64 = session.account?.steamId64,
-            )
-        }
+        val authMode =
+            when {
+                !allowLoggedInDownload -> DownloadAuthMode.Anonymous
+                prefs.preferAnonymousDownloads -> DownloadAuthMode.Auto
+                else -> DownloadAuthMode.Authenticated
+            }
+        val boundAccountKeyHash =
+            if (authMode == DownloadAuthMode.Anonymous) {
+                null
+            } else {
+                buildAccountBindingHash(
+                    accountName = session.account?.accountName,
+                    steamId64 = session.account?.steamId64,
+                )
+            }
         val now = System.currentTimeMillis()
 
         downloadTaskDao.upsert(
@@ -182,15 +187,17 @@ class DownloadsRepositoryImpl @Inject constructor(
                 appId = preparedItem.appId,
                 title = preparedItem.title,
                 previewUrl = preparedItem.previewUrl,
-                sourceUrl = preparedItem.fileUrl ?: "steam://publishedfile/${preparedItem.publishedFileId}",
+                sourceUrl =
+                    preparedItem.fileUrl ?: "steam://publishedfile/${preparedItem.publishedFileId}",
                 fileName = fileName,
                 downloadFolderName = downloadFolderName,
                 targetTreeUri = prefs.downloadTreeUri,
                 storageRootRef = null,
-                destinationLabel = buildDownloadDestinationLabel(
-                    treeLabel = prefs.downloadTreeLabel,
-                    folderName = downloadFolderName,
-                ),
+                destinationLabel =
+                    buildDownloadDestinationLabel(
+                        treeLabel = prefs.downloadTreeLabel,
+                        folderName = downloadFolderName,
+                    ),
                 downloadAuthMode = authMode,
                 boundAccountKeyHash = boundAccountKeyHash,
                 boundAccountName = null,
@@ -217,17 +224,18 @@ class DownloadsRepositoryImpl @Inject constructor(
                 updateCheckError = null,
                 createdAt = now,
                 updatedAt = now,
-            ),
+            )
         )
         supportDiagnosticsStore.recordDownloadEvent(
             action = "enqueue_scheduled",
             taskId = taskId,
-            fields = mapOf(
-                "publishedFileId" to preparedItem.publishedFileId.toString(),
-                "appId" to preparedItem.appId.toString(),
-                "authMode" to authMode.name,
-                "hasBindingHash" to (!boundAccountKeyHash.isNullOrBlank()).toString(),
-            ),
+            fields =
+                mapOf(
+                    "publishedFileId" to preparedItem.publishedFileId.toString(),
+                    "appId" to preparedItem.appId.toString(),
+                    "authMode" to authMode.name,
+                    "hasBindingHash" to (!boundAccountKeyHash.isNullOrBlank()).toString(),
+                ),
         )
         val shouldPrewarmAnonymousAccess =
             authMode != DownloadAuthMode.Authenticated || prefs.allowAuthenticatedDownloadFallback
@@ -259,125 +267,137 @@ class DownloadsRepositoryImpl @Inject constructor(
         return Result.success(Unit)
     }
 
-    override suspend fun retry(taskId: String): Result<Unit> = withContext(Dispatchers.IO) {
-        supportDiagnosticsStore.recordDownloadEvent(
-            action = "retry_requested",
-            taskId = taskId,
-        )
-        val existing = downloadTaskDao.getById(taskId)
-            ?: return@withContext Result.failure(IllegalArgumentException("下载任务不存在"))
+    override suspend fun retry(taskId: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            supportDiagnosticsStore.recordDownloadEvent(action = "retry_requested", taskId = taskId)
+            val existing =
+                downloadTaskDao.getById(taskId)
+                    ?: return@withContext Result.failure(IllegalArgumentException("下载任务不存在"))
 
-        if (existing.publishedFileId <= 0L) {
-            return@withContext Result.failure(IllegalStateException("当前任务没有可重试的 Workshop 条目标识"))
+            if (existing.publishedFileId <= 0L) {
+                return@withContext Result.failure(IllegalStateException("当前任务没有可重试的 Workshop 条目标识"))
+            }
+
+            runCatching {
+                val latestItem =
+                    steamRepository
+                        .resolveWorkshopItemForDownload(existing.publishedFileId)
+                        .getOrThrow()
+                requeueExistingTask(existing, latestItem)
+            }
         }
 
-        runCatching {
-            val latestItem = steamRepository.resolveWorkshopItemForDownload(existing.publishedFileId).getOrThrow()
-            requeueExistingTask(existing, latestItem)
+    override suspend fun pause(taskId: String) =
+        withContext(Dispatchers.IO) {
+            supportDiagnosticsStore.recordDownloadEvent(action = "pause_requested", taskId = taskId)
+            val existing = downloadTaskDao.getById(taskId) ?: return@withContext
+            if (
+                existing.status != DownloadStatus.Queued &&
+                    existing.status != DownloadStatus.Running
+            ) {
+                return@withContext
+            }
+            val now = System.currentTimeMillis()
+            if (existing.status == DownloadStatus.Queued) {
+                workManager.cancelUniqueWork(taskId)
+            }
+            downloadTaskDao.upsert(
+                existing.copy(
+                    status = DownloadStatus.Paused,
+                    pauseRequested = existing.status == DownloadStatus.Running,
+                    errorMessage =
+                        if (existing.status == DownloadStatus.Running) {
+                            "正在暂停…"
+                        } else {
+                            "已暂停"
+                        },
+                    updatedAt = now,
+                )
+            )
         }
-    }
 
-    override suspend fun pause(taskId: String) = withContext(Dispatchers.IO) {
-        supportDiagnosticsStore.recordDownloadEvent(
-            action = "pause_requested",
-            taskId = taskId,
-        )
-        val existing = downloadTaskDao.getById(taskId) ?: return@withContext
-        if (existing.status != DownloadStatus.Queued && existing.status != DownloadStatus.Running) {
-            return@withContext
-        }
-        val now = System.currentTimeMillis()
-        if (existing.status == DownloadStatus.Queued) {
-            workManager.cancelUniqueWork(taskId)
-        }
-        downloadTaskDao.upsert(
-            existing.copy(
-                status = DownloadStatus.Paused,
-                pauseRequested = existing.status == DownloadStatus.Running,
-                errorMessage = if (existing.status == DownloadStatus.Running) {
-                    "正在暂停…"
-                } else {
-                    "已暂停"
-                },
-                updatedAt = now,
-            ),
-        )
-    }
+    override suspend fun resume(taskId: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            supportDiagnosticsStore.recordDownloadEvent(
+                action = "resume_requested",
+                taskId = taskId,
+            )
+            val existing =
+                downloadTaskDao.getById(taskId)
+                    ?: return@withContext Result.failure(IllegalArgumentException("下载任务不存在"))
+            if (existing.status != DownloadStatus.Paused) {
+                return@withContext Result.failure(IllegalStateException("当前任务不是暂停状态"))
+            }
+            if (existing.pauseRequested) {
+                return@withContext Result.failure(IllegalStateException("正在暂停，请稍候"))
+            }
+            val latestItem =
+                runCatching {
+                        steamRepository
+                            .resolveWorkshopItemForDownload(existing.publishedFileId)
+                            .getOrThrow()
+                    }
+                    .getOrNull()
 
-    override suspend fun resume(taskId: String): Result<Unit> = withContext(Dispatchers.IO) {
-        supportDiagnosticsStore.recordDownloadEvent(
-            action = "resume_requested",
-            taskId = taskId,
-        )
-        val existing = downloadTaskDao.getById(taskId)
-            ?: return@withContext Result.failure(IllegalArgumentException("下载任务不存在"))
-        if (existing.status != DownloadStatus.Paused) {
-            return@withContext Result.failure(IllegalStateException("当前任务不是暂停状态"))
-        }
-        if (existing.pauseRequested) {
-            return@withContext Result.failure(IllegalStateException("正在暂停，请稍候"))
-        }
-        val latestItem = runCatching {
-            steamRepository.resolveWorkshopItemForDownload(existing.publishedFileId).getOrThrow()
-        }.getOrNull()
+            downloadTaskDao.upsert(
+                existing.copy(
+                    status = DownloadStatus.Queued,
+                    boundAccountKeyHash =
+                        resolveAccountBindingHash(
+                            existing.boundAccountKeyHash,
+                            existing.boundAccountName,
+                            existing.boundSteamId64,
+                        ),
+                    boundAccountName = null,
+                    boundSteamId64 = null,
+                    errorMessage = null,
+                    pauseRequested = false,
+                    runtimeRouteLabel = null,
+                    runtimeTransportLabel = null,
+                    runtimeEndpointLabel = null,
+                    runtimeSourceAddress = null,
+                    runtimeAttemptCount = 0,
+                    runtimeChunkConcurrency = 0,
+                    runtimeLastFailure = null,
+                    remoteUpdatedAt =
+                        latestItem?.timeUpdated?.takeIf { it > 0L } ?: existing.remoteUpdatedAt,
+                    lastUpdateCheckAt = existing.lastUpdateCheckAt,
+                    hasUpdateAvailable = false,
+                    updateCheckError = null,
+                    updatedAt = System.currentTimeMillis(),
+                )
+            )
 
-        downloadTaskDao.upsert(
-            existing.copy(
-                status = DownloadStatus.Queued,
-                boundAccountKeyHash = resolveAccountBindingHash(
-                    existing.boundAccountKeyHash,
-                    existing.boundAccountName,
-                    existing.boundSteamId64,
+            workManager.enqueueUniqueWork(
+                taskId,
+                ExistingWorkPolicy.REPLACE,
+                buildWorkRequest(
+                    taskId = existing.taskId,
+                    url =
+                        latestItem?.fileUrl
+                            ?: existing.sourceUrl.takeUnless { it.startsWith("steam://") },
+                    fileName = existing.fileName,
+                    title = existing.title,
+                    targetTreeUri = existing.targetTreeUri,
+                    downloadFolderName = existing.downloadFolderName,
+                    appId = latestItem?.appId?.takeIf { it > 0 } ?: existing.appId,
+                    publishedFileId = existing.publishedFileId,
+                    contentManifestId = latestItem?.contentManifestId ?: 0L,
+                    downloadAuthMode = existing.downloadAuthMode,
+                    boundAccountKeyHash =
+                        resolveAccountBindingHash(
+                            existing.boundAccountKeyHash,
+                            existing.boundAccountName,
+                            existing.boundSteamId64,
+                        ),
                 ),
-                boundAccountName = null,
-                boundSteamId64 = null,
-                errorMessage = null,
-                pauseRequested = false,
-                runtimeRouteLabel = null,
-                runtimeTransportLabel = null,
-                runtimeEndpointLabel = null,
-                runtimeSourceAddress = null,
-                runtimeAttemptCount = 0,
-                runtimeChunkConcurrency = 0,
-                runtimeLastFailure = null,
-                remoteUpdatedAt = latestItem?.timeUpdated?.takeIf { it > 0L } ?: existing.remoteUpdatedAt,
-                lastUpdateCheckAt = existing.lastUpdateCheckAt,
-                hasUpdateAvailable = false,
-                updateCheckError = null,
-                updatedAt = System.currentTimeMillis(),
-            ),
-        )
+            )
 
-        workManager.enqueueUniqueWork(
-            taskId,
-            ExistingWorkPolicy.REPLACE,
-            buildWorkRequest(
-                taskId = existing.taskId,
-                url = latestItem?.fileUrl ?: existing.sourceUrl.takeUnless { it.startsWith("steam://") },
-                fileName = existing.fileName,
-                title = existing.title,
-                targetTreeUri = existing.targetTreeUri,
-                downloadFolderName = existing.downloadFolderName,
-                appId = latestItem?.appId?.takeIf { it > 0 } ?: existing.appId,
-                publishedFileId = existing.publishedFileId,
-                contentManifestId = latestItem?.contentManifestId ?: 0L,
-                downloadAuthMode = existing.downloadAuthMode,
-                boundAccountKeyHash = resolveAccountBindingHash(
-                    existing.boundAccountKeyHash,
-                    existing.boundAccountName,
-                    existing.boundSteamId64,
-                ),
-            ),
-        )
-
-        Result.success(Unit)
-    }
+            Result.success(Unit)
+        }
 
     override suspend fun cancel(taskId: String) {
-        supportDiagnosticsStore.recordDownloadEvent(
-            action = "cancel_requested",
-            taskId = taskId,
-        )
+        supportDiagnosticsStore.recordDownloadEvent(action = "cancel_requested", taskId = taskId)
         AppLog.i(LOG_TAG, "cancel requested taskId=$taskId")
         workManager.cancelUniqueWork(taskId)
         val existing = downloadTaskDao.getById(taskId) ?: return
@@ -396,302 +416,339 @@ class DownloadsRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun delete(taskId: String): Result<Unit> = withContext(Dispatchers.IO) {
-        supportDiagnosticsStore.recordDownloadEvent(
-            action = "delete_requested",
-            taskId = taskId,
-        )
-        val existing = downloadTaskDao.getById(taskId)
-            ?: return@withContext Result.failure(IllegalArgumentException("下载任务不存在"))
-        if (
-            existing.status == DownloadStatus.Queued ||
-            existing.status == DownloadStatus.Running ||
-            existing.status == DownloadStatus.Paused
-        ) {
-            return@withContext Result.failure(IllegalStateException("进行中的任务请先暂停或取消"))
-        }
-        workManager.cancelUniqueWork(taskId)
-        downloadTaskDao.deleteById(taskId)
-        AppLog.i(LOG_TAG, "delete completed taskId=$taskId status=${existing.status}")
-        Result.success(Unit)
-    }
-
-    override suspend fun clearInactiveHistory(): Int = withContext(Dispatchers.IO) {
-        supportDiagnosticsStore.recordDownloadEvent(action = "clear_inactive_history")
-        downloadTaskDao.clearInactiveTasks()
-    }
-
-    override suspend fun clearInactiveDiagnostics(): Int = withContext(Dispatchers.IO) {
-        supportDiagnosticsStore.recordDownloadEvent(action = "clear_inactive_diagnostics")
-        downloadTaskDao.clearInactiveRuntimeDetails(updatedAt = System.currentTimeMillis())
-    }
-
-    override suspend fun checkDownloadedItemsForUpdates(): Result<DownloadedItemsUpdateCheckResult> = withContext(Dispatchers.IO) {
-        runCatching {
-            val successfulTasks = downloadTaskDao.getSuccessfulTasks()
-                .filter { it.publishedFileId > 0L }
-            if (successfulTasks.isEmpty()) {
-                return@runCatching DownloadedItemsUpdateCheckResult(
-                    summary = DownloadedItemsUpdateCheckSummary(
-                        requestedCount = 0,
-                        checkedCount = 0,
-                        updateAvailableCount = 0,
-                        failedCount = 0,
-                    ),
-                    updateCandidates = emptyList(),
-                )
+    override suspend fun delete(taskId: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            supportDiagnosticsStore.recordDownloadEvent(
+                action = "delete_requested",
+                taskId = taskId,
+            )
+            val existing =
+                downloadTaskDao.getById(taskId)
+                    ?: return@withContext Result.failure(IllegalArgumentException("下载任务不存在"))
+            if (
+                existing.status == DownloadStatus.Queued ||
+                    existing.status == DownloadStatus.Running ||
+                    existing.status == DownloadStatus.Paused
+            ) {
+                return@withContext Result.failure(IllegalStateException("进行中的任务请先暂停或取消"))
             }
+            workManager.cancelUniqueWork(taskId)
+            downloadTaskDao.deleteById(taskId)
+            AppLog.i(LOG_TAG, "delete completed taskId=$taskId status=${existing.status}")
+            Result.success(Unit)
+        }
 
-            val successfulTasksById = successfulTasks.groupBy(DownloadTaskEntity::publishedFileId)
-            val latestSuccessfulTasksById = successfulTasksById
-                .mapValues { (_, tasks) ->
-                    tasks.maxByOrNull { it.updatedAt } ?: tasks.first()
+    override suspend fun clearInactiveHistory(): Int =
+        withContext(Dispatchers.IO) {
+            supportDiagnosticsStore.recordDownloadEvent(action = "clear_inactive_history")
+            downloadTaskDao.clearInactiveTasks()
+        }
+
+    override suspend fun clearInactiveDiagnostics(): Int =
+        withContext(Dispatchers.IO) {
+            supportDiagnosticsStore.recordDownloadEvent(action = "clear_inactive_diagnostics")
+            downloadTaskDao.clearInactiveRuntimeDetails(updatedAt = System.currentTimeMillis())
+        }
+
+    override suspend fun checkDownloadedItemsForUpdates():
+        Result<DownloadedItemsUpdateCheckResult> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val successfulTasks =
+                    downloadTaskDao.getSuccessfulTasks().filter { it.publishedFileId > 0L }
+                if (successfulTasks.isEmpty()) {
+                    return@runCatching DownloadedItemsUpdateCheckResult(
+                        summary =
+                            DownloadedItemsUpdateCheckSummary(
+                                requestedCount = 0,
+                                checkedCount = 0,
+                                updateAvailableCount = 0,
+                                failedCount = 0,
+                            ),
+                        updateCandidates = emptyList(),
+                    )
                 }
-            val requestedIds = latestSuccessfulTasksById.keys.toList()
-            val now = System.currentTimeMillis()
-            var checkedCount = 0
-            var updateAvailableCount = 0
-            var failedCount = 0
-            val updateCandidates = linkedMapOf<Long, DownloadedItemUpdateCandidate>()
 
-            requestedIds.chunked(50).forEach { batchIds ->
-                steamRepository.resolveWorkshopItems(batchIds)
-                    .onSuccess { remoteItems ->
-                        val remoteById = remoteItems.associateBy(WorkshopItem::publishedFileId)
-                        batchIds.forEach { publishedFileId ->
-                            val task = latestSuccessfulTasksById[publishedFileId] ?: return@forEach
-                            val remoteItem = remoteById[publishedFileId]
-                            if (remoteItem == null) {
-                                failedCount += 1
-                                successfulTasksById[publishedFileId].orEmpty().forEach { groupedTask ->
+                val successfulTasksById =
+                    successfulTasks.groupBy(DownloadTaskEntity::publishedFileId)
+                val latestSuccessfulTasksById =
+                    successfulTasksById.mapValues { (_, tasks) ->
+                        tasks.maxByOrNull { it.updatedAt } ?: tasks.first()
+                    }
+                val requestedIds = latestSuccessfulTasksById.keys.toList()
+                val now = System.currentTimeMillis()
+                var checkedCount = 0
+                var updateAvailableCount = 0
+                var failedCount = 0
+                val updateCandidates = linkedMapOf<Long, DownloadedItemUpdateCandidate>()
+
+                requestedIds.chunked(50).forEach { batchIds ->
+                    steamRepository
+                        .resolveWorkshopItems(batchIds)
+                        .onSuccess { remoteItems ->
+                            val remoteById = remoteItems.associateBy(WorkshopItem::publishedFileId)
+                            batchIds.forEach { publishedFileId ->
+                                val task =
+                                    latestSuccessfulTasksById[publishedFileId] ?: return@forEach
+                                val remoteItem = remoteById[publishedFileId]
+                                if (remoteItem == null) {
+                                    failedCount += 1
+                                    successfulTasksById[publishedFileId].orEmpty().forEach {
+                                        groupedTask ->
+                                        downloadTaskDao.updateUpdateCheckState(
+                                            taskId = groupedTask.taskId,
+                                            lastUpdateCheckAt = now,
+                                            hasUpdateAvailable = false,
+                                            updateCheckError = "无法通过公开工坊读取这个条目",
+                                        )
+                                    }
+                                    return@forEach
+                                }
+
+                                checkedCount += 1
+                                val baselineUpdatedAt = task.remoteUpdatedAt ?: task.updatedAt
+                                val hasUpdateAvailable = remoteItem.timeUpdated > baselineUpdatedAt
+                                if (hasUpdateAvailable) {
+                                    updateAvailableCount += 1
+                                    updateCandidates[publishedFileId] =
+                                        DownloadedItemUpdateCandidate(
+                                            publishedFileId = remoteItem.publishedFileId,
+                                            appId = remoteItem.appId,
+                                            title = task.title,
+                                            previewUrl = task.previewUrl ?: remoteItem.previewUrl,
+                                        )
+                                }
+                                successfulTasksById[publishedFileId].orEmpty().forEach { groupedTask
+                                    ->
+                                    downloadTaskDao.updateUpdateCheckState(
+                                        taskId = groupedTask.taskId,
+                                        lastUpdateCheckAt = now,
+                                        hasUpdateAvailable = hasUpdateAvailable,
+                                        updateCheckError = null,
+                                    )
+                                }
+                            }
+                        }
+                        .onFailure { error ->
+                            AppLog.w(
+                                LOG_TAG,
+                                "checkDownloadedItemsForUpdates failed for batch size=${batchIds.size}",
+                                error,
+                            )
+                            failedCount += batchIds.size
+                            batchIds.forEach { publishedFileId ->
+                                successfulTasksById[publishedFileId].orEmpty().forEach { groupedTask
+                                    ->
                                     downloadTaskDao.updateUpdateCheckState(
                                         taskId = groupedTask.taskId,
                                         lastUpdateCheckAt = now,
                                         hasUpdateAvailable = false,
-                                        updateCheckError = "无法通过公开工坊读取这个条目",
+                                        updateCheckError = error.message ?: "公开更新检查失败",
                                     )
                                 }
-                                return@forEach
-                            }
-
-                            checkedCount += 1
-                            val baselineUpdatedAt = task.remoteUpdatedAt ?: task.updatedAt
-                            val hasUpdateAvailable = remoteItem.timeUpdated > baselineUpdatedAt
-                            if (hasUpdateAvailable) {
-                                updateAvailableCount += 1
-                                updateCandidates[publishedFileId] = DownloadedItemUpdateCandidate(
-                                    publishedFileId = remoteItem.publishedFileId,
-                                    appId = remoteItem.appId,
-                                    title = task.title,
-                                    previewUrl = task.previewUrl ?: remoteItem.previewUrl,
-                                )
-                            }
-                            successfulTasksById[publishedFileId].orEmpty().forEach { groupedTask ->
-                                downloadTaskDao.updateUpdateCheckState(
-                                    taskId = groupedTask.taskId,
-                                    lastUpdateCheckAt = now,
-                                    hasUpdateAvailable = hasUpdateAvailable,
-                                    updateCheckError = null,
-                                )
                             }
                         }
-                    }
-                    .onFailure { error ->
-                        AppLog.w(
-                            LOG_TAG,
-                            "checkDownloadedItemsForUpdates failed for batch size=${batchIds.size}",
-                            error,
-                        )
-                        failedCount += batchIds.size
-                        batchIds.forEach { publishedFileId ->
-                            successfulTasksById[publishedFileId].orEmpty().forEach { groupedTask ->
-                                downloadTaskDao.updateUpdateCheckState(
-                                    taskId = groupedTask.taskId,
-                                    lastUpdateCheckAt = now,
-                                    hasUpdateAvailable = false,
-                                    updateCheckError = error.message ?: "公开更新检查失败",
-                                )
-                            }
-                        }
-                    }
-            }
-
-            DownloadedItemsUpdateCheckResult(
-                summary = DownloadedItemsUpdateCheckSummary(
-                    requestedCount = requestedIds.size,
-                    checkedCount = checkedCount,
-                    updateAvailableCount = updateAvailableCount,
-                    failedCount = failedCount,
-                ),
-                updateCandidates = updateCandidates.values.toList(),
-            )
-        }
-    }
-
-    override suspend fun simulateUpdateAvailableForDownloadedItem(): Result<String> = withContext(Dispatchers.IO) {
-        runCatching {
-            val successfulTasks = downloadTaskDao.getSuccessfulTasks()
-                .filter { it.publishedFileId > 0L }
-            require(successfulTasks.isNotEmpty()) { "当前没有可模拟更新的已完成任务" }
-
-            successfulTasks.forEach { task ->
-                val remoteItem = steamRepository.resolveWorkshopItems(listOf(task.publishedFileId))
-                    .getOrNull()
-                    ?.firstOrNull { it.publishedFileId == task.publishedFileId }
-                    ?: return@forEach
-
-                val simulatedBaseline = when {
-                    remoteItem.timeUpdated > 1L -> remoteItem.timeUpdated - 1L
-                    task.remoteUpdatedAt != null && task.remoteUpdatedAt > 1L -> task.remoteUpdatedAt - 1L
-                    else -> 0L
                 }
-                downloadTaskDao.primeUpdateCheckBaseline(
-                    publishedFileId = task.publishedFileId,
-                    remoteUpdatedAt = simulatedBaseline,
+
+                DownloadedItemsUpdateCheckResult(
+                    summary =
+                        DownloadedItemsUpdateCheckSummary(
+                            requestedCount = requestedIds.size,
+                            checkedCount = checkedCount,
+                            updateAvailableCount = updateAvailableCount,
+                            failedCount = failedCount,
+                        ),
+                    updateCandidates = updateCandidates.values.toList(),
                 )
-                return@runCatching task.title
             }
-
-            error("当前没有可通过公开工坊读取的已完成任务")
         }
-    }
 
-    override suspend fun rebindRetryableTasksToCurrentSession() = withContext(Dispatchers.IO) {
-        val binding = currentAuthenticatedBinding() ?: return@withContext
-        supportDiagnosticsStore.recordDownloadEvent(
-            action = "rebind_retryable_tasks",
-            fields = mapOf(
-                "authMode" to binding.authMode.name,
-                "hasBindingHash" to (!binding.boundAccountKeyHash.isNullOrBlank()).toString(),
-            ),
-        )
-        val now = System.currentTimeMillis()
-        downloadTaskDao.getAll()
-            .filter { task ->
+    override suspend fun simulateUpdateAvailableForDownloadedItem(): Result<String> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val successfulTasks =
+                    downloadTaskDao.getSuccessfulTasks().filter { it.publishedFileId > 0L }
+                require(successfulTasks.isNotEmpty()) { "当前没有可模拟更新的已完成任务" }
+
+                successfulTasks.forEach { task ->
+                    val remoteItem =
+                        steamRepository
+                            .resolveWorkshopItems(listOf(task.publishedFileId))
+                            .getOrNull()
+                            ?.firstOrNull { it.publishedFileId == task.publishedFileId }
+                            ?: return@forEach
+
+                    val simulatedBaseline =
+                        when {
+                            remoteItem.timeUpdated > 1L -> remoteItem.timeUpdated - 1L
+                            task.remoteUpdatedAt != null && task.remoteUpdatedAt > 1L ->
+                                task.remoteUpdatedAt - 1L
+                            else -> 0L
+                        }
+                    downloadTaskDao.primeUpdateCheckBaseline(
+                        publishedFileId = task.publishedFileId,
+                        remoteUpdatedAt = simulatedBaseline,
+                    )
+                    return@runCatching task.title
+                }
+
+                error("当前没有可通过公开工坊读取的已完成任务")
+            }
+        }
+
+    override suspend fun rebindRetryableTasksToCurrentSession() =
+        withContext(Dispatchers.IO) {
+            val binding = currentAuthenticatedBinding() ?: return@withContext
+            supportDiagnosticsStore.recordDownloadEvent(
+                action = "rebind_retryable_tasks",
+                fields =
+                    mapOf(
+                        "authMode" to binding.authMode.name,
+                        "hasBindingHash" to
+                            (!binding.boundAccountKeyHash.isNullOrBlank()).toString(),
+                    ),
+            )
+            val now = System.currentTimeMillis()
+            downloadTaskDao
+                .getAll()
+                .filter { task ->
                     task.publishedFileId > 0L &&
-                    task.status != DownloadStatus.Running &&
-                    task.status != DownloadStatus.Success &&
-                    (
-                        task.downloadAuthMode != binding.authMode ||
+                        task.status != DownloadStatus.Running &&
+                        task.status != DownloadStatus.Success &&
+                        (task.downloadAuthMode != binding.authMode ||
                             resolveAccountBindingHash(
                                 task.boundAccountKeyHash,
                                 task.boundAccountName,
                                 task.boundSteamId64,
-                            ) != binding.boundAccountKeyHash
+                            ) != binding.boundAccountKeyHash)
+                }
+                .forEach { task ->
+                    downloadTaskDao.upsert(
+                        task.copy(
+                            downloadAuthMode = binding.authMode,
+                            boundAccountKeyHash = binding.boundAccountKeyHash,
+                            boundAccountName = null,
+                            boundSteamId64 = null,
+                            updatedAt = now,
+                        )
                     )
-            }
-            .forEach { task ->
+                }
+        }
+
+    override suspend fun enforceAnonymousOnly(reason: String) =
+        withContext(Dispatchers.IO) {
+            supportDiagnosticsStore.recordDownloadEvent(
+                action = "enforce_anonymous_only",
+                fields = mapOf("reason" to reason),
+            )
+            val now = System.currentTimeMillis()
+            downloadTaskDao.getAll().forEach { task ->
+                if (
+                    task.downloadAuthMode == DownloadAuthMode.Anonymous &&
+                        task.boundAccountKeyHash.isNullOrBlank() &&
+                        task.boundAccountName.isNullOrBlank() &&
+                        task.boundSteamId64 == null
+                ) {
+                    return@forEach
+                }
+
+                if (task.status in activeStatuses) {
+                    workManager.cancelUniqueWork(task.taskId)
+                }
+
                 downloadTaskDao.upsert(
                     task.copy(
-                        downloadAuthMode = binding.authMode,
-                        boundAccountKeyHash = binding.boundAccountKeyHash,
+                        sourceUrl =
+                            if (task.publishedFileId > 0L) {
+                                "steam://publishedfile/${task.publishedFileId}"
+                            } else {
+                                task.sourceUrl
+                            },
+                        targetTreeUri =
+                            if (task.status in activeStatuses) null else task.targetTreeUri,
+                        storageRootRef = null,
+                        downloadAuthMode = DownloadAuthMode.Anonymous,
+                        boundAccountKeyHash = null,
                         boundAccountName = null,
                         boundSteamId64 = null,
+                        runtimeRouteLabel = null,
+                        runtimeTransportLabel = null,
+                        runtimeEndpointLabel = null,
+                        runtimeSourceAddress = null,
+                        runtimeAttemptCount = 0,
+                        runtimeChunkConcurrency = 0,
+                        runtimeLastFailure = null,
+                        status =
+                            if (task.status in activeStatuses) DownloadStatus.Cancelled
+                            else task.status,
+                        pauseRequested = false,
+                        errorMessage =
+                            if (task.status in activeStatuses) reason else task.errorMessage,
                         updatedAt = now,
-                    ),
+                    )
                 )
             }
-    }
-
-    override suspend fun enforceAnonymousOnly(reason: String) = withContext(Dispatchers.IO) {
-        supportDiagnosticsStore.recordDownloadEvent(
-            action = "enforce_anonymous_only",
-            fields = mapOf("reason" to reason),
-        )
-        val now = System.currentTimeMillis()
-        downloadTaskDao.getAll().forEach { task ->
-            if (task.downloadAuthMode == DownloadAuthMode.Anonymous &&
-                task.boundAccountKeyHash.isNullOrBlank() &&
-                task.boundAccountName.isNullOrBlank() &&
-                task.boundSteamId64 == null
-            ) {
-                return@forEach
-            }
-
-            if (task.status in activeStatuses) {
-                workManager.cancelUniqueWork(task.taskId)
-            }
-
-            downloadTaskDao.upsert(
-                task.copy(
-                    sourceUrl = if (task.publishedFileId > 0L) {
-                        "steam://publishedfile/${task.publishedFileId}"
-                    } else {
-                        task.sourceUrl
-                    },
-                    targetTreeUri = if (task.status in activeStatuses) null else task.targetTreeUri,
-                    storageRootRef = null,
-                    downloadAuthMode = DownloadAuthMode.Anonymous,
-                    boundAccountKeyHash = null,
-                    boundAccountName = null,
-                    boundSteamId64 = null,
-                    runtimeRouteLabel = null,
-                    runtimeTransportLabel = null,
-                    runtimeEndpointLabel = null,
-                    runtimeSourceAddress = null,
-                    runtimeAttemptCount = 0,
-                    runtimeChunkConcurrency = 0,
-                    runtimeLastFailure = null,
-                    status = if (task.status in activeStatuses) DownloadStatus.Cancelled else task.status,
-                    pauseRequested = false,
-                    errorMessage = if (task.status in activeStatuses) reason else task.errorMessage,
-                    updatedAt = now,
-                ),
-            )
         }
-    }
 
-    override suspend fun reconcileActiveTasks() = withContext(Dispatchers.IO) {
-        downloadTaskDao.getActiveTasks().forEach { task ->
-            val infos = runCatching { workManager.getWorkInfosForUniqueWork(task.taskId).get() }
-                .getOrDefault(emptyList())
+    override suspend fun reconcileActiveTasks() =
+        withContext(Dispatchers.IO) {
+            downloadTaskDao.getActiveTasks().forEach { task ->
+                val infos =
+                    runCatching { workManager.getWorkInfosForUniqueWork(task.taskId).get() }
+                        .getOrDefault(emptyList())
 
-            when {
-                infos.isEmpty() -> markTaskInterrupted(task, "下载任务已丢失，请重新加入队列")
-                infos.any { it.state == WorkInfo.State.RUNNING } -> Unit
-                infos.any { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.BLOCKED } -> {
-                    if (task.status != DownloadStatus.Queued) {
-                        downloadTaskDao.updateProgress(
+                when {
+                    infos.isEmpty() -> markTaskInterrupted(task, "下载任务已丢失，请重新加入队列")
+                    infos.any { it.state == WorkInfo.State.RUNNING } -> Unit
+                    infos.any {
+                        it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.BLOCKED
+                    } -> {
+                        if (task.status != DownloadStatus.Queued) {
+                            downloadTaskDao.updateProgress(
+                                taskId = task.taskId,
+                                status = DownloadStatus.Queued,
+                                pauseRequested = false,
+                                errorMessage = null,
+                                progressPercent = task.progressPercent,
+                                bytesDownloaded = task.bytesDownloaded,
+                                totalBytes = task.totalBytes,
+                                updatedAt = System.currentTimeMillis(),
+                            )
+                        }
+                    }
+                    infos.any { it.state == WorkInfo.State.CANCELLED } -> {
+                        val latest = downloadTaskDao.getById(task.taskId) ?: task
+                        val cancelledStatus =
+                            if (latest.status == DownloadStatus.Paused || latest.pauseRequested) {
+                                DownloadStatus.Paused
+                            } else {
+                                DownloadStatus.Cancelled
+                            }
+                        downloadTaskDao.finish(
                             taskId = task.taskId,
-                            status = DownloadStatus.Queued,
-                            pauseRequested = false,
-                            errorMessage = null,
-                            progressPercent = task.progressPercent,
-                            bytesDownloaded = task.bytesDownloaded,
-                            totalBytes = task.totalBytes,
+                            status = cancelledStatus,
+                            savedFileUri = latest.savedFileUri,
+                            savedRelativePath = latest.savedRelativePath,
+                            postProcessSummary = latest.postProcessSummary,
+                            runtimeLastFailure = latest.runtimeLastFailure,
+                            errorMessage =
+                                latest.errorMessage
+                                    ?: if (cancelledStatus == DownloadStatus.Paused) "已暂停"
+                                    else "已取消",
+                            progressPercent = latest.progressPercent,
+                            bytesDownloaded = latest.bytesDownloaded,
+                            totalBytes = latest.totalBytes,
                             updatedAt = System.currentTimeMillis(),
                         )
                     }
-                }
-                infos.any { it.state == WorkInfo.State.CANCELLED } -> {
-                    val latest = downloadTaskDao.getById(task.taskId) ?: task
-                    val cancelledStatus = if (latest.status == DownloadStatus.Paused || latest.pauseRequested) {
-                        DownloadStatus.Paused
-                    } else {
-                        DownloadStatus.Cancelled
+                    infos.any { it.state == WorkInfo.State.FAILED } -> {
+                        markTaskInterrupted(task, task.errorMessage ?: "下载失败，请重新加入队列")
                     }
-                    downloadTaskDao.finish(
-                        taskId = task.taskId,
-                        status = cancelledStatus,
-                        savedFileUri = latest.savedFileUri,
-                        savedRelativePath = latest.savedRelativePath,
-                        postProcessSummary = latest.postProcessSummary,
-                        runtimeLastFailure = latest.runtimeLastFailure,
-                        errorMessage = latest.errorMessage ?: if (cancelledStatus == DownloadStatus.Paused) "已暂停" else "已取消",
-                        progressPercent = latest.progressPercent,
-                        bytesDownloaded = latest.bytesDownloaded,
-                        totalBytes = latest.totalBytes,
-                        updatedAt = System.currentTimeMillis(),
-                    )
+                    infos.any { it.state == WorkInfo.State.SUCCEEDED } -> Unit
+                    else -> markTaskInterrupted(task, "下载状态异常，请重新加入队列")
                 }
-                infos.any { it.state == WorkInfo.State.FAILED } -> {
-                    markTaskInterrupted(task, task.errorMessage ?: "下载失败，请重新加入队列")
-                }
-                infos.any { it.state == WorkInfo.State.SUCCEEDED } -> Unit
-                else -> markTaskInterrupted(task, "下载状态异常，请重新加入队列")
             }
         }
-    }
 
     private suspend fun cancelActiveDownloads(publishedFileId: Long) {
         downloadTaskDao.getActiveByPublishedFileId(publishedFileId).forEach { existing ->
@@ -712,17 +769,12 @@ class DownloadsRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun markTaskInterrupted(
-        task: DownloadTaskEntity,
-        message: String,
-    ) {
+    private suspend fun markTaskInterrupted(task: DownloadTaskEntity, message: String) {
         supportDiagnosticsStore.recordDownloadEvent(
             action = "task_interrupted",
             taskId = task.taskId,
-            fields = mapOf(
-                "publishedFileId" to task.publishedFileId.toString(),
-                "message" to message,
-            ),
+            fields =
+                mapOf("publishedFileId" to task.publishedFileId.toString(), "message" to message),
         )
         AppLog.w(
             LOG_TAG,
@@ -743,33 +795,36 @@ class DownloadsRepositoryImpl @Inject constructor(
         )
     }
 
-    private suspend fun sanitizeLegacyTaskBindings() = withContext(Dispatchers.IO) {
-        val now = System.currentTimeMillis()
-        downloadTaskDao.getAll().forEach { task ->
-            val normalizedHash = when {
-                task.downloadAuthMode == DownloadAuthMode.Anonymous -> null
-                task.status !in activeStatuses -> null
-                else -> resolveAccountBindingHash(
-                    task.boundAccountKeyHash,
-                    task.boundAccountName,
-                    task.boundSteamId64,
+    private suspend fun sanitizeLegacyTaskBindings() =
+        withContext(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            downloadTaskDao.getAll().forEach { task ->
+                val normalizedHash =
+                    when {
+                        task.downloadAuthMode == DownloadAuthMode.Anonymous -> null
+                        task.status !in activeStatuses -> null
+                        else ->
+                            resolveAccountBindingHash(
+                                task.boundAccountKeyHash,
+                                task.boundAccountName,
+                                task.boundSteamId64,
+                            )
+                    }
+                val alreadySanitized =
+                    task.boundAccountName.isNullOrBlank() &&
+                        task.boundSteamId64 == null &&
+                        task.boundAccountKeyHash == normalizedHash
+                if (alreadySanitized) return@forEach
+                downloadTaskDao.upsert(
+                    task.copy(
+                        boundAccountKeyHash = normalizedHash,
+                        boundAccountName = null,
+                        boundSteamId64 = null,
+                        updatedAt = now,
+                    )
                 )
             }
-            val alreadySanitized =
-                task.boundAccountName.isNullOrBlank() &&
-                    task.boundSteamId64 == null &&
-                    task.boundAccountKeyHash == normalizedHash
-            if (alreadySanitized) return@forEach
-            downloadTaskDao.upsert(
-                task.copy(
-                    boundAccountKeyHash = normalizedHash,
-                    boundAccountName = null,
-                    boundSteamId64 = null,
-                    updatedAt = now,
-                ),
-            )
         }
-    }
 
     private suspend fun requeueExistingTask(
         existing: DownloadTaskEntity,
@@ -778,10 +833,11 @@ class DownloadsRepositoryImpl @Inject constructor(
         supportDiagnosticsStore.recordDownloadEvent(
             action = "requeue_existing_task",
             taskId = existing.taskId,
-            fields = mapOf(
-                "publishedFileId" to existing.publishedFileId.toString(),
-                "latestCanDownload" to latestItem.canDownload.toString(),
-            ),
+            fields =
+                mapOf(
+                    "publishedFileId" to existing.publishedFileId.toString(),
+                    "latestCanDownload" to latestItem.canDownload.toString(),
+                ),
         )
         removeDuplicateEntries(existing)
 
@@ -790,35 +846,40 @@ class DownloadsRepositoryImpl @Inject constructor(
                 existing.copy(
                     title = latestItem.title,
                     previewUrl = latestItem.previewUrl,
-                    sourceUrl = latestItem.fileUrl ?: "steam://publishedfile/${latestItem.publishedFileId}",
+                    sourceUrl =
+                        latestItem.fileUrl ?: "steam://publishedfile/${latestItem.publishedFileId}",
                     runtimeRouteLabel = null,
                     runtimeTransportLabel = null,
                     runtimeEndpointLabel = null,
                     runtimeSourceAddress = null,
-                runtimeAttemptCount = 0,
-                runtimeChunkConcurrency = 0,
-                runtimeLastFailure = null,
-                status = DownloadStatus.Unavailable,
-                pauseRequested = false,
-                errorMessage = "该条目当前不可下载",
-                remoteUpdatedAt = latestItem.timeUpdated.takeIf { it > 0L } ?: existing.remoteUpdatedAt,
-                lastUpdateCheckAt = existing.lastUpdateCheckAt,
-                hasUpdateAvailable = false,
-                updateCheckError = null,
-                updatedAt = System.currentTimeMillis(),
-            ),
-        )
+                    runtimeAttemptCount = 0,
+                    runtimeChunkConcurrency = 0,
+                    runtimeLastFailure = null,
+                    status = DownloadStatus.Unavailable,
+                    pauseRequested = false,
+                    errorMessage = "该条目当前不可下载",
+                    remoteUpdatedAt =
+                        latestItem.timeUpdated.takeIf { it > 0L } ?: existing.remoteUpdatedAt,
+                    lastUpdateCheckAt = existing.lastUpdateCheckAt,
+                    hasUpdateAvailable = false,
+                    updateCheckError = null,
+                    updatedAt = System.currentTimeMillis(),
+                )
+            )
             error("该条目当前不可下载")
         }
 
-        val fileName = sanitizeFileName(
-            latestItem.fileName ?: existing.fileName.ifBlank { latestItem.title },
-            "workshop-${latestItem.publishedFileId}",
-        )
-        val binding = currentAuthenticatedBinding() ?: DownloadBinding(
-            authMode = DownloadAuthMode.Anonymous,
-            boundAccountKeyHash = null,
-        )
+        val fileName =
+            sanitizeFileName(
+                latestItem.fileName ?: existing.fileName.ifBlank { latestItem.title },
+                "workshop-${latestItem.publishedFileId}",
+            )
+        val binding =
+            currentAuthenticatedBinding()
+                ?: DownloadBinding(
+                    authMode = DownloadAuthMode.Anonymous,
+                    boundAccountKeyHash = null,
+                )
 
         downloadTaskDao.upsert(
             existing.copy(
@@ -826,7 +887,8 @@ class DownloadsRepositoryImpl @Inject constructor(
                 appId = latestItem.appId,
                 title = latestItem.title,
                 previewUrl = latestItem.previewUrl,
-                sourceUrl = latestItem.fileUrl ?: "steam://publishedfile/${latestItem.publishedFileId}",
+                sourceUrl =
+                    latestItem.fileUrl ?: "steam://publishedfile/${latestItem.publishedFileId}",
                 fileName = fileName,
                 totalBytes = latestItem.fileSize.takeIf { it > 0L } ?: existing.totalBytes,
                 downloadAuthMode = binding.authMode,
@@ -843,12 +905,13 @@ class DownloadsRepositoryImpl @Inject constructor(
                 status = DownloadStatus.Queued,
                 pauseRequested = false,
                 errorMessage = null,
-                remoteUpdatedAt = latestItem.timeUpdated.takeIf { it > 0L } ?: existing.remoteUpdatedAt,
+                remoteUpdatedAt =
+                    latestItem.timeUpdated.takeIf { it > 0L } ?: existing.remoteUpdatedAt,
                 lastUpdateCheckAt = existing.lastUpdateCheckAt,
                 hasUpdateAvailable = false,
                 updateCheckError = null,
                 updatedAt = System.currentTimeMillis(),
-            ),
+            )
         )
 
         workManager.enqueueUniqueWork(
@@ -876,17 +939,19 @@ class DownloadsRepositoryImpl @Inject constructor(
         val prefs = preferencesStore.snapshot()
         if (!prefs.isLoginFeatureEnabled || !prefs.isLoggedInDownloadEnabled) return null
         if (!steamRepository.isAuthenticatedDownloadReady()) return null
-        val authMode = if (prefs.preferAnonymousDownloads) {
-            DownloadAuthMode.Auto
-        } else {
-            DownloadAuthMode.Authenticated
-        }
+        val authMode =
+            if (prefs.preferAnonymousDownloads) {
+                DownloadAuthMode.Auto
+            } else {
+                DownloadAuthMode.Authenticated
+            }
         return DownloadBinding(
             authMode = authMode,
-            boundAccountKeyHash = buildAccountBindingHash(
-                accountName = session.account?.accountName,
-                steamId64 = session.account?.steamId64,
-            ),
+            boundAccountKeyHash =
+                buildAccountBindingHash(
+                    accountName = session.account?.accountName,
+                    steamId64 = session.account?.steamId64,
+                ),
         )
     }
 
@@ -898,33 +963,35 @@ class DownloadsRepositoryImpl @Inject constructor(
             fields = mapOf("publishedFileId" to item.publishedFileId.toString()),
         )
         return runCatching {
-            steamRepository.resolveWorkshopItemForDownload(item.publishedFileId).getOrThrow()
-        }.getOrElse { item }
+                steamRepository.resolveWorkshopItemForDownload(item.publishedFileId).getOrThrow()
+            }
+            .getOrElse { item }
     }
 
     private fun WorkshopItem.needsDownloadPreparation(): Boolean {
-        return publishedFileId > 0L &&
-            (!isDownloadInfoResolved || !canDownload || hasChildItems)
+        return publishedFileId > 0L && (!isDownloadInfoResolved || !canDownload || hasChildItems)
     }
 
     private suspend fun removeDuplicateEntries(existing: DownloadTaskEntity) {
-        downloadTaskDao.getByPublishedFileIdExcludingTask(
-            publishedFileId = existing.publishedFileId,
-            keepTaskId = existing.taskId,
-        ).forEach { duplicate ->
-            AppLog.i(
-                LOG_TAG,
-                "removeDuplicateEntries removing taskId=${duplicate.taskId} publishedFileId=${duplicate.publishedFileId}",
+        downloadTaskDao
+            .getByPublishedFileIdExcludingTask(
+                publishedFileId = existing.publishedFileId,
+                keepTaskId = existing.taskId,
             )
-            if (
-                duplicate.status == DownloadStatus.Queued ||
-                duplicate.status == DownloadStatus.Running ||
-                duplicate.status == DownloadStatus.Paused
-            ) {
-                workManager.cancelUniqueWork(duplicate.taskId)
+            .forEach { duplicate ->
+                AppLog.i(
+                    LOG_TAG,
+                    "removeDuplicateEntries removing taskId=${duplicate.taskId} publishedFileId=${duplicate.publishedFileId}",
+                )
+                if (
+                    duplicate.status == DownloadStatus.Queued ||
+                        duplicate.status == DownloadStatus.Running ||
+                        duplicate.status == DownloadStatus.Paused
+                ) {
+                    workManager.cancelUniqueWork(duplicate.taskId)
+                }
+                downloadTaskDao.deleteById(duplicate.taskId)
             }
-            downloadTaskDao.deleteById(duplicate.taskId)
-        }
     }
 
     private fun buildWorkRequest(
@@ -939,22 +1006,26 @@ class DownloadsRepositoryImpl @Inject constructor(
         contentManifestId: Long,
         downloadAuthMode: DownloadAuthMode,
         boundAccountKeyHash: String?,
-    ) = OneTimeWorkRequestBuilder<WorkshopDownloadWorker>()
-        .setInputData(
-            Data.Builder()
-                .putString(WorkshopDownloadWorker.KEY_TASK_ID, taskId)
-                .putString(WorkshopDownloadWorker.KEY_URL, url)
-                .putString(WorkshopDownloadWorker.KEY_FILE_NAME, fileName)
-                .putString(WorkshopDownloadWorker.KEY_TITLE, title)
-                .putString(WorkshopDownloadWorker.KEY_TARGET_TREE_URI, targetTreeUri)
-                .putString(WorkshopDownloadWorker.KEY_DOWNLOAD_FOLDER_NAME, downloadFolderName)
-                .putInt(WorkshopDownloadWorker.KEY_APP_ID, appId)
-                .putLong(WorkshopDownloadWorker.KEY_PUBLISHED_FILE_ID, publishedFileId)
-                .putLong(WorkshopDownloadWorker.KEY_CONTENT_MANIFEST_ID, contentManifestId)
-                .putString(WorkshopDownloadWorker.KEY_DOWNLOAD_AUTH_MODE, downloadAuthMode.name)
-                .putString(WorkshopDownloadWorker.KEY_BOUND_ACCOUNT_KEY_HASH, boundAccountKeyHash)
-                .build(),
-        )
-        .addTag(WorkshopDownloadWorker.TAG_DOWNLOAD)
-        .build()
+    ) =
+        OneTimeWorkRequestBuilder<WorkshopDownloadWorker>()
+            .setInputData(
+                Data.Builder()
+                    .putString(WorkshopDownloadWorker.KEY_TASK_ID, taskId)
+                    .putString(WorkshopDownloadWorker.KEY_URL, url)
+                    .putString(WorkshopDownloadWorker.KEY_FILE_NAME, fileName)
+                    .putString(WorkshopDownloadWorker.KEY_TITLE, title)
+                    .putString(WorkshopDownloadWorker.KEY_TARGET_TREE_URI, targetTreeUri)
+                    .putString(WorkshopDownloadWorker.KEY_DOWNLOAD_FOLDER_NAME, downloadFolderName)
+                    .putInt(WorkshopDownloadWorker.KEY_APP_ID, appId)
+                    .putLong(WorkshopDownloadWorker.KEY_PUBLISHED_FILE_ID, publishedFileId)
+                    .putLong(WorkshopDownloadWorker.KEY_CONTENT_MANIFEST_ID, contentManifestId)
+                    .putString(WorkshopDownloadWorker.KEY_DOWNLOAD_AUTH_MODE, downloadAuthMode.name)
+                    .putString(
+                        WorkshopDownloadWorker.KEY_BOUND_ACCOUNT_KEY_HASH,
+                        boundAccountKeyHash,
+                    )
+                    .build()
+            )
+            .addTag(WorkshopDownloadWorker.TAG_DOWNLOAD)
+            .build()
 }

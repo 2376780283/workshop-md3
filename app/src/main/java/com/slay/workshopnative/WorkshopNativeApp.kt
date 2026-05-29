@@ -2,13 +2,13 @@ package com.slay.workshopnative
 
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.serviceLoaderEnabled
-import androidx.work.Configuration
 import com.slay.workshopnative.core.logging.AppLog
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -17,8 +17,7 @@ import okio.Path.Companion.toOkioPath
 @HiltAndroidApp
 class WorkshopNativeApp : Application(), Configuration.Provider {
 
-    @Inject
-    lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var workerFactory: HiltWorkerFactory
 
     override fun onCreate() {
         super.onCreate()
@@ -26,14 +25,8 @@ class WorkshopNativeApp : Application(), Configuration.Provider {
         SingletonImageLoader.setSafe { context ->
             ImageLoader.Builder(context)
                 .serviceLoaderEnabled(false)
-                .components {
-                    add(OkHttpNetworkFetcherFactory())
-                }
-                .memoryCache {
-                    MemoryCache.Builder()
-                        .maxSizePercent(context, 0.2)
-                        .build()
-                }
+                .components { add(OkHttpNetworkFetcherFactory()) }
+                .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.2).build() }
                 .diskCache {
                     DiskCache.Builder()
                         .directory(context.cacheDir.resolve("coil-image-cache").toOkioPath())
@@ -45,7 +38,5 @@ class WorkshopNativeApp : Application(), Configuration.Provider {
     }
 
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .build()
+        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 }

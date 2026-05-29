@@ -47,14 +47,15 @@ fun AnimatedWorkshopThumbnail(
     contentScale: ContentScale = ContentScale.Crop,
 ) {
     val context = LocalContext.current
-    val candidateUrls = remember(imageUrl) {
-        buildList {
-            val normalizedUrl = normalizeAnimatedWorkshopArtworkUrl(imageUrl)
-            if (!normalizedUrl.isNullOrBlank()) {
-                add(normalizedUrl)
+    val candidateUrls =
+        remember(imageUrl) {
+            buildList {
+                val normalizedUrl = normalizeAnimatedWorkshopArtworkUrl(imageUrl)
+                if (!normalizedUrl.isNullOrBlank()) {
+                    add(normalizedUrl)
+                }
             }
         }
-    }
     var candidateIndex by remember(candidateUrls) { mutableStateOf(0) }
     val resolvedUrl = candidateUrls.getOrNull(candidateIndex)
     val imageLoader = rememberAnimatedWorkshopImageLoader(context)
@@ -65,19 +66,21 @@ fun AnimatedWorkshopThumbnail(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 2.dp,
         shadowElevation = 8.dp,
-        border = BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.35f))),
+        border =
+            BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.35f))),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer,
-                        ),
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(
+                        brush =
+                            Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.tertiaryContainer,
+                                )
+                            )
                     ),
-                ),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -88,14 +91,10 @@ fun AnimatedWorkshopThumbnail(
             )
             if (!resolvedUrl.isNullOrBlank()) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(resolvedUrl)
-                        .build(),
+                    model = ImageRequest.Builder(context).data(resolvedUrl).build(),
                     imageLoader = imageLoader,
                     contentDescription = fallbackText,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(shape),
+                    modifier = Modifier.fillMaxSize().clip(shape),
                     contentScale = contentScale,
                     onError = {
                         if (candidateIndex < candidateUrls.lastIndex) {
@@ -111,19 +110,17 @@ fun AnimatedWorkshopThumbnail(
 @Composable
 private fun rememberAnimatedWorkshopImageLoader(context: Context): ImageLoader {
     val appContext = context.applicationContext
-    return remember(appContext) {
-        AnimatedWorkshopImageLoaderHolder.get(appContext)
-    }
+    return remember(appContext) { AnimatedWorkshopImageLoaderHolder.get(appContext) }
 }
 
 private object AnimatedWorkshopImageLoaderHolder {
-    @Volatile
-    private var imageLoader: ImageLoader? = null
+    @Volatile private var imageLoader: ImageLoader? = null
 
     fun get(context: Context): ImageLoader {
-        return imageLoader ?: synchronized(this) {
-            imageLoader ?: buildImageLoader(context).also { imageLoader = it }
-        }
+        return imageLoader
+            ?: synchronized(this) {
+                imageLoader ?: buildImageLoader(context).also { imageLoader = it }
+            }
     }
 
     private fun buildImageLoader(context: Context): ImageLoader {
@@ -137,14 +134,12 @@ private object AnimatedWorkshopImageLoaderHolder {
                     add(GifDecoder.Factory())
                 }
             }
-            .memoryCache {
-                MemoryCache.Builder()
-                    .maxSizePercent(context, 0.08)
-                    .build()
-            }
+            .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.08).build() }
             .diskCache {
                 DiskCache.Builder()
-                    .directory(context.cacheDir.resolve("coil-animated-workshop-cache").toOkioPath())
+                    .directory(
+                        context.cacheDir.resolve("coil-animated-workshop-cache").toOkioPath()
+                    )
                     .maxSizeBytes(128L * 1024L * 1024L)
                     .build()
             }
@@ -155,11 +150,12 @@ private object AnimatedWorkshopImageLoaderHolder {
 private fun normalizeAnimatedWorkshopArtworkUrl(url: String?): String? {
     if (url.isNullOrBlank()) return null
     return runCatching {
-        val parsed = Uri.parse(url)
-        if (parsed.scheme.equals("http", ignoreCase = true)) {
-            parsed.buildUpon().scheme("https").build().toString()
-        } else {
-            url.trim()
+            val parsed = Uri.parse(url)
+            if (parsed.scheme.equals("http", ignoreCase = true)) {
+                parsed.buildUpon().scheme("https").build().toString()
+            } else {
+                url.trim()
+            }
         }
-    }.getOrDefault(url.trim())
+        .getOrDefault(url.trim())
 }

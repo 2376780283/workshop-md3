@@ -36,17 +36,19 @@ fun TranslatableDescriptionCard(
     onShowOriginal: () -> Unit,
     onShowTranslated: (() -> Unit)? = null,
 ) {
-    val displayText = if (showTranslated && !translatedText.isNullOrBlank()) {
-        translatedText
-    } else {
-        originalText
-    }
+    val displayText =
+        if (showTranslated && !translatedText.isNullOrBlank()) {
+            translatedText
+        } else {
+            originalText
+        }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = workshopAdaptiveSurfaceColor(
-            light = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
-        ),
+        color =
+            workshopAdaptiveSurfaceColor(
+                light = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f)
+            ),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, workshopAdaptiveBorderColor()),
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -106,15 +108,20 @@ fun TranslatableDescriptionCard(
                 )
             }
 
-            if (showTranslated && (!providerLabel.isNullOrBlank() || !sourceLanguageLabel.isNullOrBlank())) {
-                val metadata = buildList {
-                    if (!sourceLanguageLabel.isNullOrBlank()) {
-                        add("识别原文：$sourceLanguageLabel")
-                    }
-                    if (!providerLabel.isNullOrBlank()) {
-                        add("译文由 $providerLabel 提供")
-                    }
-                }.joinToString(" · ")
+            if (
+                showTranslated &&
+                    (!providerLabel.isNullOrBlank() || !sourceLanguageLabel.isNullOrBlank())
+            ) {
+                val metadata =
+                    buildList {
+                            if (!sourceLanguageLabel.isNullOrBlank()) {
+                                add("识别原文：$sourceLanguageLabel")
+                            }
+                            if (!providerLabel.isNullOrBlank()) {
+                                add("译文由 $providerLabel 提供")
+                            }
+                        }
+                        .joinToString(" · ")
                 Text(
                     text = metadata,
                     style = MaterialTheme.typography.labelSmall,
@@ -130,10 +137,7 @@ fun TranslatableDescriptionCard(
                 )
             }
 
-            ExpandableBodyText(
-                text = displayText,
-                collapsedMaxLines = collapsedMaxLines,
-            )
+            ExpandableBodyText(text = displayText, collapsedMaxLines = collapsedMaxLines)
         }
     }
 }

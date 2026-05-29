@@ -20,10 +20,9 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Singleton
-class SecureSessionStore @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val json: Json,
-) {
+class SecureSessionStore
+@Inject
+constructor(@ApplicationContext private val context: Context, private val json: Json) {
     private val secretCache = HashMap<String, String>()
 
     fun readActiveRefreshToken(): String = readSecret(ACTIVE_REFRESH_TOKEN_KEY)
@@ -39,12 +38,11 @@ class SecureSessionStore @Inject constructor(
     fun readActiveSessionProfile(): PersistedActiveSteamSession {
         val payload = readSecret(ACTIVE_SESSION_PROFILE_KEY)
         if (payload.isBlank()) return PersistedActiveSteamSession()
-        return runCatching {
-            json.decodeFromString<PersistedActiveSteamSession>(payload)
-        }.getOrElse {
-            removeSecret(ACTIVE_SESSION_PROFILE_KEY)
-            PersistedActiveSteamSession()
-        }
+        return runCatching { json.decodeFromString<PersistedActiveSteamSession>(payload) }
+            .getOrElse {
+                removeSecret(ACTIVE_SESSION_PROFILE_KEY)
+                PersistedActiveSteamSession()
+            }
     }
 
     fun writeActiveSessionProfile(profile: PersistedActiveSteamSession) {
@@ -62,12 +60,11 @@ class SecureSessionStore @Inject constructor(
     fun readSavedAccountsMetadata(): List<PersistedSavedSteamAccount> {
         val payload = readSecret(SAVED_ACCOUNTS_METADATA_KEY)
         if (payload.isBlank()) return emptyList()
-        return runCatching {
-            json.decodeFromString<List<PersistedSavedSteamAccount>>(payload)
-        }.getOrElse {
-            removeSecret(SAVED_ACCOUNTS_METADATA_KEY)
-            emptyList()
-        }
+        return runCatching { json.decodeFromString<List<PersistedSavedSteamAccount>>(payload) }
+            .getOrElse {
+                removeSecret(SAVED_ACCOUNTS_METADATA_KEY)
+                emptyList()
+            }
     }
 
     fun writeSavedAccountsMetadata(accounts: List<PersistedSavedSteamAccount>) {
@@ -128,10 +125,7 @@ class SecureSessionStore @Inject constructor(
         return legacyValue
     }
 
-    fun writeSavedAccountRefreshToken(
-        accountIdentityKey: String,
-        value: String,
-    ) {
+    fun writeSavedAccountRefreshToken(accountIdentityKey: String, value: String) {
         writeSecret(savedAccountRefreshTokenKey(accountIdentityKey), value)
     }
 
@@ -146,47 +140,45 @@ class SecureSessionStore @Inject constructor(
 
     private val lock = Any()
 
-    private fun readSecret(storageKey: String): String = synchronized(lock) {
-        secretCache[storageKey]?.let { cached ->
-            return@synchronized cached
+    private fun readSecret(storageKey: String): String =
+        synchronized(lock) {
+            secretCache[storageKey]?.let { cached ->
+                return@synchronized cached
+            }
+            val payload = preferences.getString(storageKey, null).orEmpty()
+            if (payload.isBlank()) {
+                secretCache[storageKey] = ""
+                return@synchronized ""
+            }
+            return@synchronized runCatching { decrypt(payload) }
+                .getOrElse { throwable ->
+                    Log.w(LOG_TAG, "Failed to decrypt secure value", throwable)
+                    preferences.edit().remove(storageKey).commit()
+                    secretCache[storageKey] = ""
+                    ""
+                }
+                .also { decrypted -> secretCache[storageKey] = decrypted }
         }
-        val payload = preferences.getString(storageKey, null).orEmpty()
-        if (payload.isBlank()) {
-            secretCache[storageKey] = ""
-            return@synchronized ""
+
+    private fun writeSecret(storageKey: String, value: String) =
+        synchronized(lock) {
+            if (value.isBlank()) {
+                preferences.edit().remove(storageKey).commit()
+                secretCache[storageKey] = ""
+                return@synchronized
+            }
+            val payload = encrypt(value)
+            check(preferences.edit().putString(storageKey, payload).commit()) {
+                "Failed to persist secure session value"
+            }
+            secretCache[storageKey] = value
         }
-        return@synchronized runCatching {
-            decrypt(payload)
-        }.getOrElse { throwable ->
-            Log.w(LOG_TAG, "Failed to decrypt secure value", throwable)
+
+    private fun removeSecret(storageKey: String) =
+        synchronized(lock) {
             preferences.edit().remove(storageKey).commit()
             secretCache[storageKey] = ""
-            ""
-        }.also { decrypted ->
-            secretCache[storageKey] = decrypted
         }
-    }
-
-    private fun writeSecret(
-        storageKey: String,
-        value: String,
-    ) = synchronized(lock) {
-        if (value.isBlank()) {
-            preferences.edit().remove(storageKey).commit()
-            secretCache[storageKey] = ""
-            return@synchronized
-        }
-        val payload = encrypt(value)
-        check(preferences.edit().putString(storageKey, payload).commit()) {
-            "Failed to persist secure session value"
-        }
-        secretCache[storageKey] = value
-    }
-
-    private fun removeSecret(storageKey: String) = synchronized(lock) {
-        preferences.edit().remove(storageKey).commit()
-        secretCache[storageKey] = ""
-    }
 
     private fun encrypt(plainText: String): String {
         val cipher = Cipher.getInstance(TRANSFORMATION)
@@ -204,11 +196,7 @@ class SecureSessionStore @Inject constructor(
         val iv = decoded.copyOfRange(0, GCM_IV_SIZE_BYTES)
         val cipherText = decoded.copyOfRange(GCM_IV_SIZE_BYTES, decoded.size)
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(
-            Cipher.DECRYPT_MODE,
-            secretKey(),
-            GCMParameterSpec(GCM_TAG_SIZE_BITS, iv),
-        )
+        cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(GCM_TAG_SIZE_BITS, iv))
         val plainText = cipher.doFinal(cipherText)
         return plainText.toString(StandardCharsets.UTF_8)
     }
@@ -218,20 +206,18 @@ class SecureSessionStore @Inject constructor(
         val existing = keyStore.getKey(KEY_ALIAS, null) as? SecretKey
         if (existing != null) return existing
 
-        val keyGenerator = KeyGenerator.getInstance(
-            KeyProperties.KEY_ALGORITHM_AES,
-            ANDROID_KEYSTORE,
-        )
+        val keyGenerator =
+            KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         keyGenerator.init(
             KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-            )
+                    KEY_ALIAS,
+                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+                )
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(256)
                 .setRandomizedEncryptionRequired(true)
-                .build(),
+                .build()
         )
         return keyGenerator.generateKey()
     }
@@ -247,11 +233,7 @@ class SecureSessionStore @Inject constructor(
     private fun hashedKey(rawValue: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
         val bytes = digest.digest(rawValue.toByteArray(StandardCharsets.UTF_8))
-        return buildString(bytes.size * 2) {
-            bytes.forEach { byte ->
-                append("%02x".format(byte))
-            }
-        }
+        return buildString(bytes.size * 2) { bytes.forEach { byte -> append("%02x".format(byte)) } }
     }
 
     private companion object {

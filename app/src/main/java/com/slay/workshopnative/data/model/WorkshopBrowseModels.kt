@@ -11,15 +11,9 @@ data class WorkshopDateRangeFilter(
         val normalizedStart = startEpochSeconds.coerceAtLeast(0L)
         val normalizedEnd = endEpochSeconds.coerceAtLeast(0L)
         return if (normalizedStart > 0L && normalizedEnd > 0L && normalizedStart > normalizedEnd) {
-            copy(
-                startEpochSeconds = normalizedEnd,
-                endEpochSeconds = normalizedStart,
-            )
+            copy(startEpochSeconds = normalizedEnd, endEpochSeconds = normalizedStart)
         } else {
-            copy(
-                startEpochSeconds = normalizedStart,
-                endEpochSeconds = normalizedEnd,
-            )
+            copy(startEpochSeconds = normalizedStart, endEpochSeconds = normalizedEnd)
         }
     }
 }
@@ -66,21 +60,11 @@ data class WorkshopBrowsePage(
     val supportsIncompatibleFilter: Boolean,
 )
 
-data class WorkshopBrowseSectionOption(
-    val key: String,
-    val label: String,
-)
+data class WorkshopBrowseSectionOption(val key: String, val label: String)
 
-data class WorkshopBrowseSortOption(
-    val key: String,
-    val label: String,
-    val supportsPeriod: Boolean,
-)
+data class WorkshopBrowseSortOption(val key: String, val label: String, val supportsPeriod: Boolean)
 
-data class WorkshopBrowsePeriodOption(
-    val days: Int,
-    val label: String,
-)
+data class WorkshopBrowsePeriodOption(val days: Int, val label: String)
 
 enum class WorkshopBrowseTagGroupSelectionMode {
     IncludeExclude,
@@ -90,10 +74,8 @@ enum class WorkshopBrowseTagGroupSelectionMode {
 data class WorkshopBrowseTagGroup(
     val label: String,
     val tags: List<WorkshopBrowseTagOption>,
-    val selectionMode: WorkshopBrowseTagGroupSelectionMode = WorkshopBrowseTagGroupSelectionMode.IncludeExclude,
+    val selectionMode: WorkshopBrowseTagGroupSelectionMode =
+        WorkshopBrowseTagGroupSelectionMode.IncludeExclude,
 )
 
-data class WorkshopBrowseTagOption(
-    val value: String,
-    val label: String,
-)
+data class WorkshopBrowseTagOption(val value: String, val label: String)

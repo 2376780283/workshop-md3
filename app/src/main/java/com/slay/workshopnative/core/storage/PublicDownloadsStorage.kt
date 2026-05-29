@@ -6,8 +6,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.provider.OpenableColumns
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import com.slay.workshopnative.core.util.sanitizeFileName
 import java.io.FilterOutputStream
 import java.io.OutputStream
@@ -23,10 +23,7 @@ fun normalizeDownloadFolderName(raw: String?): String {
     )
 }
 
-fun buildDownloadDestinationLabel(
-    treeLabel: String?,
-    folderName: String?,
-): String {
+fun buildDownloadDestinationLabel(treeLabel: String?, folderName: String?): String {
     val safeFolderName = normalizeDownloadFolderName(folderName)
     return if (treeLabel.isNullOrBlank()) {
         "系统下载/$safeFolderName"
@@ -35,11 +32,7 @@ fun buildDownloadDestinationLabel(
     }
 }
 
-fun uniqueMediaStoreRootName(
-    context: Context,
-    folderName: String?,
-    baseRootName: String,
-): String {
+fun uniqueMediaStoreRootName(context: Context, folderName: String?, baseRootName: String): String {
     val safeBaseRootName = sanitizeFileName(baseRootName, "workshop-item")
     if (!mediaStoreDirectoryExists(context, folderName, safeBaseRootName)) {
         return safeBaseRootName
@@ -77,27 +70,27 @@ fun createMediaStoreFileOutput(
     relativePath: String,
     replaceExisting: Boolean,
 ): Pair<OutputStream, Uri> {
-    val uri = createMediaStoreFileUri(
-        context = context,
-        folderName = folderName,
-        rootName = rootName,
-        relativePath = relativePath,
-        replaceExisting = replaceExisting,
-    )
+    val uri =
+        createMediaStoreFileUri(
+            context = context,
+            folderName = folderName,
+            rootName = rootName,
+            relativePath = relativePath,
+            replaceExisting = replaceExisting,
+        )
     val resolver = context.contentResolver
-    val stream = runCatching {
-        resolver.openOutputStream(uri)
-    }.getOrElse { throwable ->
-        resolver.delete(uri, null, null)
-        throw throwable
-    } ?: run {
-        resolver.delete(uri, null, null)
-        error("无法打开目标文件")
-    }
+    val stream =
+        runCatching { resolver.openOutputStream(uri) }
+            .getOrElse { throwable ->
+                resolver.delete(uri, null, null)
+                throw throwable
+            }
+            ?: run {
+                resolver.delete(uri, null, null)
+                error("无法打开目标文件")
+            }
 
-    return MediaStoreOutputStream(stream) {
-        finalizeMediaStoreFile(context, uri)
-    } to uri
+    return MediaStoreOutputStream(stream) { finalizeMediaStoreFile(context, uri) } to uri
 }
 
 fun createMediaStoreFileUri(
@@ -110,11 +103,12 @@ fun createMediaStoreFileUri(
     requireMediaStoreDownloadsSupport()
     val segments = normalizeRelativeSegments(relativePath)
     val fileName = segments.lastOrNull() ?: error("无效的文件路径")
-    val relativeDirectory = buildRelativeDirectory(
-        folderName = folderName,
-        rootName = rootName,
-        subdirectories = segments.dropLast(1),
-    )
+    val relativeDirectory =
+        buildRelativeDirectory(
+            folderName = folderName,
+            rootName = rootName,
+            subdirectories = segments.dropLast(1),
+        )
 
     if (replaceExisting) {
         queryMatchingUris(context, relativeDirectory, fileName).forEach { uri ->
@@ -122,27 +116,25 @@ fun createMediaStoreFileUri(
         }
     }
 
-    val targetName = if (replaceExisting) {
-        fileName
-    } else {
-        uniqueDisplayName(context, relativeDirectory, fileName)
-    }
+    val targetName =
+        if (replaceExisting) {
+            fileName
+        } else {
+            uniqueDisplayName(context, relativeDirectory, fileName)
+        }
 
-    val values = ContentValues().apply {
-        put(MediaStore.MediaColumns.DISPLAY_NAME, targetName)
-        put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
-        put(MediaStore.MediaColumns.RELATIVE_PATH, relativeDirectory)
-        put(MediaStore.MediaColumns.IS_PENDING, 1)
-    }
+    val values =
+        ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, targetName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, relativeDirectory)
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
 
-    return context.contentResolver.insert(MEDIASTORE_DOWNLOADS_URI, values)
-        ?: error("无法创建目标文件")
+    return context.contentResolver.insert(MEDIASTORE_DOWNLOADS_URI, values) ?: error("无法创建目标文件")
 }
 
-fun finalizeMediaStoreFile(
-    context: Context,
-    uri: Uri,
-) {
+fun finalizeMediaStoreFile(context: Context, uri: Uri) {
     context.contentResolver.update(
         uri,
         ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
@@ -160,41 +152,31 @@ fun findMediaStoreDownloadUri(
     requireMediaStoreDownloadsSupport()
     val segments = normalizeRelativeSegments(relativePath)
     val fileName = segments.lastOrNull() ?: return null
-    val relativeDirectory = buildRelativeDirectory(
-        folderName = folderName,
-        rootName = rootName,
-        subdirectories = segments.dropLast(1),
-    )
+    val relativeDirectory =
+        buildRelativeDirectory(
+            folderName = folderName,
+            rootName = rootName,
+            subdirectories = segments.dropLast(1),
+        )
     return queryMatchingUris(context, relativeDirectory, fileName).firstOrNull()
 }
 
-fun queryUriSize(
-    context: Context,
-    uri: Uri,
-): Long {
-    return context.contentResolver.query(
-        uri,
-        arrayOf(OpenableColumns.SIZE, MediaStore.MediaColumns.SIZE),
-        null,
-        null,
-        null,
-    )?.use { cursor ->
-        if (!cursor.moveToFirst()) return@use 0L
-        val sizeIndex = cursor.columnNames.indexOfFirst { name ->
-            name == OpenableColumns.SIZE || name == MediaStore.MediaColumns.SIZE
-        }
-        if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else 0L
-    } ?: 0L
+fun queryUriSize(context: Context, uri: Uri): Long {
+    return context.contentResolver
+        .query(uri, arrayOf(OpenableColumns.SIZE, MediaStore.MediaColumns.SIZE), null, null, null)
+        ?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use 0L
+            val sizeIndex =
+                cursor.columnNames.indexOfFirst { name ->
+                    name == OpenableColumns.SIZE || name == MediaStore.MediaColumns.SIZE
+                }
+            if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else 0L
+        } ?: 0L
 }
 
-fun openExistingMediaStoreFileOutput(
-    context: Context,
-    uri: Uri,
-    append: Boolean,
-): OutputStream {
+fun openExistingMediaStoreFileOutput(context: Context, uri: Uri, append: Boolean): OutputStream {
     val mode = if (append) "wa" else "w"
-    return context.contentResolver.openOutputStream(uri, mode)
-        ?: error("无法打开目标文件")
+    return context.contentResolver.openOutputStream(uri, mode) ?: error("无法打开目标文件")
 }
 
 private fun mediaStoreDirectoryExists(
@@ -203,11 +185,12 @@ private fun mediaStoreDirectoryExists(
     rootName: String,
 ): Boolean {
     requireMediaStoreDownloadsSupport()
-    val relativeDirectory = buildRelativeDirectory(
-        folderName = folderName,
-        rootName = rootName,
-        subdirectories = emptyList(),
-    )
+    val relativeDirectory =
+        buildRelativeDirectory(
+            folderName = folderName,
+            rootName = rootName,
+            subdirectories = emptyList(),
+        )
     val selection = buildString {
         append(MediaStore.MediaColumns.RELATIVE_PATH)
         append(" = ? OR ")
@@ -216,15 +199,17 @@ private fun mediaStoreDirectoryExists(
     }
     val args = arrayOf(relativeDirectory, "$relativeDirectory%")
 
-    context.contentResolver.query(
-        MEDIASTORE_DOWNLOADS_URI,
-        arrayOf(MediaStore.MediaColumns._ID),
-        selection,
-        args,
-        null,
-    )?.use { cursor ->
-        return cursor.moveToFirst()
-    }
+    context.contentResolver
+        .query(
+            MEDIASTORE_DOWNLOADS_URI,
+            arrayOf(MediaStore.MediaColumns._ID),
+            selection,
+            args,
+            null,
+        )
+        ?.use { cursor ->
+            return cursor.moveToFirst()
+        }
     return false
 }
 
@@ -239,7 +224,9 @@ private fun uniqueDisplayName(
     val baseName = if (dot >= 0) fileName.substring(0, dot) else fileName
     val extension = if (dot >= 0) fileName.substring(dot) else ""
     var index = 1
-    while (queryMatchingUris(context, relativeDirectory, "$baseName ($index)$extension").isNotEmpty()) {
+    while (
+        queryMatchingUris(context, relativeDirectory, "$baseName ($index)$extension").isNotEmpty()
+    ) {
         index++
     }
     return "$baseName ($index)$extension"
@@ -273,9 +260,7 @@ private fun queryMatchingUris(
 }
 
 private fun requireMediaStoreDownloadsSupport() {
-    check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        "公共下载目录需要 Android 10 及以上"
-    }
+    check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { "公共下载目录需要 Android 10 及以上" }
 }
 
 private fun buildRelativeDirectory(
@@ -293,22 +278,20 @@ private fun buildRelativeDirectory(
 }
 
 private fun normalizeRelativeSegments(relativePath: String): List<String> {
-    val cleanedSegments = relativePath
-        .replace('\\', '/')
-        .split('/')
-        .filter { it.isNotBlank() && it != "." && it != ".." }
-    return cleanedSegments.mapIndexed { index, segment ->
-            sanitizeFileName(
-                raw = segment,
-                fallback = if (index == cleanedSegments.lastIndex) "file" else "folder",
-            )
+    val cleanedSegments =
+        relativePath.replace('\\', '/').split('/').filter {
+            it.isNotBlank() && it != "." && it != ".."
         }
+    return cleanedSegments.mapIndexed { index, segment ->
+        sanitizeFileName(
+            raw = segment,
+            fallback = if (index == cleanedSegments.lastIndex) "file" else "folder",
+        )
+    }
 }
 
-private class MediaStoreOutputStream(
-    output: OutputStream,
-    private val onClose: () -> Unit,
-) : FilterOutputStream(output) {
+private class MediaStoreOutputStream(output: OutputStream, private val onClose: () -> Unit) :
+    FilterOutputStream(output) {
     override fun close() {
         try {
             super.close()

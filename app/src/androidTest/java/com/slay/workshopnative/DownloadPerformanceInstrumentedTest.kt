@@ -14,8 +14,8 @@ import com.slay.workshopnative.data.preferences.DownloadPerformanceMode
 import com.slay.workshopnative.data.preferences.UserPreferencesStore
 import com.slay.workshopnative.data.repository.DownloadsRepository
 import com.slay.workshopnative.data.repository.SteamRepository
-import dagger.hilt.android.EntryPointAccessors
 import com.slay.workshopnative.testing.DownloadTestEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -75,14 +75,10 @@ class DownloadPerformanceInstrumentedTest {
             steamRepository.bootstrap()
             enableDownloadCapabilities()
 
-            val anonymousAuto = runAnonymousScenario(
-                mode = DownloadPerformanceMode.Auto,
-                title = "谋黄忠角色模组",
-            )
-            val anonymousPrimordial = runAnonymousScenario(
-                mode = DownloadPerformanceMode.Primordial,
-                title = "谋黄忠角色模组",
-            )
+            val anonymousAuto =
+                runAnonymousScenario(mode = DownloadPerformanceMode.Auto, title = "谋黄忠角色模组")
+            val anonymousPrimordial =
+                runAnonymousScenario(mode = DownloadPerformanceMode.Primordial, title = "谋黄忠角色模组")
 
             logResult("anonymous-auto", anonymousAuto)
             logResult("anonymous-primordial", anonymousPrimordial)
@@ -110,14 +106,13 @@ class DownloadPerformanceInstrumentedTest {
             enableDownloadCapabilities()
             ensureAuthenticatedSession()
 
-            val accountAuto = runAuthenticatedScenario(
-                mode = DownloadPerformanceMode.Auto,
-                title = "鸣潮-忧郁漂泊者",
-            )
-            val accountPrimordial = runAuthenticatedScenario(
-                mode = DownloadPerformanceMode.Primordial,
-                title = "鸣潮-忧郁漂泊者",
-            )
+            val accountAuto =
+                runAuthenticatedScenario(mode = DownloadPerformanceMode.Auto, title = "鸣潮-忧郁漂泊者")
+            val accountPrimordial =
+                runAuthenticatedScenario(
+                    mode = DownloadPerformanceMode.Primordial,
+                    title = "鸣潮-忧郁漂泊者",
+                )
 
             logResult("account-auto", accountAuto)
             logResult("account-primordial", accountPrimordial)
@@ -146,16 +141,18 @@ class DownloadPerformanceInstrumentedTest {
             preferencesStore.saveDownloadPerformanceMode(DownloadPerformanceMode.Primordial)
             preferencesStore.savePrimordialReducedMemoryProtectionEnabled(false)
 
-            val conservative = runAuthenticatedScenario(
-                mode = DownloadPerformanceMode.Primordial,
-                title = "鸣潮-忧郁漂泊者",
-                aggressiveCdnEnabled = false,
-            )
-            val aggressive = runAuthenticatedScenario(
-                mode = DownloadPerformanceMode.Primordial,
-                title = "鸣潮-忧郁漂泊者",
-                aggressiveCdnEnabled = true,
-            )
+            val conservative =
+                runAuthenticatedScenario(
+                    mode = DownloadPerformanceMode.Primordial,
+                    title = "鸣潮-忧郁漂泊者",
+                    aggressiveCdnEnabled = false,
+                )
+            val aggressive =
+                runAuthenticatedScenario(
+                    mode = DownloadPerformanceMode.Primordial,
+                    title = "鸣潮-忧郁漂泊者",
+                    aggressiveCdnEnabled = true,
+                )
 
             logResult("account-primordial-conservative", conservative)
             logResult("account-primordial-aggressive", aggressive)
@@ -166,7 +163,8 @@ class DownloadPerformanceInstrumentedTest {
             assertEquals("Authenticated", aggressive.authMode)
             assertTrue(
                 "开启账户激进 CDN 后，应扩大首批并发 CDN 节点数，实际 ${conservative.endpointLabel} -> ${aggressive.endpointLabel}",
-                endpointRouteCount(aggressive.endpointLabel) > endpointRouteCount(conservative.endpointLabel),
+                endpointRouteCount(aggressive.endpointLabel) >
+                    endpointRouteCount(conservative.endpointLabel),
             )
         } finally {
             restorePreferences(originalPrefs)
@@ -183,7 +181,10 @@ class DownloadPerformanceInstrumentedTest {
         preferencesStore.saveAllowAuthenticatedDownloadFallback(false)
         preferencesStore.saveDownloadPerformanceMode(mode)
 
-        val item = steamRepository.resolveWorkshopItemForDownload(ANONYMOUS_TEST_PUBLISHED_FILE_ID).getOrThrow()
+        val item =
+            steamRepository
+                .resolveWorkshopItemForDownload(ANONYMOUS_TEST_PUBLISHED_FILE_ID)
+                .getOrThrow()
         assertTrue("匿名测试对象不匹配：${item.title}", item.title.contains(title))
         return enqueueAndWait(label = "anonymous-${mode.name}", item = item)
     }
@@ -200,73 +201,82 @@ class DownloadPerformanceInstrumentedTest {
         preferencesStore.savePrimordialAuthenticatedAggressiveCdnEnabled(aggressiveCdnEnabled)
 
         runCatching {
-            val publicPage = steamRepository.loadWorkshopBrowsePage(
-                appId = 431960,
-                query = WorkshopBrowseQuery(
-                    searchText = title,
-                    pageSize = 30,
-                ),
-                forceRefresh = true,
-            ).getOrThrow()
-            val publicVisible = publicPage.items.any { it.title.contains(title) }
-            Log.i(TAG, "Authenticated scenario public visibility for \"$title\": $publicVisible")
-        }.onFailure { error ->
-            Log.w(TAG, "Authenticated scenario public visibility probe failed for \"$title\": ${error.message}")
-        }
+                val publicPage =
+                    steamRepository
+                        .loadWorkshopBrowsePage(
+                            appId = 431960,
+                            query = WorkshopBrowseQuery(searchText = title, pageSize = 30),
+                            forceRefresh = true,
+                        )
+                        .getOrThrow()
+                val publicVisible = publicPage.items.any { it.title.contains(title) }
+                Log.i(
+                    TAG,
+                    "Authenticated scenario public visibility for \"$title\": $publicVisible",
+                )
+            }
+            .onFailure { error ->
+                Log.w(
+                    TAG,
+                    "Authenticated scenario public visibility probe failed for \"$title\": ${error.message}",
+                )
+            }
 
-        val item = steamRepository.resolveWorkshopItemForDownload(AUTHENTICATED_TEST_PUBLISHED_FILE_ID).getOrThrow()
+        val item =
+            steamRepository
+                .resolveWorkshopItemForDownload(AUTHENTICATED_TEST_PUBLISHED_FILE_ID)
+                .getOrThrow()
         assertTrue("账号测试对象不匹配：${item.title}", item.title.contains(title))
         return enqueueAndWait(label = "account-${mode.name}", item = item)
     }
 
     private suspend fun findPublicItem(appId: Int, title: String): WorkshopItem {
-        val page = steamRepository.loadWorkshopBrowsePage(
-            appId = appId,
-            query = WorkshopBrowseQuery(
-                searchText = title,
-                pageSize = 30,
-            ),
-            forceRefresh = true,
-        ).getOrThrow()
+        val page =
+            steamRepository
+                .loadWorkshopBrowsePage(
+                    appId = appId,
+                    query = WorkshopBrowseQuery(searchText = title, pageSize = 30),
+                    forceRefresh = true,
+                )
+                .getOrThrow()
         val match = page.items.firstOrNull { it.title.contains(title) }
         assertNotNull("公开工坊里没有找到条目：$title", match)
-        return steamRepository.resolveWorkshopItemForDownload(checkNotNull(match).publishedFileId).getOrThrow()
+        return steamRepository
+            .resolveWorkshopItemForDownload(checkNotNull(match).publishedFileId)
+            .getOrThrow()
     }
 
     private suspend fun ensureAuthenticatedSession() {
-        if (steamRepository.sessionState.value.status == SessionStatus.Authenticated &&
-            steamRepository.isAuthenticatedDownloadReady()
+        if (
+            steamRepository.sessionState.value.status == SessionStatus.Authenticated &&
+                steamRepository.isAuthenticatedDownloadReady()
         ) {
             Log.i(TAG, "Authenticated scenario will reuse current in-memory Steam session")
             return
         }
         val savedAccount = preferencesStore.snapshot().savedAccounts.firstOrNull()
-        assertNotNull(
-            "当前设备既没有在线的 Steam 会话，也没有已保存账号；请先在模拟器里登录并保持当前会话可用后再跑账号态下载测试",
-            savedAccount,
-        )
+        assertNotNull("当前设备既没有在线的 Steam 会话，也没有已保存账号；请先在模拟器里登录并保持当前会话可用后再跑账号态下载测试", savedAccount)
         steamRepository.switchSavedAccount(checkNotNull(savedAccount).stableKey()).getOrThrow()
         waitForSessionStatus(expectAuthenticated = true)
     }
 
     private suspend fun findAuthenticatedItem(appId: Int, title: String): WorkshopItem {
-        val page = steamRepository.loadAuthenticatedWorkshopQueryPage(
-            appId = appId,
-            query = WorkshopBrowseQuery(
-                searchText = title,
-                pageSize = 30,
-            ),
-            forceRefresh = true,
-        ).getOrThrow()
+        val page =
+            steamRepository
+                .loadAuthenticatedWorkshopQueryPage(
+                    appId = appId,
+                    query = WorkshopBrowseQuery(searchText = title, pageSize = 30),
+                    forceRefresh = true,
+                )
+                .getOrThrow()
         val match = page.items.firstOrNull { it.title.contains(title) }
         assertNotNull("账号可见查询里没有找到条目：$title", match)
-        return steamRepository.resolveWorkshopItemForDownload(checkNotNull(match).publishedFileId).getOrThrow()
+        return steamRepository
+            .resolveWorkshopItemForDownload(checkNotNull(match).publishedFileId)
+            .getOrThrow()
     }
 
-    private suspend fun enqueueAndWait(
-        label: String,
-        item: WorkshopItem,
-    ): DownloadRunResult {
+    private suspend fun enqueueAndWait(label: String, item: WorkshopItem): DownloadRunResult {
         val startAt = System.currentTimeMillis()
         downloadsRepository.enqueue(item).getOrThrow()
         val observed = waitForTask(item.publishedFileId, startAt)
@@ -295,13 +305,16 @@ class DownloadPerformanceInstrumentedTest {
         return withTimeout(12 * 60 * 1000L) {
             var observedEndpointLabel: String? = null
             while (true) {
-                val task = downloadTaskDao.getAll()
-                    .firstOrNull { it.publishedFileId == publishedFileId && it.createdAt >= createdAfterMs }
+                val task =
+                    downloadTaskDao.getAll().firstOrNull {
+                        it.publishedFileId == publishedFileId && it.createdAt >= createdAfterMs
+                    }
                 if (task != null) {
                     val currentEndpointLabel = task.runtimeEndpointLabel
                     if (
                         !currentEndpointLabel.isNullOrBlank() &&
-                        endpointRouteCount(currentEndpointLabel) >= endpointRouteCount(observedEndpointLabel)
+                            endpointRouteCount(currentEndpointLabel) >=
+                                endpointRouteCount(observedEndpointLabel)
                     ) {
                         observedEndpointLabel = currentEndpointLabel
                     }
@@ -324,7 +337,10 @@ class DownloadPerformanceInstrumentedTest {
                 val status = steamRepository.sessionState.value.status
                 if (expectAuthenticated) {
                     if (status == SessionStatus.Authenticated) return@withTimeout
-                } else if (status != SessionStatus.Authenticated && !steamRepository.isAuthenticatedDownloadReady()) {
+                } else if (
+                    status != SessionStatus.Authenticated &&
+                        !steamRepository.isAuthenticatedDownloadReady()
+                ) {
                     return@withTimeout
                 }
                 delay(1_000L)
@@ -341,14 +357,22 @@ class DownloadPerformanceInstrumentedTest {
         preferencesStore.savePrimordialAuthenticatedAggressiveCdnEnabled(false)
     }
 
-    private suspend fun restorePreferences(original: com.slay.workshopnative.data.preferences.UserPreferences) {
+    private suspend fun restorePreferences(
+        original: com.slay.workshopnative.data.preferences.UserPreferences
+    ) {
         preferencesStore.saveLoginFeatureEnabled(original.isLoginFeatureEnabled)
         preferencesStore.saveLoggedInDownloadEnabled(original.isLoggedInDownloadEnabled)
         preferencesStore.savePreferAnonymousDownloads(original.preferAnonymousDownloads)
-        preferencesStore.saveAllowAuthenticatedDownloadFallback(original.allowAuthenticatedDownloadFallback)
+        preferencesStore.saveAllowAuthenticatedDownloadFallback(
+            original.allowAuthenticatedDownloadFallback
+        )
         preferencesStore.saveDownloadPerformanceMode(original.downloadPerformanceMode)
-        preferencesStore.savePrimordialReducedMemoryProtectionEnabled(original.primordialReducedMemoryProtectionEnabled)
-        preferencesStore.savePrimordialAuthenticatedAggressiveCdnEnabled(original.primordialAuthenticatedAggressiveCdnEnabled)
+        preferencesStore.savePrimordialReducedMemoryProtectionEnabled(
+            original.primordialReducedMemoryProtectionEnabled
+        )
+        preferencesStore.savePrimordialAuthenticatedAggressiveCdnEnabled(
+            original.primordialAuthenticatedAggressiveCdnEnabled
+        )
     }
 
     private fun logResult(prefix: String, result: DownloadRunResult) {
@@ -384,20 +408,14 @@ class DownloadPerformanceInstrumentedTest {
     }
 
     private fun endpointRouteCount(endpointLabel: String?): Int {
-        return endpointLabel
-            ?.substringBefore(" 个 CDN 节点并发")
-            ?.toIntOrNull()
-            ?: 0
+        return endpointLabel?.substringBefore(" 个 CDN 节点并发")?.toIntOrNull() ?: 0
     }
 
     private companion object {
         const val TAG = "DownloadPerfTest"
         const val ANONYMOUS_TEST_PUBLISHED_FILE_ID = 3686133388L
         const val AUTHENTICATED_TEST_PUBLISHED_FILE_ID = 3686245041L
-        val ACTIVE_STATUSES = setOf(
-            DownloadStatus.Queued,
-            DownloadStatus.Running,
-            DownloadStatus.Paused,
-        )
+        val ACTIVE_STATUSES =
+            setOf(DownloadStatus.Queued, DownloadStatus.Running, DownloadStatus.Paused)
     }
 }

@@ -1,18 +1,19 @@
 package com.slay.workshopnative.data.remote
 
 import com.slay.workshopnative.data.model.WorkshopBrowseQuery
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 class PublicWorkshopBrowseParserTest {
 
     @Test
     fun parse_extracts_items_and_filters_from_dom() {
-        val html = """
+        val html =
+            """
             <html>
             <body>
             <div class="workshopBrowseSortingControls">
@@ -55,17 +56,17 @@ class PublicWorkshopBrowseParserTest {
             </div>
             </body>
             </html>
-        """.trimIndent()
+            """
+                .trimIndent()
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 431960,
-            query = WorkshopBrowseQuery(
-                page = 1,
-                sectionKey = WorkshopBrowseQuery.SECTION_ITEMS,
-            ),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 431960,
+                query =
+                    WorkshopBrowseQuery(page = 1, sectionKey = WorkshopBrowseQuery.SECTION_ITEMS),
+                html = html,
+                baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
+            )
 
         assertEquals(listOf(100L, 200L), result.items.map { it.publishedFileId })
         assertEquals("Title 100", result.items[0].title)
@@ -79,14 +80,18 @@ class PublicWorkshopBrowseParserTest {
         assertEquals(listOf("trend", "lastupdated"), result.sortOptions.map { it.key })
         assertEquals(listOf(7, 30), result.periodOptions.map { it.days })
         assertEquals(listOf("风格"), result.tagGroups.map { it.label })
-        assertEquals(listOf("anime"), result.tagGroups.flatMap { group -> group.tags.map { it.value } })
+        assertEquals(
+            listOf("anime"),
+            result.tagGroups.flatMap { group -> group.tags.map { it.value } },
+        )
         assertTrue(result.supportsIncompatibleFilter)
         assertFalse(result.isExplicitlyEmpty)
     }
 
     @Test
     fun parse_falls_back_to_detail_links_and_detects_explicit_empty() {
-        val html = """
+        val html =
+            """
             <html>
             <body>
             <div class="summary">0 entries matching filters</div>
@@ -97,14 +102,16 @@ class PublicWorkshopBrowseParserTest {
             </a>
             </body>
             </html>
-        """.trimIndent()
+            """
+                .trimIndent()
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 431960,
-            query = WorkshopBrowseQuery(page = 1),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 431960,
+                query = WorkshopBrowseQuery(page = 1),
+                html = html,
+                baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
+            )
 
         assertEquals(listOf(300L, 400L), result.items.map { it.publishedFileId })
         assertEquals("Title 300", result.items[0].title)
@@ -115,7 +122,8 @@ class PublicWorkshopBrowseParserTest {
 
     @Test
     fun parse_uses_dropdown_labels_for_sort_and_period_instead_of_sidebar_links() {
-        val html = """
+        val html =
+            """
             <html>
             <body>
             <div class="rightDetailsBlock">
@@ -140,33 +148,31 @@ class PublicWorkshopBrowseParserTest {
             </div>
             </body>
             </html>
-        """.trimIndent()
+            """
+                .trimIndent()
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 431960,
-            query = WorkshopBrowseQuery(
-                page = 1,
-                sectionKey = WorkshopBrowseQuery.SECTION_ITEMS,
-                sortKey = WorkshopBrowseQuery.SORT_TREND,
-                periodDays = 7,
-            ),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 431960,
+                query =
+                    WorkshopBrowseQuery(
+                        page = 1,
+                        sectionKey = WorkshopBrowseQuery.SECTION_ITEMS,
+                        sortKey = WorkshopBrowseQuery.SORT_TREND,
+                        periodDays = 7,
+                    ),
+                html = html,
+                baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
+            )
 
-        assertEquals(
-            listOf("最热门", "最新"),
-            result.sortOptions.map { it.label },
-        )
-        assertEquals(
-            listOf("一周", "30 天"),
-            result.periodOptions.map { it.label },
-        )
+        assertEquals(listOf("最热门", "最新"), result.sortOptions.map { it.label })
+        assertEquals(listOf("一周", "30 天"), result.periodOptions.map { it.label })
     }
 
     @Test
     fun parse_supports_current_steam_public_quick_filter_structure() {
-        val html = """
+        val html =
+            """
             <html>
             <body>
             <div class="workshopBrowseSortingControls">
@@ -188,19 +194,22 @@ class PublicWorkshopBrowseParserTest {
             </div>
             </body>
             </html>
-        """.trimIndent()
+            """
+                .trimIndent()
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 646570,
-            query = WorkshopBrowseQuery(
-                page = 1,
-                sectionKey = WorkshopBrowseQuery.SECTION_ITEMS,
-                sortKey = WorkshopBrowseQuery.SORT_TREND,
-                periodDays = 7,
-            ),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=646570",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 646570,
+                query =
+                    WorkshopBrowseQuery(
+                        page = 1,
+                        sectionKey = WorkshopBrowseQuery.SECTION_ITEMS,
+                        sortKey = WorkshopBrowseQuery.SORT_TREND,
+                        periodDays = 7,
+                    ),
+                html = html,
+                baseUrl = "https://steamcommunity.com/workshop/browse/?appid=646570",
+            )
 
         assertEquals(
             listOf(
@@ -213,13 +222,7 @@ class PublicWorkshopBrowseParserTest {
             result.sortOptions.map { it.key },
         )
         assertEquals(
-            listOf(
-                "最热门",
-                "最受好评（发布至今）",
-                "最近发行",
-                "最新更新",
-                "不重复订阅者总计",
-            ),
+            listOf("最热门", "最受好评（发布至今）", "最近发行", "最新更新", "不重复订阅者总计"),
             result.sortOptions.map { it.label },
         )
         assertEquals(listOf(1, 7, 30, 90, 180, 365, -1), result.periodOptions.map { it.days })
@@ -231,7 +234,8 @@ class PublicWorkshopBrowseParserTest {
 
     @Test
     fun parse_prefers_browsesort_when_actualsort_conflicts() {
-        val html = """
+        val html =
+            """
             <html>
             <body>
             <div class="workshopBrowseSortingControls">
@@ -245,30 +249,27 @@ class PublicWorkshopBrowseParserTest {
             </div>
             </body>
             </html>
-        """.trimIndent()
+            """
+                .trimIndent()
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 646570,
-            query = WorkshopBrowseQuery(
-                page = 1,
-                sortKey = WorkshopBrowseQuery.SORT_TOP_RATED,
-            ),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=646570",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 646570,
+                query = WorkshopBrowseQuery(page = 1, sortKey = WorkshopBrowseQuery.SORT_TOP_RATED),
+                html = html,
+                baseUrl = "https://steamcommunity.com/workshop/browse/?appid=646570",
+            )
 
         assertEquals(
-            listOf(
-                WorkshopBrowseQuery.SORT_TOP_RATED,
-                WorkshopBrowseQuery.SORT_MOST_RECENT,
-            ),
+            listOf(WorkshopBrowseQuery.SORT_TOP_RATED, WorkshopBrowseQuery.SORT_MOST_RECENT),
             result.sortOptions.map { it.key },
         )
     }
 
     @Test
     fun parse_returns_empty_sort_and_period_options_when_only_current_value_is_present_outside_dropdowns() {
-        val html = """
+        val html =
+            """
             <html>
             <body>
             <div class="rightDetailsBlock">
@@ -280,19 +281,22 @@ class PublicWorkshopBrowseParserTest {
             </div>
             </body>
             </html>
-        """.trimIndent()
+            """
+                .trimIndent()
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 431960,
-            query = WorkshopBrowseQuery(
-                page = 1,
-                sectionKey = WorkshopBrowseQuery.SECTION_ITEMS,
-                sortKey = WorkshopBrowseQuery.SORT_TREND,
-                periodDays = 7,
-            ),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 431960,
+                query =
+                    WorkshopBrowseQuery(
+                        page = 1,
+                        sectionKey = WorkshopBrowseQuery.SECTION_ITEMS,
+                        sortKey = WorkshopBrowseQuery.SORT_TREND,
+                        periodDays = 7,
+                    ),
+                html = html,
+                baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
+            )
 
         assertTrue(result.sortOptions.isEmpty())
         assertTrue(result.periodOptions.isEmpty())
@@ -304,7 +308,8 @@ class PublicWorkshopBrowseParserTest {
 
     @Test
     fun parse_tag_groups_support_modern_sidebar_structure() {
-        val html = """
+        val html =
+            """
             <html>
             <body>
             <aside>
@@ -346,20 +351,26 @@ class PublicWorkshopBrowseParserTest {
             </div>
             </body>
             </html>
-        """.trimIndent()
+            """
+                .trimIndent()
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 431960,
-            query = WorkshopBrowseQuery(page = 1),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 431960,
+                query = WorkshopBrowseQuery(page = 1),
+                html = html,
+                baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
+            )
 
         assertEquals(listOf("CATEGORIES", "Language"), result.tagGroups.map { it.label })
-        assertEquals(listOf("Tools", "Api", "English", "Chinese"), result.tagGroups.flatMap { group -> group.tags.map { it.value } })
+        assertEquals(
+            listOf("Tools", "Api", "English", "Chinese"),
+            result.tagGroups.flatMap { group -> group.tags.map { it.value } },
+        )
         assertEquals(
             listOf(
-                com.slay.workshopnative.data.model.WorkshopBrowseTagGroupSelectionMode.IncludeExclude,
+                com.slay.workshopnative.data.model.WorkshopBrowseTagGroupSelectionMode
+                    .IncludeExclude,
                 com.slay.workshopnative.data.model.WorkshopBrowseTagGroupSelectionMode.SingleSelect,
             ),
             result.tagGroups.map { it.selectionMode },
@@ -369,7 +380,8 @@ class PublicWorkshopBrowseParserTest {
 
     @Test
     fun parse_incompatible_filter_supports_modern_checkbox_marker() {
-        val html = """
+        val html =
+            """
             <html>
             <body>
             <div class="BrowseSidebarCtn">
@@ -377,21 +389,24 @@ class PublicWorkshopBrowseParserTest {
             </div>
             </body>
             </html>
-        """.trimIndent()
+            """
+                .trimIndent()
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 431960,
-            query = WorkshopBrowseQuery(page = 1),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 431960,
+                query = WorkshopBrowseQuery(page = 1),
+                html = html,
+                baseUrl = "https://steamcommunity.com/workshop/browse/?appid=431960",
+            )
 
         assertTrue(result.supportsIncompatibleFilter)
     }
 
     @Test
     fun parse_extracts_items_and_advanced_filters_from_ssr_payload() {
-        val loaderItem1 = """
+        val loaderItem1 =
+            """
             {
               "declaredTags": {
                 "readytouse_tags": [
@@ -413,8 +428,10 @@ class PublicWorkshopBrowseParserTest {
                 ]
               }
             }
-        """.trimIndent()
-        val loaderItem2 = """
+            """
+                .trimIndent()
+        val loaderItem2 =
+            """
             {
               "workshopNumbers": {
                 "total": 99,
@@ -425,8 +442,10 @@ class PublicWorkshopBrowseParserTest {
                 "section": "readytouseitems"
               }
             }
-        """.trimIndent()
-        val queryData = """
+            """
+                .trimIndent()
+        val queryData =
+            """
             {
               "mutations": [],
               "queries": [
@@ -469,23 +488,23 @@ class PublicWorkshopBrowseParserTest {
                 }
               ]
             }
-        """.trimIndent()
-        val html = ssrHtml(
-            loaderData = listOf(loaderItem1, loaderItem2),
-            queryData = queryData,
-        )
+            """
+                .trimIndent()
+        val html = ssrHtml(loaderData = listOf(loaderItem1, loaderItem2), queryData = queryData)
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 646570,
-            query = WorkshopBrowseQuery(
-                page = 1,
-                sectionKey = WorkshopBrowseQuery.SECTION_ITEMS,
-                sortKey = WorkshopBrowseQuery.SORT_TREND,
-                periodDays = 7,
-            ),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=646570",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 646570,
+                query =
+                    WorkshopBrowseQuery(
+                        page = 1,
+                        sectionKey = WorkshopBrowseQuery.SECTION_ITEMS,
+                        sortKey = WorkshopBrowseQuery.SORT_TREND,
+                        periodDays = 7,
+                    ),
+                html = html,
+                baseUrl = "https://steamcommunity.com/workshop/browse/?appid=646570",
+            )
 
         assertEquals(listOf(111L), result.items.map { it.publishedFileId })
         assertEquals("SSR Title", result.items[0].title)
@@ -493,14 +512,18 @@ class PublicWorkshopBrowseParserTest {
         assertEquals(99, result.totalCount)
         assertEquals(4, result.maxPage)
         assertEquals(listOf("标签", "Language"), result.tagGroups.map { it.label })
-        assertEquals(listOf("Tools", "Api", "English"), result.tagGroups.flatMap { group -> group.tags.map { it.value } })
+        assertEquals(
+            listOf("Tools", "Api", "English"),
+            result.tagGroups.flatMap { group -> group.tags.map { it.value } },
+        )
         assertTrue(result.supportsIncompatibleFilter)
         assertFalse(result.isExplicitlyEmpty)
     }
 
     @Test
     fun parse_uses_section_specific_ssr_tag_bucket_and_single_select_mode() {
-        val loaderItem1 = """
+        val loaderItem1 =
+            """
             {
               "declaredTags": {
                 "readytouse_tags": [
@@ -524,8 +547,10 @@ class PublicWorkshopBrowseParserTest {
                 ]
               }
             }
-        """.trimIndent()
-        val loaderItem2 = """
+            """
+                .trimIndent()
+        val loaderItem2 =
+            """
             {
               "workshopNumbers": {
                 "total": 0,
@@ -536,8 +561,10 @@ class PublicWorkshopBrowseParserTest {
                 "section": "collections"
               }
             }
-        """.trimIndent()
-        val queryData = """
+            """
+                .trimIndent()
+        val queryData =
+            """
             {
               "mutations": [],
               "queries": [
@@ -563,23 +590,24 @@ class PublicWorkshopBrowseParserTest {
                 }
               ]
             }
-        """.trimIndent()
-        val html = ssrHtml(
-            loaderData = listOf(loaderItem1, loaderItem2),
-            queryData = queryData,
-        )
+            """
+                .trimIndent()
+        val html = ssrHtml(loaderData = listOf(loaderItem1, loaderItem2), queryData = queryData)
 
-        val result = PublicWorkshopBrowseParser.parse(
-            appId = 646570,
-            query = WorkshopBrowseQuery(
-                page = 1,
-                sectionKey = "collections",
-                sortKey = WorkshopBrowseQuery.SORT_TREND,
-                periodDays = 7,
-            ),
-            html = html,
-            baseUrl = "https://steamcommunity.com/workshop/browse/?appid=646570&section=collections",
-        )
+        val result =
+            PublicWorkshopBrowseParser.parse(
+                appId = 646570,
+                query =
+                    WorkshopBrowseQuery(
+                        page = 1,
+                        sectionKey = "collections",
+                        sortKey = WorkshopBrowseQuery.SORT_TREND,
+                        periodDays = 7,
+                    ),
+                html = html,
+                baseUrl =
+                    "https://steamcommunity.com/workshop/browse/?appid=646570&section=collections",
+            )
 
         assertEquals(listOf("Language"), result.tagGroups.map { it.label })
         assertEquals(listOf("English", "French"), result.tagGroups.single().tags.map { it.value })
@@ -591,10 +619,7 @@ class PublicWorkshopBrowseParserTest {
         assertTrue(result.isExplicitlyEmpty)
     }
 
-    private fun ssrHtml(
-        loaderData: List<String>,
-        queryData: String,
-    ): String {
+    private fun ssrHtml(loaderData: List<String>, queryData: String): String {
         val renderContext = """{"queryData":${Json.encodeToString(queryData)}}"""
         return """
             <html>
@@ -606,6 +631,7 @@ class PublicWorkshopBrowseParserTest {
             </script>
             </body>
             </html>
-        """.trimIndent()
+        """
+            .trimIndent()
     }
 }

@@ -16,20 +16,23 @@ data class OwnedGame(
     val ownershipSource: OwnershipSource = OwnershipSource.Owned,
 ) {
     val capsuleUrl: String
-        get() = "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/$appId/capsule_616x353.jpg"
+        get() =
+            "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/$appId/capsule_616x353.jpg"
 
     val iconUrl: String
-        get() = if (iconHash.isBlank()) {
-            ""
-        } else {
-            "https://media.steampowered.com/steamcommunity/public/images/apps/$appId/$iconHash.jpg"
-        }
+        get() =
+            if (iconHash.isBlank()) {
+                ""
+            } else {
+                "https://media.steampowered.com/steamcommunity/public/images/apps/$appId/$iconHash.jpg"
+            }
 
     val sourceLabel: String
-        get() = when (ownershipSource) {
-            OwnershipSource.Owned -> "已购买"
-            OwnershipSource.FamilyShared -> "家庭共享"
-        }
+        get() =
+            when (ownershipSource) {
+                OwnershipSource.Owned -> "已购买"
+                OwnershipSource.FamilyShared -> "家庭共享"
+            }
 
     val isFamilyShared: Boolean
         get() = ownershipSource == OwnershipSource.FamilyShared

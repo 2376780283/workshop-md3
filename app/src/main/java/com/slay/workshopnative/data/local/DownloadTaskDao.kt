@@ -25,7 +25,7 @@ interface DownloadTaskDao {
         SELECT * FROM download_tasks
         WHERE status = 'Success'
         ORDER BY createdAt DESC
-        """,
+        """
     )
     suspend fun getSuccessfulTasks(): List<DownloadTaskEntity>
 
@@ -33,7 +33,7 @@ interface DownloadTaskDao {
         """
         DELETE FROM download_tasks
         WHERE status NOT IN ('Queued', 'Running', 'Paused')
-        """,
+        """
     )
     suspend fun clearInactiveTasks(): Int
 
@@ -58,7 +58,7 @@ interface DownloadTaskDao {
             runtimeLastFailure = NULL,
             updatedAt = :updatedAt
         WHERE status NOT IN ('Queued', 'Running', 'Paused')
-        """,
+        """
     )
     suspend fun clearInactiveRuntimeDetails(updatedAt: Long): Int
 
@@ -67,7 +67,7 @@ interface DownloadTaskDao {
         SELECT * FROM download_tasks
         WHERE status IN ('Queued', 'Running')
         ORDER BY createdAt DESC
-        """,
+        """
     )
     suspend fun getActiveTasks(): List<DownloadTaskEntity>
 
@@ -79,7 +79,7 @@ interface DownloadTaskDao {
             errorMessage = :errorMessage,
             updatedAt = :updatedAt
         WHERE taskId = :taskId
-        """,
+        """
     )
     suspend fun updateStatus(
         taskId: String,
@@ -95,7 +95,7 @@ interface DownloadTaskDao {
         WHERE publishedFileId = :publishedFileId
           AND status IN ('Queued', 'Running')
         ORDER BY createdAt DESC
-        """,
+        """
     )
     suspend fun getActiveByPublishedFileId(publishedFileId: Long): List<DownloadTaskEntity>
 
@@ -105,15 +105,14 @@ interface DownloadTaskDao {
         WHERE publishedFileId = :publishedFileId
           AND taskId != :keepTaskId
         ORDER BY createdAt DESC
-        """,
+        """
     )
     suspend fun getByPublishedFileIdExcludingTask(
         publishedFileId: Long,
         keepTaskId: String,
     ): List<DownloadTaskEntity>
 
-    @Upsert
-    suspend fun upsert(entity: DownloadTaskEntity)
+    @Upsert suspend fun upsert(entity: DownloadTaskEntity)
 
     @Query("DELETE FROM download_tasks WHERE taskId = :taskId")
     suspend fun deleteById(taskId: String)
@@ -129,7 +128,7 @@ interface DownloadTaskDao {
             totalBytes = :totalBytes,
             updatedAt = :updatedAt
         WHERE taskId = :taskId
-        """,
+        """
     )
     suspend fun updateProgress(
         taskId: String,
@@ -155,7 +154,7 @@ interface DownloadTaskDao {
             totalBytes = :totalBytes,
             updatedAt = :updatedAt
         WHERE taskId = :taskId
-        """,
+        """
     )
     suspend fun updateRunningProgressPreservingPause(
         taskId: String,
@@ -178,7 +177,7 @@ interface DownloadTaskDao {
             runtimeLastFailure = :runtimeLastFailure,
             updatedAt = :updatedAt
         WHERE taskId = :taskId
-        """,
+        """
     )
     suspend fun updateRuntimeInfo(
         taskId: String,
@@ -199,7 +198,7 @@ interface DownloadTaskDao {
             hasUpdateAvailable = :hasUpdateAvailable,
             updateCheckError = :updateCheckError
         WHERE taskId = :taskId
-        """,
+        """
     )
     suspend fun updateUpdateCheckState(
         taskId: String,
@@ -217,12 +216,9 @@ interface DownloadTaskDao {
             updateCheckError = NULL
         WHERE publishedFileId = :publishedFileId
           AND status = 'Success'
-        """,
+        """
     )
-    suspend fun primeUpdateCheckBaseline(
-        publishedFileId: Long,
-        remoteUpdatedAt: Long?,
-    )
+    suspend fun primeUpdateCheckBaseline(publishedFileId: Long, remoteUpdatedAt: Long?)
 
     @Query(
         """
@@ -250,7 +246,7 @@ interface DownloadTaskDao {
             totalBytes = :totalBytes,
             updatedAt = :updatedAt
         WHERE taskId = :taskId
-        """,
+        """
     )
     suspend fun finish(
         taskId: String,

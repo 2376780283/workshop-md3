@@ -46,10 +46,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -81,26 +80,28 @@ fun ExploreScreen(
     val focusManager = LocalFocusManager.current
     val selectedGame = remember { mutableStateOf<WorkshopGameEntry?>(null) }
     val favoriteAppIds = state.favoriteGames.mapTo(linkedSetOf(), FavoriteWorkshopGame::appId)
-    val favoriteEntries = if (state.isSearching) {
-        emptyList()
-    } else {
-        state.favoriteGames.map(FavoriteWorkshopGame::toWorkshopGameEntry)
-    }
-    val listGames = if (state.isSearching) {
-        state.visibleGames
-    } else {
-        state.visibleGames.filterNot { it.appId in favoriteAppIds }
-    }
+    val favoriteEntries =
+        if (state.isSearching) {
+            emptyList()
+        } else {
+            state.favoriteGames.map(FavoriteWorkshopGame::toWorkshopGameEntry)
+        }
+    val listGames =
+        if (state.isSearching) {
+            state.visibleGames
+        } else {
+            state.visibleGames.filterNot { it.appId in favoriteAppIds }
+        }
 
     LaunchedEffect(selectedGame.value?.appId) {
         selectedGame.value?.appId?.let(viewModel::loadGameDetails)
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier =
+            Modifier.fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ExploreControlPanel(
@@ -126,19 +127,22 @@ fun ExploreScreen(
                     shape = RoundedCornerShape(24.dp),
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 18.dp),
+                        modifier =
+                            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.6.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.6.dp,
+                        )
                         Text(
-                            text = if (state.isSearching) {
-                                "正在搜索 Steam 游戏…"
-                            } else {
-                                "正在读取最近热门的工坊游戏…"
-                            },
+                            text =
+                                if (state.isSearching) {
+                                    "正在搜索 Steam 游戏…"
+                                } else {
+                                    "正在读取最近热门的工坊游戏…"
+                                },
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -153,9 +157,10 @@ fun ExploreScreen(
                     Column(
                         modifier = Modifier.padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            Text(
-                                text = if (state.isSearching) {
+                    ) {
+                        Text(
+                            text =
+                                if (state.isSearching) {
                                     "没有找到匹配名称的工坊游戏"
                                 } else {
                                     "当前页还没有读取到热门工坊游戏"
@@ -164,11 +169,13 @@ fun ExploreScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                                text = state.errorMessage ?: if (state.isSearching) {
-                                    "试试换个关键词继续搜索，这里会查 Steam 游戏库，不只限当前热门页。"
-                                } else {
-                                    "稍后刷新或切换页码再试。"
-                                },
+                            text =
+                                state.errorMessage
+                                    ?: if (state.isSearching) {
+                                        "试试换个关键词继续搜索，这里会查 Steam 游戏库，不只限当前热门页。"
+                                    } else {
+                                        "稍后刷新或切换页码再试。"
+                                    },
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -183,15 +190,9 @@ fun ExploreScreen(
                 ) {
                     if (favoriteEntries.isNotEmpty()) {
                         item(key = "explore_section_favorites") {
-                            ExploreSectionHeader(
-                                title = "工坊收藏",
-                                count = favoriteEntries.size,
-                            )
+                            ExploreSectionHeader(title = "工坊收藏", count = favoriteEntries.size)
                         }
-                        items(
-                            items = favoriteEntries,
-                            key = { "favorite_${it.appId}" },
-                        ) { game ->
+                        items(items = favoriteEntries, key = { "favorite_${it.appId}" }) { game ->
                             ExploreGameRow(
                                 game = game,
                                 isFavorite = true,
@@ -211,17 +212,11 @@ fun ExploreScreen(
 
                     if (favoriteEntries.isNotEmpty()) {
                         item(key = "explore_section_all") {
-                            ExploreSectionHeader(
-                                title = "全部游戏",
-                                count = listGames.size,
-                            )
+                            ExploreSectionHeader(title = "全部游戏", count = listGames.size)
                         }
                     }
 
-                    items(
-                        items = listGames,
-                        key = WorkshopGameEntry::appId,
-                    ) { game ->
+                    items(items = listGames, key = WorkshopGameEntry::appId) { game ->
                         ExploreGameRow(
                             game = game,
                             isFavorite = game.appId in favoriteAppIds,
@@ -260,8 +255,10 @@ fun ExploreScreen(
         val isLoadingDetails = state.loadingDetailsAppId == game.appId && details == null
         WorkshopNativeModalBottomSheet(onDismissRequest = { selectedGame.value = null }) {
             val description = details?.about?.ifBlank { details.shortDescription }.orEmpty()
-            val translationState = state.descriptionTranslationByAppId[game.appId]
-                ?.takeIf { it.sourceFingerprint == textFingerprint(description.trim()) }
+            val translationState =
+                state.descriptionTranslationByAppId[game.appId]?.takeIf {
+                    it.sourceFingerprint == textFingerprint(description.trim())
+                }
             ExploreGameDetailsSheet(
                 game = game,
                 details = details,
@@ -277,7 +274,9 @@ fun ExploreScreen(
                     )
                 },
                 onShowOriginalDescription = { viewModel.showOriginalGameDescription(game.appId) },
-                onShowTranslatedDescription = { viewModel.showTranslatedGameDescription(game.appId) },
+                onShowTranslatedDescription = {
+                    viewModel.showTranslatedGameDescription(game.appId)
+                },
                 onOpenWorkshop = {
                     selectedGame.value = null
                     viewModel.markWorkshopOpened(game.appId)
@@ -328,11 +327,12 @@ private fun ExploreControlPanel(
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = if (isSearching) {
-                            "按名称搜索整个公开创意工坊游戏列表"
-                        } else {
-                            "最近热门的公开创意工坊游戏 · 共 $totalCount 项"
-                        },
+                        text =
+                            if (isSearching) {
+                                "按名称搜索整个公开创意工坊游戏列表"
+                            } else {
+                                "最近热门的公开创意工坊游戏 · 共 $totalCount 项"
+                            },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -345,19 +345,17 @@ private fun ExploreControlPanel(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ExploreMetaChip(
-                        label = if (isSearching) {
-                            "$resultCount 项"
-                        } else {
-                            "第 $currentPage 页"
-                        },
+                        label =
+                            if (isSearching) {
+                                "$resultCount 项"
+                            } else {
+                                "第 $currentPage 页"
+                            }
                     )
                     Surface(
-                        modifier = Modifier
-                            .focusProperties { canFocus = false }
-                            .clickable(
-                                enabled = !isRefreshing,
-                                onClick = onRefresh,
-                            ),
+                        modifier =
+                            Modifier.focusProperties { canFocus = false }
+                                .clickable(enabled = !isRefreshing, onClick = onRefresh),
                         shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ) {
@@ -381,14 +379,13 @@ private fun ExploreControlPanel(
             Surface(
                 shape = RoundedCornerShape(22.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                border =
+                    BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
             ) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = onQueryChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                     placeholder = {
                         Text(
                             text = "按名称搜索 Steam 游戏",
@@ -396,9 +393,7 @@ private fun ExploreControlPanel(
                             overflow = TextOverflow.Ellipsis,
                         )
                     },
-                    leadingIcon = {
-                        Icon(Icons.Rounded.Search, contentDescription = null)
-                    },
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     singleLine = true,
                     trailingIcon = {
                         if (query.isNotBlank()) {
@@ -407,13 +402,15 @@ private fun ExploreControlPanel(
                             }
                         }
                     },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        imeAction = ImeAction.Search,
-                    ),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                        onSearch = { onSearch() },
-                        onDone = { onSearch() },
-                    ),
+                    keyboardOptions =
+                        androidx.compose.foundation.text.KeyboardOptions(
+                            imeAction = ImeAction.Search
+                        ),
+                    keyboardActions =
+                        androidx.compose.foundation.text.KeyboardActions(
+                            onSearch = { onSearch() },
+                            onDone = { onSearch() },
+                        ),
                     shape = RoundedCornerShape(18.dp),
                 )
             }
@@ -435,16 +432,17 @@ private fun ExploreGameRow(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = workshopAdaptiveGradientBrush(
-                        lightStart = Color.White.copy(alpha = 0.98f),
-                        lightEnd = Color(0xFFF9F0E5).copy(alpha = 0.94f),
-                    ),
-                    shape = RoundedCornerShape(22.dp),
-                )
-                .padding(horizontal = 10.dp, vertical = 9.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(
+                        brush =
+                            workshopAdaptiveGradientBrush(
+                                lightStart = Color.White.copy(alpha = 0.98f),
+                                lightEnd = Color(0xFFF9F0E5).copy(alpha = 0.94f),
+                            ),
+                        shape = RoundedCornerShape(22.dp),
+                    )
+                    .padding(horizontal = 10.dp, vertical = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -452,16 +450,15 @@ private fun ExploreGameRow(
                 imageUrl = game.capsuleUrl ?: steamCapsuleUrl(game.appId),
                 alternateImageUrl = game.previewUrl,
                 fallbackText = game.name,
-                modifier = Modifier
-                    .size(width = 78.dp, height = 50.dp),
+                modifier = Modifier.size(width = 78.dp, height = 50.dp),
                 shape = RoundedCornerShape(16.dp),
             )
 
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .focusProperties { canFocus = false }
-                    .clickable(onClick = onShowDetails),
+                modifier =
+                    Modifier.weight(1f)
+                        .focusProperties { canFocus = false }
+                        .clickable(onClick = onShowDetails),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
@@ -473,13 +470,12 @@ private fun ExploreGameRow(
                 )
 
                 Text(
-                    text = buildString {
-                        append("AppID ${game.appId}")
-                        append("  ·  ")
-                        append(
-                            game.workshopItemCount?.let { "$it 个工坊条目" } ?: "公开创意工坊",
-                        )
-                    },
+                    text =
+                        buildString {
+                            append("AppID ${game.appId}")
+                            append("  ·  ")
+                            append(game.workshopItemCount?.let { "$it 个工坊条目" } ?: "公开创意工坊")
+                        },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -493,24 +489,22 @@ private fun ExploreGameRow(
                 ) {
                     IconButton(
                         onClick = onToggleFavorite,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .focusProperties { canFocus = false },
+                        modifier = Modifier.size(28.dp).focusProperties { canFocus = false },
                     ) {
                         Icon(
-                            imageVector = if (isFavorite) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                            imageVector =
+                                if (isFavorite) Icons.Rounded.Bookmark
+                                else Icons.Rounded.BookmarkBorder,
                             contentDescription = if (isFavorite) "取消收藏" else "收藏工坊",
-                            tint = if (isFavorite) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                            tint =
+                                if (isFavorite) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                         )
                     }
-                    ExploreActionCapsule(
-                        text = "进入工坊",
-                        onClick = onOpenWorkshop,
-                    )
+                    ExploreActionCapsule(text = "进入工坊", onClick = onOpenWorkshop)
                 }
             }
         }
@@ -531,41 +525,29 @@ private fun ExploreGameDetailsSheet(
     onOpenWorkshop: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .padding(horizontal = 18.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier = Modifier.padding(horizontal = 18.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box {
             ArtworkThumbnail(
-                imageUrl = details?.headerImageUrl ?: game.capsuleUrl ?: steamCapsuleUrl(game.appId),
+                imageUrl =
+                    details?.headerImageUrl ?: game.capsuleUrl ?: steamCapsuleUrl(game.appId),
                 alternateImageUrl = game.previewUrl,
                 fallbackText = game.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(188.dp)
-                    .clip(RoundedCornerShape(32.dp)),
+                modifier = Modifier.fillMaxWidth().height(188.dp).clip(RoundedCornerShape(32.dp)),
                 shape = RoundedCornerShape(32.dp),
             )
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(188.dp)
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Transparent,
-                                Color(0xAA172131),
-                            ),
-                        ),
-                    ),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(188.dp)
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(
+                            Brush.verticalGradient(listOf(Color.Transparent, Color(0xAA172131)))
+                        )
             )
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomStart)
-                    .padding(18.dp),
+                modifier = Modifier.fillMaxWidth().align(Alignment.BottomStart).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 ExploreMetaChip(
@@ -594,16 +576,22 @@ private fun ExploreGameDetailsSheet(
                 Surface(
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
                     shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                    border =
+                        BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                        ),
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 18.dp),
+                        modifier =
+                            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.6.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.6.dp,
+                        )
                         Text(
                             text = "正在补全这款游戏的详细资料…",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -642,7 +630,11 @@ private fun ExploreGameDetailsSheet(
                 Surface(
                     color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.78f)),
                     shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f))),
+                    border =
+                        BorderStroke(
+                            1.dp,
+                            workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f)),
+                        ),
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ) {
                     Text(
@@ -660,9 +652,7 @@ private fun ExploreGameDetailsSheet(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -681,22 +671,18 @@ private fun ExploreGameDetailsSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Button(
-                    onClick = onOpenWorkshop,
-                    shape = RoundedCornerShape(20.dp),
-                ) {
-                    Text("进入工坊")
-                }
+                Button(onClick = onOpenWorkshop, shape = RoundedCornerShape(20.dp)) { Text("进入工坊") }
             }
         }
 
         OutlinedActionRow(
             title = if (isFavorite) "已加入工坊收藏" else "加入工坊收藏",
-            description = if (isFavorite) {
-                "这款游戏会固定出现在探索和我的内容顶部，方便你快速回到它的工坊。"
-            } else {
-                "把常用的工坊游戏固定下来，下次不用再重新搜索。"
-            },
+            description =
+                if (isFavorite) {
+                    "这款游戏会固定出现在探索和我的内容顶部，方便你快速回到它的工坊。"
+                } else {
+                    "把常用的工坊游戏固定下来，下次不用再重新搜索。"
+                },
             actionText = if (isFavorite) "取消收藏" else "收藏",
             onClick = onToggleFavorite,
         )
@@ -706,14 +692,9 @@ private fun ExploreGameDetailsSheet(
 }
 
 @Composable
-private fun ExploreSectionHeader(
-    title: String,
-    count: Int,
-) {
+private fun ExploreSectionHeader(title: String, count: Int) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 2.dp, bottom = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -743,9 +724,7 @@ private fun OutlinedActionRow(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -764,9 +743,7 @@ private fun OutlinedActionRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(onClick = onClick) {
-                Text(actionText)
-            }
+            TextButton(onClick = onClick) { Text(actionText) }
         }
     }
 }
@@ -786,18 +763,11 @@ private fun ExplorePaginationBar(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(
-                onClick = onPrevious,
-                enabled = hasPreviousPage,
-            ) {
-                Text("上一页")
-            }
+            TextButton(onClick = onPrevious, enabled = hasPreviousPage) { Text("上一页") }
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -814,12 +784,7 @@ private fun ExplorePaginationBar(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(
-                onClick = onNext,
-                enabled = hasNextPage,
-            ) {
-                Text("下一页")
-            }
+            TextButton(onClick = onNext, enabled = hasNextPage) { Text("下一页") }
         }
     }
 }
@@ -834,7 +799,8 @@ private fun ExploreOverviewCard(
     Surface(
         color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.78f)),
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f))),
+        border =
+            BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f))),
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
@@ -847,11 +813,7 @@ private fun ExploreOverviewCard(
                     label = "AppID",
                     value = appId.toString(),
                 )
-                ExploreMetaTile(
-                    modifier = Modifier.weight(1f),
-                    label = "来源",
-                    value = "公开工坊",
-                )
+                ExploreMetaTile(modifier = Modifier.weight(1f), label = "来源", value = "公开工坊")
             }
 
             ExploreDetailGroup(label = "开发商", values = developers)
@@ -862,11 +824,7 @@ private fun ExploreOverviewCard(
 }
 
 @Composable
-private fun ExploreMetaTile(
-    modifier: Modifier = Modifier,
-    label: String,
-    value: String,
-) {
+private fun ExploreMetaTile(modifier: Modifier = Modifier, label: String, value: String) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
@@ -882,19 +840,13 @@ private fun ExploreMetaTile(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Text(text = value, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
 
 @Composable
-private fun ExploreDetailGroup(
-    label: String,
-    values: List<String>,
-) {
+private fun ExploreDetailGroup(label: String, values: List<String>) {
     if (values.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -902,38 +854,25 @@ private fun ExploreDetailGroup(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            text = values.joinToString(" · "),
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Text(text = values.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
 @Composable
-private fun ExploreActionCapsule(
-    text: String,
-    onClick: () -> Unit,
-) {
+private fun ExploreActionCapsule(text: String, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier
-            .focusProperties { canFocus = false }
-            .clickable(onClick = onClick),
+        modifier = Modifier.focusProperties { canFocus = false }.clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         shadowElevation = 0.dp,
         color = Color.Transparent,
     ) {
         Box(
-            modifier = Modifier
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color(0xFFE96D43),
-                            Color(0xFFF08A52),
-                        ),
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                )
-                .padding(horizontal = 10.dp, vertical = 7.dp),
+            modifier =
+                Modifier.background(
+                        Brush.horizontalGradient(listOf(Color(0xFFE96D43), Color(0xFFF08A52))),
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -952,10 +891,7 @@ private fun ExploreMetaChip(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = containerColor,
-    ) {
+    Surface(shape = RoundedCornerShape(999.dp), color = containerColor) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),

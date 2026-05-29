@@ -4,18 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.slay.workshopnative.core.logging.AppLog
 import com.slay.workshopnative.data.local.DownloadTaskEntity
+import com.slay.workshopnative.data.preferences.UserPreferencesStore
 import com.slay.workshopnative.data.repository.DownloadedItemUpdateCandidate
 import com.slay.workshopnative.data.repository.DownloadsRepository
-import com.slay.workshopnative.data.preferences.UserPreferencesStore
 import com.slay.workshopnative.data.repository.SteamRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -32,7 +32,9 @@ data class DownloadUpdatesDialogState(
 }
 
 @HiltViewModel
-class DownloadsViewModel @Inject constructor(
+class DownloadsViewModel
+@Inject
+constructor(
     private val downloadsRepository: DownloadsRepository,
     private val steamRepository: SteamRepository,
     private val preferencesStore: UserPreferencesStore,
@@ -43,8 +45,12 @@ class DownloadsViewModel @Inject constructor(
         val PUBLISHED_FILE_ID_STEAM_URI_REGEX = Regex("""steam://publishedfile/(\d+)""")
     }
 
-    val downloads: StateFlow<List<DownloadTaskEntity>> = downloadsRepository.downloads
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val downloads: StateFlow<List<DownloadTaskEntity>> =
+        downloadsRepository.downloads.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            emptyList(),
+        )
 
     private val _isCreatingTask = MutableStateFlow(false)
     val isCreatingTask = _isCreatingTask.asStateFlow()
@@ -67,23 +73,18 @@ class DownloadsViewModel @Inject constructor(
     private var startupUpdateCheckAttempted = false
 
     init {
-        viewModelScope.launch {
-            downloadsRepository.reconcileActiveTasks()
-        }
+        viewModelScope.launch { downloadsRepository.reconcileActiveTasks() }
     }
 
     fun cancel(taskId: String) {
-        viewModelScope.launch {
-            downloadsRepository.cancel(taskId)
-        }
+        viewModelScope.launch { downloadsRepository.cancel(taskId) }
     }
 
     fun delete(taskId: String) {
         viewModelScope.launch {
-            downloadsRepository.delete(taskId)
-                .onSuccess {
-                    _messages.emit("已删除这条下载记录")
-                }
+            downloadsRepository
+                .delete(taskId)
+                .onSuccess { _messages.emit("已删除这条下载记录") }
                 .onFailure { error ->
                     AppLog.w(LOG_TAG, "delete failed taskId=$taskId", error)
                     _messages.emit(error.message ?: "删除记录失败")
@@ -93,10 +94,9 @@ class DownloadsViewModel @Inject constructor(
 
     fun retry(taskId: String) {
         viewModelScope.launch {
-            downloadsRepository.retry(taskId)
-                .onSuccess {
-                    _messages.emit("已重新加入下载队列")
-                }
+            downloadsRepository
+                .retry(taskId)
+                .onSuccess { _messages.emit("已重新加入下载队列") }
                 .onFailure { error ->
                     AppLog.w(LOG_TAG, "retry failed taskId=$taskId", error)
                     _messages.emit(error.message ?: "重试失败")
@@ -113,10 +113,9 @@ class DownloadsViewModel @Inject constructor(
 
     fun resume(taskId: String) {
         viewModelScope.launch {
-            downloadsRepository.resume(taskId)
-                .onSuccess {
-                    _messages.emit("已继续下载")
-                }
+            downloadsRepository
+                .resume(taskId)
+                .onSuccess { _messages.emit("已继续下载") }
                 .onFailure { error ->
                     AppLog.w(LOG_TAG, "resume failed taskId=$taskId", error)
                     _messages.emit(error.message ?: "继续下载失败")
@@ -139,7 +138,7 @@ class DownloadsViewModel @Inject constructor(
                     "已清理 $deleted 条历史记录"
                 } else {
                     "没有可清理的历史记录"
-                },
+                }
             )
         }
     }
@@ -157,7 +156,8 @@ class DownloadsViewModel @Inject constructor(
             val now = System.currentTimeMillis()
             if (
                 prefs.lastDownloadedModUpdatesLaunchCheckAtMs > 0L &&
-                now - prefs.lastDownloadedModUpdatesLaunchCheckAtMs < DOWNLOADED_MOD_UPDATES_STARTUP_CHECK_INTERVAL_MS
+                    now - prefs.lastDownloadedModUpdatesLaunchCheckAtMs <
+                        DOWNLOADED_MOD_UPDATES_STARTUP_CHECK_INTERVAL_MS
             ) {
                 return@launch
             }
@@ -170,7 +170,8 @@ class DownloadsViewModel @Inject constructor(
         viewModelScope.launch {
             if (_isSimulatingUpdate.value || _isCheckingUpdates.value) return@launch
             _isSimulatingUpdate.value = true
-            downloadsRepository.simulateUpdateAvailableForDownloadedItem()
+            downloadsRepository
+                .simulateUpdateAvailableForDownloadedItem()
                 .onSuccess { title ->
                     _messages.emit("已为《$title》写入更旧的本地更新基线，现在点“检查已下载更新”就能看到可更新效果")
                 }
@@ -189,16 +190,19 @@ class DownloadsViewModel @Inject constructor(
     fun toggleDownloadUpdateSelection(publishedFileId: Long) {
         val current = _downloadUpdatesDialogState.value
         if (!current.isVisible || current.isUpdating) return
-        val nextSelection = if (publishedFileId in current.selectedPublishedFileIds) {
-            current.selectedPublishedFileIds - publishedFileId
-        } else {
-            current.selectedPublishedFileIds + publishedFileId
-        }
+        val nextSelection =
+            if (publishedFileId in current.selectedPublishedFileIds) {
+                current.selectedPublishedFileIds - publishedFileId
+            } else {
+                current.selectedPublishedFileIds + publishedFileId
+            }
         _downloadUpdatesDialogState.value = current.copy(selectedPublishedFileIds = nextSelection)
     }
 
     fun enqueueAllDownloadUpdates() {
-        enqueueDownloadUpdates(_downloadUpdatesDialogState.value.candidates.map { it.publishedFileId })
+        enqueueDownloadUpdates(
+            _downloadUpdatesDialogState.value.candidates.map { it.publishedFileId }
+        )
     }
 
     fun enqueueSelectedDownloadUpdates() {
@@ -217,20 +221,23 @@ class DownloadsViewModel @Inject constructor(
 
             _isCreatingTask.value = true
             runCatching {
-                val item = steamRepository.resolveWorkshopItemForDownload(publishedFileId).getOrThrow()
-                downloadsRepository.enqueue(item).getOrThrow()
-                item
-            }.onSuccess { item ->
-                _taskCreated.tryEmit(Unit)
-                _messages.emit("已加入下载队列：${item.title}")
-            }.onFailure { error ->
-                AppLog.w(
-                    LOG_TAG,
-                    "enqueueByPublishedFileId failed publishedFileId=$publishedFileId",
-                    error,
-                )
-                _messages.emit(error.message ?: "新建下载任务失败")
-            }
+                    val item =
+                        steamRepository.resolveWorkshopItemForDownload(publishedFileId).getOrThrow()
+                    downloadsRepository.enqueue(item).getOrThrow()
+                    item
+                }
+                .onSuccess { item ->
+                    _taskCreated.tryEmit(Unit)
+                    _messages.emit("已加入下载队列：${item.title}")
+                }
+                .onFailure { error ->
+                    AppLog.w(
+                        LOG_TAG,
+                        "enqueueByPublishedFileId failed publishedFileId=$publishedFileId",
+                        error,
+                    )
+                    _messages.emit(error.message ?: "新建下载任务失败")
+                }
             _isCreatingTask.value = false
         }
     }
@@ -239,7 +246,12 @@ class DownloadsViewModel @Inject constructor(
         val normalized = rawInput.trim()
         if (normalized.isBlank()) return null
 
-        normalized.toLongOrNull()?.takeIf { it > 0L }?.let { return it }
+        normalized
+            .toLongOrNull()
+            ?.takeIf { it > 0L }
+            ?.let {
+                return it
+            }
 
         val queryMatch = PUBLISHED_FILE_ID_QUERY_REGEX.find(normalized)
         if (queryMatch != null) {
@@ -258,27 +270,30 @@ class DownloadsViewModel @Inject constructor(
         viewModelScope.launch {
             if (_isCheckingUpdates.value) return@launch
             _isCheckingUpdates.value = true
-            downloadsRepository.checkDownloadedItemsForUpdates()
+            downloadsRepository
+                .checkDownloadedItemsForUpdates()
                 .onSuccess { result ->
                     val summary = result.summary
                     val candidates = result.updateCandidates
                     if (candidates.isNotEmpty()) {
-                        _downloadUpdatesDialogState.value = DownloadUpdatesDialogState(
-                            candidates = candidates,
-                            selectedPublishedFileIds = candidates.map { it.publishedFileId }.toSet(),
-                            failedCount = summary.failedCount,
-                            isUpdating = false,
-                        )
+                        _downloadUpdatesDialogState.value =
+                            DownloadUpdatesDialogState(
+                                candidates = candidates,
+                                selectedPublishedFileIds =
+                                    candidates.map { it.publishedFileId }.toSet(),
+                                failedCount = summary.failedCount,
+                                isUpdating = false,
+                            )
                     } else if (userInitiated) {
-                        val message = when {
-                            summary.requestedCount == 0 -> "当前没有可检查更新的已完成任务"
-                            summary.failedCount > 0 && summary.checkedCount == 0 ->
-                                "公开更新检查失败：${summary.failedCount} 项暂时无法读取"
-                            summary.failedCount > 0 ->
-                                "已检查 ${summary.checkedCount} 项，${summary.failedCount} 项无法公开检查"
-                            else ->
-                                "已检查 ${summary.checkedCount} 项，当前都已是最新"
-                        }
+                        val message =
+                            when {
+                                summary.requestedCount == 0 -> "当前没有可检查更新的已完成任务"
+                                summary.failedCount > 0 && summary.checkedCount == 0 ->
+                                    "公开更新检查失败：${summary.failedCount} 项暂时无法读取"
+                                summary.failedCount > 0 ->
+                                    "已检查 ${summary.checkedCount} 项，${summary.failedCount} 项无法公开检查"
+                                else -> "已检查 ${summary.checkedCount} 项，当前都已是最新"
+                            }
                         _messages.emit(message)
                     }
                 }
@@ -307,29 +322,31 @@ class DownloadsViewModel @Inject constructor(
             var failedCount = 0
             uniqueIds.forEach { publishedFileId ->
                 runCatching {
-                    val item = steamRepository.resolveWorkshopItemForDownload(publishedFileId).getOrThrow()
-                    downloadsRepository.enqueue(item).getOrThrow()
-                }.onSuccess {
-                    successCount += 1
-                }.onFailure { error ->
-                    failedCount += 1
-                    AppLog.w(
-                        LOG_TAG,
-                        "enqueueDownloadUpdates failed publishedFileId=$publishedFileId",
-                        error,
-                    )
-                }
+                        val item =
+                            steamRepository
+                                .resolveWorkshopItemForDownload(publishedFileId)
+                                .getOrThrow()
+                        downloadsRepository.enqueue(item).getOrThrow()
+                    }
+                    .onSuccess { successCount += 1 }
+                    .onFailure { error ->
+                        failedCount += 1
+                        AppLog.w(
+                            LOG_TAG,
+                            "enqueueDownloadUpdates failed publishedFileId=$publishedFileId",
+                            error,
+                        )
+                    }
             }
 
             _downloadUpdatesDialogState.value = DownloadUpdatesDialogState()
-            val message = when {
-                successCount > 0 && failedCount > 0 ->
-                    "已加入 $successCount 项更新任务，另有 $failedCount 项更新失败"
-                successCount > 0 ->
-                    "已加入 $successCount 项更新任务"
-                else ->
-                    "没有成功加入任何更新任务"
-            }
+            val message =
+                when {
+                    successCount > 0 && failedCount > 0 ->
+                        "已加入 $successCount 项更新任务，另有 $failedCount 项更新失败"
+                    successCount > 0 -> "已加入 $successCount 项更新任务"
+                    else -> "没有成功加入任何更新任务"
+                }
             _messages.emit(message)
         }
     }

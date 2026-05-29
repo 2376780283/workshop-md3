@@ -21,12 +21,7 @@ object MainActivityRuntimeTracker {
     private var lastCreatedInstanceId: String? = null
     private var lastResumedInstanceId: String? = null
 
-    fun onCreated(
-        instanceId: String,
-        taskId: Int,
-        intentFlags: Int?,
-        hadSavedState: Boolean,
-    ) {
+    fun onCreated(instanceId: String, taskId: Int, intentFlags: Int?, hadSavedState: Boolean) {
         synchronized(lock) {
             createCount += 1
             lastCreatedAtMs = System.currentTimeMillis()
@@ -45,11 +40,7 @@ object MainActivityRuntimeTracker {
         }
     }
 
-    fun onNewIntent(
-        instanceId: String,
-        taskId: Int,
-        intentFlags: Int?,
-    ) {
+    fun onNewIntent(instanceId: String, taskId: Int, intentFlags: Int?) {
         synchronized(lock) {
             newIntentCount += 1
             lastNewIntentAtMs = System.currentTimeMillis()
@@ -79,11 +70,7 @@ object MainActivityRuntimeTracker {
         }
     }
 
-    fun onDestroyed(
-        instanceId: String,
-        taskId: Int,
-        changingConfigurations: Boolean,
-    ) {
+    fun onDestroyed(instanceId: String, taskId: Int, changingConfigurations: Boolean) {
         synchronized(lock) {
             destroyCount += 1
             lastDestroyedAtMs = System.currentTimeMillis()

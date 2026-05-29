@@ -29,9 +29,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val themeMode = viewModel.themeMode.collectAsStateWithLifecycle().value
-            WorkshopNativeTheme(themeMode = themeMode) {
-                WorkshopNativeRoot(viewModel = viewModel)
-            }
+            WorkshopNativeTheme(themeMode = themeMode) { WorkshopNativeRoot(viewModel = viewModel) }
         }
     }
 

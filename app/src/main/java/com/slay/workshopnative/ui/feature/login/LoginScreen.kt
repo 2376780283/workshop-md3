@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,60 +89,64 @@ fun LoginScreen(
         }
     }
 
-    LaunchedEffect(sessionState.status, sessionState.challenge?.type, sessionState.challenge?.previousCodeIncorrect) {
+    LaunchedEffect(
+        sessionState.status,
+        sessionState.challenge?.type,
+        sessionState.challenge?.previousCodeIncorrect,
+    ) {
         if (sessionState.status != SessionStatus.AwaitingCode) {
             authCode = ""
         }
     }
 
-    val awaitingCode = sessionState.status == SessionStatus.AwaitingCode && sessionState.challenge != null
-    val isBusy = sessionState.status == SessionStatus.Connecting || sessionState.status == SessionStatus.Authenticating
-    val inputsEnabled = !awaitingCode &&
-        sessionState.status != SessionStatus.Connecting &&
-        sessionState.status != SessionStatus.Authenticating
-    val busyLabel = when (sessionState.status) {
-        SessionStatus.Connecting -> "正在连接 Steam…"
-        SessionStatus.Authenticating -> "正在验证登录信息…"
-        else -> "正在处理…"
-    }
+    val awaitingCode =
+        sessionState.status == SessionStatus.AwaitingCode && sessionState.challenge != null
+    val isBusy =
+        sessionState.status == SessionStatus.Connecting ||
+            sessionState.status == SessionStatus.Authenticating
+    val inputsEnabled =
+        !awaitingCode &&
+            sessionState.status != SessionStatus.Connecting &&
+            sessionState.status != SessionStatus.Authenticating
+    val busyLabel =
+        when (sessionState.status) {
+            SessionStatus.Connecting -> "正在连接 Steam…"
+            SessionStatus.Authenticating -> "正在验证登录信息…"
+            else -> "正在处理…"
+        }
 
     WorkshopBackdrop {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .imePadding()
-                .padding(horizontal = 20.dp, vertical = 24.dp),
+            modifier =
+                Modifier.fillMaxSize().imePadding().padding(horizontal = 20.dp, vertical = 24.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 430.dp),
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().widthIn(max = 430.dp)) {
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 50.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 50.dp),
                     shape = RoundedCornerShape(36.dp),
-                    color = workshopAdaptiveSurfaceColor(
-                        light = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                        dark = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
-                    ),
+                    color =
+                        workshopAdaptiveSurfaceColor(
+                            light = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                            dark =
+                                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+                        ),
                     tonalElevation = 8.dp,
                     shadowElevation = 18.dp,
-                    border = BorderStroke(
-                        1.dp,
-                        workshopAdaptiveBorderColor(
-                            light = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f),
+                    border =
+                        BorderStroke(
+                            1.dp,
+                            workshopAdaptiveBorderColor(
+                                light = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)
+                            ),
                         ),
-                    ),
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ) {
                     Column(
-                        modifier = Modifier
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 22.dp, vertical = 24.dp)
-                            .padding(top = 44.dp),
+                        modifier =
+                            Modifier.verticalScroll(rememberScrollState())
+                                .padding(horizontal = 22.dp, vertical = 24.dp)
+                                .padding(top = 44.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
@@ -162,7 +164,8 @@ fun LoginScreen(
                             ) {
                                 Text(
                                     text = message,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                    modifier =
+                                        Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                 )
@@ -174,16 +177,14 @@ fun LoginScreen(
                             onValueChange = { username = it },
                             placeholder = "Steam 用户名",
                             leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Rounded.Person,
-                                    contentDescription = null,
-                                )
+                                Icon(imageVector = Icons.Rounded.Person, contentDescription = null)
                             },
                             enabled = inputsEnabled,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Next,
-                            ),
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    keyboardType = KeyboardType.Text,
+                                    imeAction = ImeAction.Next,
+                                ),
                         )
 
                         CredentialField(
@@ -191,40 +192,45 @@ fun LoginScreen(
                             onValueChange = { password = it },
                             placeholder = "密码",
                             leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Rounded.Lock,
-                                    contentDescription = null,
-                                )
+                                Icon(imageVector = Icons.Rounded.Lock, contentDescription = null)
                             },
                             trailingIcon = {
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                     Icon(
-                                        imageVector = if (passwordVisible) {
-                                            Icons.Rounded.VisibilityOff
-                                        } else {
-                                            Icons.Rounded.Visibility
-                                        },
+                                        imageVector =
+                                            if (passwordVisible) {
+                                                Icons.Rounded.VisibilityOff
+                                            } else {
+                                                Icons.Rounded.Visibility
+                                            },
                                         contentDescription = if (passwordVisible) "隐藏密码" else "显示密码",
                                     )
                                 }
                             },
                             enabled = inputsEnabled,
-                            visualTransformation = if (passwordVisible) {
-                                VisualTransformation.None
-                            } else {
-                                PasswordVisualTransformation()
-                            },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Password,
-                                imeAction = ImeAction.Done,
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    if (username.isNotBlank() && password.isNotBlank() && inputsEnabled) {
-                                        onLogin(username, password, rememberSession)
-                                    }
+                            visualTransformation =
+                                if (passwordVisible) {
+                                    VisualTransformation.None
+                                } else {
+                                    PasswordVisualTransformation()
                                 },
-                            ),
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Done,
+                                ),
+                            keyboardActions =
+                                KeyboardActions(
+                                    onDone = {
+                                        if (
+                                            username.isNotBlank() &&
+                                                password.isNotBlank() &&
+                                                inputsEnabled
+                                        ) {
+                                            onLogin(username, password, rememberSession)
+                                        }
+                                    }
+                                ),
                         )
 
                         RememberSessionRow(
@@ -244,19 +250,19 @@ fun LoginScreen(
                         if (!awaitingCode) {
                             Button(
                                 onClick = { onLogin(username, password, rememberSession) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
+                                modifier = Modifier.fillMaxWidth().height(56.dp),
                                 shape = RoundedCornerShape(22.dp),
-                                enabled = username.isNotBlank() &&
-                                    password.isNotBlank() &&
-                                    inputsEnabled,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                ),
+                                enabled =
+                                    username.isNotBlank() && password.isNotBlank() && inputsEnabled,
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        disabledContainerColor =
+                                            MaterialTheme.colorScheme.surfaceContainerHighest,
+                                        disabledContentColor =
+                                            MaterialTheme.colorScheme.onSurfaceVariant,
+                                    ),
                             ) {
                                 Text(
                                     text = "登录 Steam",
@@ -267,9 +273,7 @@ fun LoginScreen(
 
                             OutlinedButton(
                                 onClick = onContinueAsGuest,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp),
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
                                 enabled = inputsEnabled,
                                 shape = RoundedCornerShape(20.dp),
                             ) {
@@ -296,15 +300,21 @@ fun LoginScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             shape = RoundedCornerShape(18.dp),
                                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                            border = BorderStroke(
-                                                1.dp,
-                                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f),
-                                            ),
+                                            border =
+                                                BorderStroke(
+                                                    1.dp,
+                                                    MaterialTheme.colorScheme.outlineVariant.copy(
+                                                        alpha = 0.42f
+                                                    ),
+                                                ),
                                         ) {
                                             Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                modifier =
+                                                    Modifier.fillMaxWidth()
+                                                        .padding(
+                                                            horizontal = 12.dp,
+                                                            vertical = 10.dp,
+                                                        ),
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically,
                                             ) {
@@ -318,17 +328,22 @@ fun LoginScreen(
                                                         fontWeight = FontWeight.SemiBold,
                                                     )
                                                     Text(
-                                                        text = if (account.steamId64 > 0L) {
-                                                            "SteamID ${account.steamId64}"
-                                                        } else {
-                                                            "已保存登录态"
-                                                        },
+                                                        text =
+                                                            if (account.steamId64 > 0L) {
+                                                                "SteamID ${account.steamId64}"
+                                                            } else {
+                                                                "已保存登录态"
+                                                            },
                                                         style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        color =
+                                                            MaterialTheme.colorScheme
+                                                                .onSurfaceVariant,
                                                     )
                                                 }
                                                 OutlinedButton(
-                                                    onClick = { onSwitchSavedAccount(account.stableKey()) },
+                                                    onClick = {
+                                                        onSwitchSavedAccount(account.stableKey())
+                                                    },
                                                     shape = RoundedCornerShape(16.dp),
                                                     enabled = inputsEnabled,
                                                 ) {
@@ -350,18 +365,21 @@ fun LoginScreen(
                 Surface(
                     modifier = Modifier.align(Alignment.Center),
                     shape = RoundedCornerShape(26.dp),
-                    color = workshopAdaptiveSurfaceColor(
-                        light = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                        dark = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
-                    ),
+                    color =
+                        workshopAdaptiveSurfaceColor(
+                            light = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                            dark =
+                                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+                        ),
                     tonalElevation = 8.dp,
                     shadowElevation = 14.dp,
-                    border = BorderStroke(
-                        1.dp,
-                        workshopAdaptiveBorderColor(
-                            light = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f),
+                    border =
+                        BorderStroke(
+                            1.dp,
+                            workshopAdaptiveBorderColor(
+                                light = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)
+                            ),
                         ),
-                    ),
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ) {
                     Column(
@@ -383,28 +401,22 @@ fun LoginScreen(
 }
 
 @Composable
-private fun BrandMark(
-    modifier: Modifier = Modifier,
-) {
+private fun BrandMark(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(30.dp),
         shadowElevation = 18.dp,
         tonalElevation = 8.dp,
-        border = BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.36f))),
+        border =
+            BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.36f))),
     ) {
         Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(30.dp))
-                .background(
-                    brush = Brush.linearGradient(
-                        listOf(
-                            Color(0xFF162334),
-                            Color(0xFFE96D43),
-                        ),
-                    ),
-                )
-                .padding(14.dp),
+            modifier =
+                Modifier.clip(RoundedCornerShape(30.dp))
+                    .background(
+                        brush = Brush.linearGradient(listOf(Color(0xFF162334), Color(0xFFE96D43)))
+                    )
+                    .padding(14.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(22.dp),
@@ -412,9 +424,7 @@ private fun BrandMark(
                 shadowElevation = 6.dp,
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(74.dp)
-                        .background(Color(0xFFF8EEE5)),
+                    modifier = Modifier.size(74.dp).background(Color(0xFFF8EEE5)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Image(
@@ -462,52 +472,51 @@ private fun CredentialField(
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         shape = RoundedCornerShape(22.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = workshopAdaptiveSurfaceColor(
-                light = MaterialTheme.colorScheme.surfaceContainerLowest,
-                dark = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.9f),
+        colors =
+            OutlinedTextFieldDefaults.colors(
+                unfocusedContainerColor =
+                    workshopAdaptiveSurfaceColor(
+                        light = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        dark = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.9f),
+                    ),
+                focusedContainerColor =
+                    workshopAdaptiveSurfaceColor(
+                        light = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        dark = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.94f),
+                    ),
+                disabledContainerColor =
+                    workshopAdaptiveSurfaceColor(
+                        light =
+                            MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.72f),
+                        dark = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
+                    ),
+                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                unfocusedBorderColor =
+                    workshopAdaptiveBorderColor(
+                        light = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                    ),
+                disabledBorderColor =
+                    workshopAdaptiveBorderColor(
+                        light = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    ),
+                focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                focusedTrailingIconColor = MaterialTheme.colorScheme.primary,
+                unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
-            focusedContainerColor = workshopAdaptiveSurfaceColor(
-                light = MaterialTheme.colorScheme.surfaceContainerLowest,
-                dark = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.94f),
-            ),
-            disabledContainerColor = workshopAdaptiveSurfaceColor(
-                light = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.72f),
-                dark = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
-            ),
-            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-            unfocusedBorderColor = workshopAdaptiveBorderColor(
-                light = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-            ),
-            disabledBorderColor = workshopAdaptiveBorderColor(
-                light = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-            ),
-            focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
-            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            focusedTrailingIconColor = MaterialTheme.colorScheme.primary,
-            unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        ),
     )
 }
 
 @Composable
-private fun RememberSessionRow(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
+private fun RememberSessionRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f),
-        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -519,12 +528,13 @@ private fun RememberSessionRow(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.surface,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.surface,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                ),
+                colors =
+                    SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.surface,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.surface,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ),
             )
         }
     }
@@ -538,19 +548,17 @@ private fun AuthCodeCard(
     onSubmit: () -> Unit,
 ) {
     val challenge = sessionState.challenge ?: return
-    val title = when (challenge.type) {
-        AuthChallengeType.SteamGuard -> "Steam Guard"
-        AuthChallengeType.Email -> challenge.emailHint?.let { "邮箱验证码 · $it" } ?: "邮箱验证码"
-    }
+    val title =
+        when (challenge.type) {
+            AuthChallengeType.SteamGuard -> "Steam Guard"
+            AuthChallengeType.Email -> challenge.emailHint?.let { "邮箱验证码 · $it" } ?: "邮箱验证码"
+        }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f),
-        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -574,26 +582,21 @@ private fun AuthCodeCard(
                 value = authCode,
                 onValueChange = onAuthCodeChange,
                 placeholder = "验证码",
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Rounded.Lock,
-                        contentDescription = null,
-                    )
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Ascii,
-                    capitalization = KeyboardCapitalization.Characters,
-                    autoCorrectEnabled = false,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = { if (authCode.isNotBlank()) onSubmit() }),
+                leadingIcon = { Icon(imageVector = Icons.Rounded.Lock, contentDescription = null) },
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Ascii,
+                        capitalization = KeyboardCapitalization.Characters,
+                        autoCorrectEnabled = false,
+                        imeAction = ImeAction.Done,
+                    ),
+                keyboardActions =
+                    KeyboardActions(onDone = { if (authCode.isNotBlank()) onSubmit() }),
             )
 
             Button(
                 onClick = onSubmit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(20.dp),
                 enabled = authCode.isNotBlank(),
             ) {

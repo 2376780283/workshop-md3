@@ -1,17 +1,17 @@
 package com.slay.workshopnative.ui
 
-import com.slay.workshopnative.BuildConfig
-import com.slay.workshopnative.core.logging.AppLog
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.slay.workshopnative.data.model.SteamSessionState
+import com.slay.workshopnative.BuildConfig
+import com.slay.workshopnative.core.logging.AppLog
 import com.slay.workshopnative.data.model.SessionStatus
+import com.slay.workshopnative.data.model.SteamSessionState
 import com.slay.workshopnative.data.preferences.AppThemeMode
 import com.slay.workshopnative.data.preferences.DEFAULT_APP_THEME_MODE
 import com.slay.workshopnative.data.preferences.SavedSteamAccount
-import com.slay.workshopnative.data.repository.DownloadsRepository
 import com.slay.workshopnative.data.preferences.UserPreferencesStore
+import com.slay.workshopnative.data.repository.DownloadsRepository
 import com.slay.workshopnative.data.repository.SteamRepository
 import com.slay.workshopnative.update.AppUpdateCheckResult
 import com.slay.workshopnative.update.AppUpdateDownloadResolution
@@ -24,14 +24,14 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 
 data class AppUpdateUiState(
@@ -48,7 +48,9 @@ data class AppUpdateUiState(
 )
 
 @HiltViewModel
-class MainViewModel @Inject constructor(
+class MainViewModel
+@Inject
+constructor(
     private val savedStateHandle: SavedStateHandle,
     private val steamRepository: SteamRepository,
     private val preferencesStore: UserPreferencesStore,
@@ -82,35 +84,41 @@ class MainViewModel @Inject constructor(
         savedStateHandle.getStateFlow(KEY_ACTIVE_WORKSHOP_APP_NAME, "")
     val activeWorkshopMode: StateFlow<String> =
         savedStateHandle.getStateFlow(KEY_ACTIVE_WORKSHOP_MODE, DEFAULT_WORKSHOP_MODE)
-    val hasAcknowledgedDisclaimer: StateFlow<Boolean?> = preferencesStore.preferences
-        .map { it.hasAcknowledgedDisclaimer }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-    val hasAcknowledgedUsageBoundary: StateFlow<Boolean?> = preferencesStore.preferences
-        .map { it.hasAcknowledgedUsageBoundary }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-    val savedAccounts: StateFlow<List<SavedSteamAccount>> = preferencesStore.preferences
-        .map { it.savedAccounts }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val isLoginFeatureEnabled: StateFlow<Boolean> = preferencesStore.preferences
-        .map { it.isLoginFeatureEnabled }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-    val showLibraryTab: StateFlow<Boolean> = preferencesStore.preferences
-        .map { prefs -> prefs.isLoginFeatureEnabled && prefs.isOwnedGamesDisplayEnabled }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-    val themeMode: StateFlow<AppThemeMode> = preferencesStore.preferences
-        .map { it.themeMode }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_APP_THEME_MODE)
+    val hasAcknowledgedDisclaimer: StateFlow<Boolean?> =
+        preferencesStore.preferences
+            .map { it.hasAcknowledgedDisclaimer }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val hasAcknowledgedUsageBoundary: StateFlow<Boolean?> =
+        preferencesStore.preferences
+            .map { it.hasAcknowledgedUsageBoundary }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val savedAccounts: StateFlow<List<SavedSteamAccount>> =
+        preferencesStore.preferences
+            .map { it.savedAccounts }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val isLoginFeatureEnabled: StateFlow<Boolean> =
+        preferencesStore.preferences
+            .map { it.isLoginFeatureEnabled }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val showLibraryTab: StateFlow<Boolean> =
+        preferencesStore.preferences
+            .map { prefs -> prefs.isLoginFeatureEnabled && prefs.isOwnedGamesDisplayEnabled }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val themeMode: StateFlow<AppThemeMode> =
+        preferencesStore.preferences
+            .map { it.themeMode }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_APP_THEME_MODE)
 
     init {
         viewModelScope.launch {
             val prefs = preferencesStore.snapshot()
-            runCatching {
-                steamRepository.bootstrap()
-            }.onFailure { error ->
-                AppLog.w(LOG_TAG, "bootstrap failed", error)
-            }
+            runCatching { steamRepository.bootstrap() }
+                .onFailure { error -> AppLog.w(LOG_TAG, "bootstrap failed", error) }
             val currentStatus = steamRepository.sessionState.value.status
-            if ((!prefs.isLoginFeatureEnabled || prefs.defaultGuestMode) && currentStatus != SessionStatus.Authenticated) {
+            if (
+                (!prefs.isLoginFeatureEnabled || prefs.defaultGuestMode) &&
+                    currentStatus != SessionStatus.Authenticated
+            ) {
                 _guestMode.value = true
             }
             _isBootstrapping.value = false
@@ -127,7 +135,10 @@ class MainViewModel @Inject constructor(
                 .map { prefs -> prefs.isLoginFeatureEnabled to prefs.isLoggedInDownloadEnabled }
                 .distinctUntilChanged()
                 .collectLatest { (loginEnabled, loggedInDownloadEnabled) ->
-                    if (!loginEnabled && steamRepository.sessionState.value.status == SessionStatus.Authenticated) {
+                    if (
+                        !loginEnabled &&
+                            steamRepository.sessionState.value.status == SessionStatus.Authenticated
+                    ) {
                         steamRepository.logout()
                     }
                     if (!loginEnabled || !loggedInDownloadEnabled) {
@@ -137,7 +148,7 @@ class MainViewModel @Inject constructor(
                                 "已关闭登录功能，涉及账号的下载任务已停止"
                             } else {
                                 "已关闭“登录后下载”，涉及账号的下载任务已停止"
-                            },
+                            }
                         )
                     }
                 }
@@ -209,22 +220,16 @@ class MainViewModel @Inject constructor(
 
     fun switchSavedAccount(accountKey: String) {
         _guestMode.value = false
-        viewModelScope.launch {
-            steamRepository.switchSavedAccount(accountKey)
-        }
+        viewModelScope.launch { steamRepository.switchSavedAccount(accountKey) }
     }
 
     fun logout() {
         _guestMode.value = true
-        viewModelScope.launch {
-            steamRepository.logout()
-        }
+        viewModelScope.launch { steamRepository.logout() }
     }
 
     fun checkForAppUpdates() {
-        viewModelScope.launch {
-            checkForAppUpdates(userInitiated = true)
-        }
+        viewModelScope.launch { checkForAppUpdates(userInitiated = true) }
     }
 
     fun dismissUpdateDialog() {
@@ -232,15 +237,11 @@ class MainViewModel @Inject constructor(
     }
 
     fun acknowledgeDisclaimer() {
-        viewModelScope.launch {
-            preferencesStore.saveDisclaimerAcknowledged()
-        }
+        viewModelScope.launch { preferencesStore.saveDisclaimerAcknowledged() }
     }
 
     fun acknowledgeUsageBoundary() {
-        viewModelScope.launch {
-            preferencesStore.saveUsageBoundaryAcknowledged()
-        }
+        viewModelScope.launch { preferencesStore.saveUsageBoundaryAcknowledged() }
     }
 
     private suspend fun checkForAppUpdates(userInitiated: Boolean) {
@@ -255,54 +256,63 @@ class MainViewModel @Inject constructor(
 
         AppLog.i(LOG_TAG, "starting app update check userInitiated=$userInitiated")
 
-        _appUpdateState.value = previousState.copy(
-            isChecking = true,
-            summary = if (userInitiated) "正在检查 GitHub Release…" else previousState.summary,
-        )
+        _appUpdateState.value =
+            previousState.copy(
+                isChecking = true,
+                summary = if (userInitiated) "正在检查 GitHub Release…" else previousState.summary,
+            )
 
-        when (val result = appUpdateService.checkForUpdates(
-            currentVersion = BuildConfig.VERSION_NAME,
-            preferredSource = AppUpdateSource.DEFAULT,
-            validateReachability = userInitiated,
-        )) {
+        when (
+            val result =
+                appUpdateService.checkForUpdates(
+                    currentVersion = BuildConfig.VERSION_NAME,
+                    preferredSource = AppUpdateSource.DEFAULT,
+                    validateReachability = userInitiated,
+                )
+        ) {
             is AppUpdateCheckResult.Success -> {
                 val now = System.currentTimeMillis()
-                _appUpdateState.value = _appUpdateState.value.copy(
-                    isChecking = false,
-                    summary = if (result.hasUpdate) {
-                        "发现新版本 ${result.release.rawTagName}"
-                    } else {
-                        "当前已是最新版本"
-                    },
-                    release = result.release,
-                    downloadResolution = result.downloadResolution,
-                    hasUpdateAvailable = result.hasUpdate,
-                    metadataSource = result.metadataSource,
-                    lastCheckedAtMillis = now,
-                    lastCheckSucceeded = true,
-                    showUpdateDialog = result.hasUpdate,
-                )
+                _appUpdateState.value =
+                    _appUpdateState.value.copy(
+                        isChecking = false,
+                        summary =
+                            if (result.hasUpdate) {
+                                "发现新版本 ${result.release.rawTagName}"
+                            } else {
+                                "当前已是最新版本"
+                            },
+                        release = result.release,
+                        downloadResolution = result.downloadResolution,
+                        hasUpdateAvailable = result.hasUpdate,
+                        metadataSource = result.metadataSource,
+                        lastCheckedAtMillis = now,
+                        lastCheckSucceeded = true,
+                        showUpdateDialog = result.hasUpdate,
+                    )
                 AppLog.i(
                     LOG_TAG,
                     "app update check succeeded hasUpdate=${result.hasUpdate} release=${result.release.rawTagName}",
                 )
                 if (userInitiated && !result.hasUpdate) {
-                    _userMessages.emit("已经是最新版本 ${AppUpdateVersioning.normalizeVersionTag(result.currentVersion)}")
+                    _userMessages.emit(
+                        "已经是最新版本 ${AppUpdateVersioning.normalizeVersionTag(result.currentVersion)}"
+                    )
                 }
             }
 
             is AppUpdateCheckResult.Failure -> {
-                _appUpdateState.value = _appUpdateState.value.copy(
-                    isChecking = false,
-                    summary = result.errorSummary,
-                    release = result.release,
-                    downloadResolution = null,
-                    hasUpdateAvailable = false,
-                    metadataSource = result.metadataSource,
-                    lastCheckedAtMillis = System.currentTimeMillis(),
-                    lastCheckSucceeded = false,
-                    showUpdateDialog = false,
-                )
+                _appUpdateState.value =
+                    _appUpdateState.value.copy(
+                        isChecking = false,
+                        summary = result.errorSummary,
+                        release = result.release,
+                        downloadResolution = null,
+                        hasUpdateAvailable = false,
+                        metadataSource = result.metadataSource,
+                        lastCheckedAtMillis = System.currentTimeMillis(),
+                        lastCheckSucceeded = false,
+                        showUpdateDialog = false,
+                    )
                 AppLog.w(LOG_TAG, "app update check failed summary=${result.errorSummary}")
                 if (userInitiated) {
                     _userMessages.emit(result.errorSummary)

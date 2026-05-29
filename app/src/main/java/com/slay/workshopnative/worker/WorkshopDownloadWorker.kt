@@ -26,7 +26,6 @@ import com.slay.workshopnative.core.util.DownloadFailureStage
 import com.slay.workshopnative.core.util.DownloadHttpException
 import com.slay.workshopnative.core.util.DownloadPausedException
 import com.slay.workshopnative.core.util.findDownloadFailureInfo
-import com.slay.workshopnative.core.util.isStorageFailureLike
 import com.slay.workshopnative.core.util.resolveAccountBindingHash
 import com.slay.workshopnative.core.util.sanitizeRuntimeSourceAddress
 import com.slay.workshopnative.core.util.toDiagnosticsFields
@@ -45,17 +44,18 @@ import dagger.assisted.AssistedInject
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.io.OutputStream
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @HiltWorker
-class WorkshopDownloadWorker @AssistedInject constructor(
+class WorkshopDownloadWorker
+@AssistedInject
+constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val downloadTaskDao: DownloadTaskDao,
@@ -103,174 +103,182 @@ class WorkshopDownloadWorker @AssistedInject constructor(
     private var lastForegroundPhaseMessage: String? = null
     private lateinit var pauseStatePoller: PauseStatePoller
 
-    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        ensureChannel()
+    override suspend fun doWork(): Result =
+        withContext(Dispatchers.IO) {
+            ensureChannel()
 
-        val taskId = inputData.getString(KEY_TASK_ID) ?: return@withContext Result.failure()
-        val url = inputData.getString(KEY_URL).orEmpty()
-        val fileName = inputData.getString(KEY_FILE_NAME) ?: "workshop-item"
-        val title = inputData.getString(KEY_TITLE) ?: fileName
-        val targetTreeUri = inputData.getString(KEY_TARGET_TREE_URI)
-        val downloadFolderName = inputData.getString(KEY_DOWNLOAD_FOLDER_NAME)
-        val appId = inputData.getInt(KEY_APP_ID, 0)
-        val publishedFileId = inputData.getLong(KEY_PUBLISHED_FILE_ID, 0L)
-        val contentManifestId = inputData.getLong(KEY_CONTENT_MANIFEST_ID, 0L)
-        val downloadAuthMode = inputData.getString(KEY_DOWNLOAD_AUTH_MODE)
-            ?.let(DownloadAuthMode::valueOf)
-            ?: DownloadAuthMode.Anonymous
-        val boundAccountName = inputData.getString(KEY_BOUND_ACCOUNT_NAME)
-        val boundSteamId64 = inputData.getLong(KEY_BOUND_STEAM_ID64, 0L).takeIf { it > 0L }
-        val boundAccountKeyHash = resolveAccountBindingHash(
-            boundAccountKeyHash = inputData.getString(KEY_BOUND_ACCOUNT_KEY_HASH),
-            boundAccountName = boundAccountName,
-            boundSteamId64 = boundSteamId64,
-        )
-        supportDiagnosticsStore.recordDownloadEvent(
-            action = "worker_start",
-            taskId = taskId,
-            fields = mapOf(
-                "publishedFileId" to publishedFileId.toString(),
-                "appId" to appId.toString(),
-                "hasUrl" to url.isNotBlank().toString(),
-                "manifest" to contentManifestId.toString(),
-                "authMode" to downloadAuthMode.name,
-                "hasBindingHash" to (!boundAccountKeyHash.isNullOrBlank()).toString(),
-            ),
-        )
-        pauseStatePoller = PauseStatePoller(taskId)
-        Log.i(
-            LOG_TAG,
-            "doWork start taskId=$taskId publishedFileId=$publishedFileId appId=$appId hasUrl=${url.isNotBlank()} manifest=$contentManifestId authMode=$downloadAuthMode",
-        )
-
-        val existing = downloadTaskDao.getById(taskId) ?: return@withContext Result.failure()
-        runtimeInfoState = RuntimeInfoState(
-            routeLabel = existing.runtimeRouteLabel,
-            transportLabel = existing.runtimeTransportLabel,
-            endpointLabel = existing.runtimeEndpointLabel,
-            sourceAddress = existing.runtimeSourceAddress,
-            attemptCount = existing.runtimeAttemptCount,
-            chunkConcurrency = existing.runtimeChunkConcurrency,
-            lastFailure = existing.runtimeLastFailure,
-        )
-        lastForegroundProgressPercent = existing.progressPercent
-        lastForegroundPhaseMessage = existing.errorMessage
-        downloadTaskDao.upsert(
-            existing.copy(
-                status = DownloadStatus.Running,
-                pauseRequested = false,
-                errorMessage = null,
-                updatedAt = System.currentTimeMillis(),
-            ),
-        )
-
-        setForeground(createForegroundInfo(title, 0))
-
-        return@withContext runCatching {
-            val completed = runBestAvailableDownload(
+            val taskId = inputData.getString(KEY_TASK_ID) ?: return@withContext Result.failure()
+            val url = inputData.getString(KEY_URL).orEmpty()
+            val fileName = inputData.getString(KEY_FILE_NAME) ?: "workshop-item"
+            val title = inputData.getString(KEY_TITLE) ?: fileName
+            val targetTreeUri = inputData.getString(KEY_TARGET_TREE_URI)
+            val downloadFolderName = inputData.getString(KEY_DOWNLOAD_FOLDER_NAME)
+            val appId = inputData.getInt(KEY_APP_ID, 0)
+            val publishedFileId = inputData.getLong(KEY_PUBLISHED_FILE_ID, 0L)
+            val contentManifestId = inputData.getLong(KEY_CONTENT_MANIFEST_ID, 0L)
+            val downloadAuthMode =
+                inputData.getString(KEY_DOWNLOAD_AUTH_MODE)?.let(DownloadAuthMode::valueOf)
+                    ?: DownloadAuthMode.Anonymous
+            val boundAccountName = inputData.getString(KEY_BOUND_ACCOUNT_NAME)
+            val boundSteamId64 = inputData.getLong(KEY_BOUND_STEAM_ID64, 0L).takeIf { it > 0L }
+            val boundAccountKeyHash =
+                resolveAccountBindingHash(
+                    boundAccountKeyHash = inputData.getString(KEY_BOUND_ACCOUNT_KEY_HASH),
+                    boundAccountName = boundAccountName,
+                    boundSteamId64 = boundSteamId64,
+                )
+            supportDiagnosticsStore.recordDownloadEvent(
+                action = "worker_start",
                 taskId = taskId,
-                url = url,
-                fileName = fileName,
-                title = title,
-                targetTreeUri = targetTreeUri,
-                downloadFolderName = downloadFolderName,
-                appId = appId,
-                publishedFileId = publishedFileId,
-                contentManifestId = contentManifestId,
-                downloadAuthMode = downloadAuthMode,
-                boundAccountKeyHash = boundAccountKeyHash,
-                existing = existing,
+                fields =
+                    mapOf(
+                        "publishedFileId" to publishedFileId.toString(),
+                        "appId" to appId.toString(),
+                        "hasUrl" to url.isNotBlank().toString(),
+                        "manifest" to contentManifestId.toString(),
+                        "authMode" to downloadAuthMode.name,
+                        "hasBindingHash" to (!boundAccountKeyHash.isNullOrBlank()).toString(),
+                    ),
             )
-
+            pauseStatePoller = PauseStatePoller(taskId)
             Log.i(
                 LOG_TAG,
-                "doWork success taskId=$taskId publishedFileId=$publishedFileId bytes=${completed.bytesDownloaded}/${completed.totalBytes}",
-            )
-            supportDiagnosticsStore.recordDownloadEvent(
-                action = "worker_success",
-                taskId = taskId,
-                fields = mapOf(
-                    "publishedFileId" to publishedFileId.toString(),
-                    "bytesDownloaded" to completed.bytesDownloaded.toString(),
-                    "totalBytes" to completed.totalBytes.toString(),
-                ),
+                "doWork start taskId=$taskId publishedFileId=$publishedFileId appId=$appId hasUrl=${url.isNotBlank()} manifest=$contentManifestId authMode=$downloadAuthMode",
             )
 
-            downloadTaskDao.finish(
-                taskId = taskId,
-                status = DownloadStatus.Success,
-                savedFileUri = completed.savedUri,
-                savedRelativePath = completed.savedRelativePath,
-                postProcessSummary = completed.postProcessSummary,
-                runtimeLastFailure = null,
-                errorMessage = null,
-                progressPercent = 100,
-                bytesDownloaded = completed.bytesDownloaded,
-                totalBytes = completed.totalBytes,
-                updatedAt = System.currentTimeMillis(),
+            val existing = downloadTaskDao.getById(taskId) ?: return@withContext Result.failure()
+            runtimeInfoState =
+                RuntimeInfoState(
+                    routeLabel = existing.runtimeRouteLabel,
+                    transportLabel = existing.runtimeTransportLabel,
+                    endpointLabel = existing.runtimeEndpointLabel,
+                    sourceAddress = existing.runtimeSourceAddress,
+                    attemptCount = existing.runtimeAttemptCount,
+                    chunkConcurrency = existing.runtimeChunkConcurrency,
+                    lastFailure = existing.runtimeLastFailure,
+                )
+            lastForegroundProgressPercent = existing.progressPercent
+            lastForegroundPhaseMessage = existing.errorMessage
+            downloadTaskDao.upsert(
+                existing.copy(
+                    status = DownloadStatus.Running,
+                    pauseRequested = false,
+                    errorMessage = null,
+                    updatedAt = System.currentTimeMillis(),
+                )
             )
-        }.fold(
-            onSuccess = { Result.success() },
-            onFailure = { throwable ->
-                val latest = downloadTaskDao.getById(taskId) ?: existing
-                val isPaused = throwable.isPauseSignal() || latest.pauseRequested
-                if (isPaused) {
-                    Log.i(LOG_TAG, "Download paused taskId=$taskId")
+
+            setForeground(createForegroundInfo(title, 0))
+
+            return@withContext runCatching {
+                    val completed =
+                        runBestAvailableDownload(
+                            taskId = taskId,
+                            url = url,
+                            fileName = fileName,
+                            title = title,
+                            targetTreeUri = targetTreeUri,
+                            downloadFolderName = downloadFolderName,
+                            appId = appId,
+                            publishedFileId = publishedFileId,
+                            contentManifestId = contentManifestId,
+                            downloadAuthMode = downloadAuthMode,
+                            boundAccountKeyHash = boundAccountKeyHash,
+                            existing = existing,
+                        )
+
+                    Log.i(
+                        LOG_TAG,
+                        "doWork success taskId=$taskId publishedFileId=$publishedFileId bytes=${completed.bytesDownloaded}/${completed.totalBytes}",
+                    )
                     supportDiagnosticsStore.recordDownloadEvent(
-                        action = "worker_paused",
+                        action = "worker_success",
                         taskId = taskId,
+                        fields =
+                            mapOf(
+                                "publishedFileId" to publishedFileId.toString(),
+                                "bytesDownloaded" to completed.bytesDownloaded.toString(),
+                                "totalBytes" to completed.totalBytes.toString(),
+                            ),
                     )
-                } else {
-                    val failureInfo = throwable.toDownloadFailureInfo("下载失败")
-                    Log.e(LOG_TAG, "Download failed taskId=$taskId", throwable)
-                    supportDiagnosticsStore.recordDownloadEvent(
-                        action = "worker_failed",
-                        taskId = taskId,
-                        fields = failureInfo.toDiagnosticsFields() + mapOf(
-                            "message" to failureInfo.userMessage,
-                        ),
-                    )
-                    runtimeInfoState = runtimeInfoState.copy(
-                        lastFailure = failureInfo.toRuntimeLabel(),
-                    )
-                }
-                val status = when {
-                    isPaused -> DownloadStatus.Paused
-                    isStopped -> DownloadStatus.Cancelled
-                    else -> DownloadStatus.Failed
-                }
-                if (isPaused) {
-                    downloadTaskDao.upsert(
-                        latest.copy(
-                            status = status,
-                            pauseRequested = false,
-                            errorMessage = "已暂停",
-                            updatedAt = System.currentTimeMillis(),
-                        ),
-                    )
-                } else {
+
                     downloadTaskDao.finish(
                         taskId = taskId,
-                        status = status,
-                        savedFileUri = latest.savedFileUri,
-                        savedRelativePath = latest.savedRelativePath,
-                        postProcessSummary = latest.postProcessSummary,
-                        runtimeLastFailure = throwable.toDownloadFailureInfo("下载失败").toRuntimeLabel(),
-                        errorMessage = throwable.toUserMessage("下载失败"),
-                        progressPercent = latest.progressPercent,
-                        bytesDownloaded = latest.bytesDownloaded,
-                        totalBytes = latest.totalBytes,
+                        status = DownloadStatus.Success,
+                        savedFileUri = completed.savedUri,
+                        savedRelativePath = completed.savedRelativePath,
+                        postProcessSummary = completed.postProcessSummary,
+                        runtimeLastFailure = null,
+                        errorMessage = null,
+                        progressPercent = 100,
+                        bytesDownloaded = completed.bytesDownloaded,
+                        totalBytes = completed.totalBytes,
                         updatedAt = System.currentTimeMillis(),
                     )
                 }
-                if (isPaused) {
-                    Result.success()
-                } else {
-                    Result.failure()
-                }
-            },
-        )
-    }
+                .fold(
+                    onSuccess = { Result.success() },
+                    onFailure = { throwable ->
+                        val latest = downloadTaskDao.getById(taskId) ?: existing
+                        val isPaused = throwable.isPauseSignal() || latest.pauseRequested
+                        if (isPaused) {
+                            Log.i(LOG_TAG, "Download paused taskId=$taskId")
+                            supportDiagnosticsStore.recordDownloadEvent(
+                                action = "worker_paused",
+                                taskId = taskId,
+                            )
+                        } else {
+                            val failureInfo = throwable.toDownloadFailureInfo("下载失败")
+                            Log.e(LOG_TAG, "Download failed taskId=$taskId", throwable)
+                            supportDiagnosticsStore.recordDownloadEvent(
+                                action = "worker_failed",
+                                taskId = taskId,
+                                fields =
+                                    failureInfo.toDiagnosticsFields() +
+                                        mapOf("message" to failureInfo.userMessage),
+                            )
+                            runtimeInfoState =
+                                runtimeInfoState.copy(lastFailure = failureInfo.toRuntimeLabel())
+                        }
+                        val status =
+                            when {
+                                isPaused -> DownloadStatus.Paused
+                                isStopped -> DownloadStatus.Cancelled
+                                else -> DownloadStatus.Failed
+                            }
+                        if (isPaused) {
+                            downloadTaskDao.upsert(
+                                latest.copy(
+                                    status = status,
+                                    pauseRequested = false,
+                                    errorMessage = "已暂停",
+                                    updatedAt = System.currentTimeMillis(),
+                                )
+                            )
+                        } else {
+                            downloadTaskDao.finish(
+                                taskId = taskId,
+                                status = status,
+                                savedFileUri = latest.savedFileUri,
+                                savedRelativePath = latest.savedRelativePath,
+                                postProcessSummary = latest.postProcessSummary,
+                                runtimeLastFailure =
+                                    throwable.toDownloadFailureInfo("下载失败").toRuntimeLabel(),
+                                errorMessage = throwable.toUserMessage("下载失败"),
+                                progressPercent = latest.progressPercent,
+                                bytesDownloaded = latest.bytesDownloaded,
+                                totalBytes = latest.totalBytes,
+                                updatedAt = System.currentTimeMillis(),
+                            )
+                        }
+                        if (isPaused) {
+                            Result.success()
+                        } else {
+                            Result.failure()
+                        }
+                    },
+                )
+        }
 
     private suspend fun runBestAvailableDownload(
         taskId: String,
@@ -321,26 +329,30 @@ class WorkshopDownloadWorker @AssistedInject constructor(
                 supportDiagnosticsStore.recordDownloadEvent(
                     action = "direct_download_refresh_requested",
                     taskId = taskId,
-                    fields = mapOf(
-                        "publishedFileId" to publishedFileId.toString(),
-                        "message" to latestDirectFailure.toUserMessage("公开直链下载失败"),
-                    ),
+                    fields =
+                        mapOf(
+                            "publishedFileId" to publishedFileId.toString(),
+                            "message" to latestDirectFailure.toUserMessage("公开直链下载失败"),
+                        ),
                 )
-                val refreshedItem = runCatching {
-                    steamSessionManager.resolveWorkshopItemForDownload(
-                        publishedFileId = publishedFileId,
-                        forceRefresh = true,
-                    )
-                }.getOrNull()
+                val refreshedItem =
+                    runCatching {
+                            steamSessionManager.resolveWorkshopItemForDownload(
+                                publishedFileId = publishedFileId,
+                                forceRefresh = true,
+                            )
+                        }
+                        .getOrNull()
                 val refreshedUrl = refreshedItem?.fileUrl?.takeIf(String::isNotBlank)
                 if (!refreshedUrl.isNullOrBlank() && refreshedUrl != url) {
                     supportDiagnosticsStore.recordDownloadEvent(
                         action = "direct_download_refresh_retry",
                         taskId = taskId,
-                        fields = mapOf(
-                            "publishedFileId" to publishedFileId.toString(),
-                            "hasSteamFallback" to canUseSteamContent.toString(),
-                        ),
+                        fields =
+                            mapOf(
+                                "publishedFileId" to publishedFileId.toString(),
+                                "hasSteamFallback" to canUseSteamContent.toString(),
+                            ),
                     )
                     val retryResult = runCatching {
                         runDirectDownload(
@@ -375,10 +387,11 @@ class WorkshopDownloadWorker @AssistedInject constructor(
                 supportDiagnosticsStore.recordDownloadEvent(
                     action = "direct_download_fallback_to_steam",
                     taskId = taskId,
-                    fields = mapOf(
-                        "publishedFileId" to publishedFileId.toString(),
-                        "message" to latestDirectFailure.toUserMessage("公开直链下载失败"),
-                    ),
+                    fields =
+                        mapOf(
+                            "publishedFileId" to publishedFileId.toString(),
+                            "message" to latestDirectFailure.toUserMessage("公开直链下载失败"),
+                        ),
                 )
                 return runSteamWorkshopDownload(
                     taskId = taskId,
@@ -435,10 +448,11 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         supportDiagnosticsStore.recordDownloadEvent(
             action = "direct_download_start",
             taskId = taskId,
-            fields = mapOf(
-                "sourceAddress" to (sanitizeRuntimeSourceAddress(url) ?: "unknown"),
-                "attemptCount" to attemptCount.toString(),
-            ),
+            fields =
+                mapOf(
+                    "sourceAddress" to (sanitizeRuntimeSourceAddress(url) ?: "unknown"),
+                    "attemptCount" to attemptCount.toString(),
+                ),
         )
         val progressReporter = RunningProgressReporter(taskId = taskId, title = title)
         updateRuntimeInfo(
@@ -451,41 +465,41 @@ class WorkshopDownloadWorker @AssistedInject constructor(
             chunkConcurrency = 1,
             lastFailure = null,
         )
-        val stagingFile = directDownloadStagingFile(
-            context = applicationContext,
-            taskId = taskId,
-            fileName = fileName,
-        )
-        val resumedBytes = stagingFile
-            .takeIf { it.exists() }
-            ?.length()
-            ?.coerceAtLeast(0L)
-            ?: 0L
-        val request = Request.Builder()
-            .url(url)
-            .apply {
-                if (resumedBytes > 0L) {
-                    header("Range", "bytes=$resumedBytes-")
+        val stagingFile =
+            directDownloadStagingFile(
+                context = applicationContext,
+                taskId = taskId,
+                fileName = fileName,
+            )
+        val resumedBytes = stagingFile.takeIf { it.exists() }?.length()?.coerceAtLeast(0L) ?: 0L
+        val request =
+            Request.Builder()
+                .url(url)
+                .apply {
+                    if (resumedBytes > 0L) {
+                        header("Range", "bytes=$resumedBytes-")
+                    }
                 }
-            }
-            .get()
-            .build()
+                .get()
+                .build()
         try {
             okHttpClient.newCall(request).execute().use { response ->
                 if (resumedBytes > 0L && response.code in setOf(200, 416) && allowResumeRecovery) {
                     resetDirectDownloadStaging(stagingFile)
-                    val phaseMessage = if (response.code == 416) {
-                        "下载进度已失效，正在重新下载…"
-                    } else {
-                        "当前下载源不支持续传，正在重新下载…"
-                    }
+                    val phaseMessage =
+                        if (response.code == 416) {
+                            "下载进度已失效，正在重新下载…"
+                        } else {
+                            "当前下载源不支持续传，正在重新下载…"
+                        }
                     supportDiagnosticsStore.recordDownloadEvent(
                         action = "direct_download_resume_reset",
                         taskId = taskId,
-                        fields = mapOf(
-                            "sourceAddress" to (sanitizeRuntimeSourceAddress(url) ?: "unknown"),
-                            "httpCode" to response.code.toString(),
-                        ),
+                        fields =
+                            mapOf(
+                                "sourceAddress" to (sanitizeRuntimeSourceAddress(url) ?: "unknown"),
+                                "httpCode" to response.code.toString(),
+                            ),
                     )
                     updateRunningProgress(
                         taskId = taskId,
@@ -508,29 +522,34 @@ class WorkshopDownloadWorker @AssistedInject constructor(
                 }
                 if (!response.isSuccessful) {
                     throw DownloadHttpException(
-                        statusCode = response.code,
-                        message = "下载失败：HTTP ${response.code}",
-                    ).toDownloadFailureException(
-                        source = DownloadFailureSource.Direct,
-                        stage = DownloadFailureStage.DirectRequest,
-                        userMessage = directRequestFailureMessage(response.code),
-                        httpCodeOverride = response.code,
-                    )
+                            statusCode = response.code,
+                            message = "下载失败：HTTP ${response.code}",
+                        )
+                        .toDownloadFailureException(
+                            source = DownloadFailureSource.Direct,
+                            stage = DownloadFailureStage.DirectRequest,
+                            userMessage = directRequestFailureMessage(response.code),
+                            httpCodeOverride = response.code,
+                        )
                 }
                 if (resumedBytes > 0L && response.code != 206) {
-                    throw IllegalStateException("当前下载源不支持断点续传").toDownloadFailureException(
-                        source = DownloadFailureSource.Direct,
-                        stage = DownloadFailureStage.DirectResume,
-                        userMessage = "当前下载源不支持断点续传，请重新开始下载",
-                        reasonOverride = DownloadFailureReason.ResumeInvalid,
-                    )
+                    throw IllegalStateException("当前下载源不支持断点续传")
+                        .toDownloadFailureException(
+                            source = DownloadFailureSource.Direct,
+                            stage = DownloadFailureStage.DirectResume,
+                            userMessage = "当前下载源不支持断点续传，请重新开始下载",
+                            reasonOverride = DownloadFailureReason.ResumeInvalid,
+                        )
                 }
                 val body = response.body ?: error("下载响应为空")
-                val totalBytes = if (resumedBytes > 0L) {
-                    (resumedBytes + body.contentLength().coerceAtLeast(0L)).coerceAtLeast(existing.totalBytes)
-                } else {
-                    body.contentLength().coerceAtLeast(0L)
-                }
+                val totalBytes =
+                    if (resumedBytes > 0L) {
+                        (resumedBytes + body.contentLength().coerceAtLeast(0L)).coerceAtLeast(
+                            existing.totalBytes
+                        )
+                    } else {
+                        body.contentLength().coerceAtLeast(0L)
+                    }
                 if (resumedBytes > 0L) {
                     progressReporter.report(
                         bytesDownloaded = resumedBytes,
@@ -542,48 +561,50 @@ class WorkshopDownloadWorker @AssistedInject constructor(
                 try {
                     stagingFile.parentFile?.mkdirs()
                     BufferedOutputStream(
-                        FileOutputStream(stagingFile, resumedBytes > 0L),
-                        DIRECT_STREAM_BUFFER_SIZE,
-                    ).use { stream ->
-                        body.byteStream().use { input ->
-                            val buffer = ByteArray(DIRECT_STREAM_BUFFER_SIZE)
-                            var read = input.read(buffer)
-                            while (read >= 0) {
-                                currentCoroutineContext().ensureActive()
-                                if (read > 0) {
-                                    stream.write(buffer, 0, read)
-                                    bytesDownloaded += read
-                                    progressReporter.report(
-                                        bytesDownloaded = bytesDownloaded,
-                                        totalBytes = totalBytes,
-                                    )
-                                    if (pauseStatePoller.shouldPause()) {
-                                        stream.flush()
+                            FileOutputStream(stagingFile, resumedBytes > 0L),
+                            DIRECT_STREAM_BUFFER_SIZE,
+                        )
+                        .use { stream ->
+                            body.byteStream().use { input ->
+                                val buffer = ByteArray(DIRECT_STREAM_BUFFER_SIZE)
+                                var read = input.read(buffer)
+                                while (read >= 0) {
+                                    currentCoroutineContext().ensureActive()
+                                    if (read > 0) {
+                                        stream.write(buffer, 0, read)
+                                        bytesDownloaded += read
                                         progressReporter.report(
                                             bytesDownloaded = bytesDownloaded,
                                             totalBytes = totalBytes,
-                                            force = true,
                                         )
-                                        throw DownloadPausedException()
+                                        if (pauseStatePoller.shouldPause()) {
+                                            stream.flush()
+                                            progressReporter.report(
+                                                bytesDownloaded = bytesDownloaded,
+                                                totalBytes = totalBytes,
+                                                force = true,
+                                            )
+                                            throw DownloadPausedException()
+                                        }
                                     }
+                                    read = input.read(buffer)
                                 }
-                                read = input.read(buffer)
                             }
                         }
-                    }
                     progressReporter.report(
                         bytesDownloaded = bytesDownloaded,
                         totalBytes = totalBytes,
                         force = true,
                     )
-                    val savedUri = exportDirectStagingFile(
-                        taskId = taskId,
-                        title = title,
-                        stagingFile = stagingFile,
-                        fileName = fileName,
-                        treeUri = targetTreeUri,
-                        downloadFolderName = downloadFolderName,
-                    )
+                    val savedUri =
+                        exportDirectStagingFile(
+                            taskId = taskId,
+                            title = title,
+                            stagingFile = stagingFile,
+                            fileName = fileName,
+                            treeUri = targetTreeUri,
+                            downloadFolderName = downloadFolderName,
+                        )
                     clearDownloadStaging(applicationContext, taskId)
                     return CompletedDownload(
                         savedUri = savedUri,
@@ -628,11 +649,12 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         )
         try {
             return if (!treeUri.isNullOrBlank()) {
-                val tree = DocumentFile.fromTreeUri(applicationContext, Uri.parse(treeUri))
-                    ?: error("无法访问所选目录")
+                val tree =
+                    DocumentFile.fromTreeUri(applicationContext, Uri.parse(treeUri))
+                        ?: error("无法访问所选目录")
                 val targetName = uniqueNameForTree(tree, fileName)
-                val document = tree.createFile("application/octet-stream", targetName)
-                    ?: error("无法创建目标文件")
+                val document =
+                    tree.createFile("application/octet-stream", targetName) ?: error("无法创建目标文件")
                 try {
                     copyLocalFileToUri(
                         context = applicationContext,
@@ -646,13 +668,14 @@ class WorkshopDownloadWorker @AssistedInject constructor(
                     throw throwable
                 }
             } else {
-                val uri = createMediaStoreFileUri(
-                    context = applicationContext,
-                    folderName = downloadFolderName,
-                    rootName = null,
-                    relativePath = fileName,
-                    replaceExisting = false,
-                )
+                val uri =
+                    createMediaStoreFileUri(
+                        context = applicationContext,
+                        folderName = downloadFolderName,
+                        rootName = null,
+                        relativePath = fileName,
+                        replaceExisting = false,
+                    )
                 try {
                     copyLocalFileToUri(
                         context = applicationContext,
@@ -695,109 +718,118 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         supportDiagnosticsStore.recordDownloadEvent(
             action = "steam_download_attempt",
             taskId = taskId,
-            fields = mapOf(
-                "publishedFileId" to publishedFileId.toString(),
-                "authMode" to downloadAuthMode.name,
-            ),
+            fields =
+                mapOf(
+                    "publishedFileId" to publishedFileId.toString(),
+                    "authMode" to downloadAuthMode.name,
+                ),
         )
         var bytesDownloaded = 0L
         var totalBytes = fallbackTotalBytes.coerceAtLeast(0L)
         val progressReporter = RunningProgressReporter(taskId = taskId, title = title)
 
-        val exportResult = try {
-            steamSessionManager.downloadWorkshopItem(
-                item = WorkshopItem(
-                    publishedFileId = publishedFileId,
-                    appId = appId,
-                    title = title,
-                    shortDescription = "",
-                    description = "",
-                    previewUrl = null,
-                    fileUrl = fileUrl,
-                    fileName = rootName,
-                    fileSize = fallbackTotalBytes,
-                    timeUpdated = 0L,
-                    subscriptions = 0,
-                    creatorSteamId = 0L,
-                    contentManifestId = contentManifestId,
-                    childPublishedFileIds = emptyList(),
-                    tags = emptyList(),
-                ),
-                stagingTaskId = taskId,
-                targetTreeUri = targetTreeUri,
-                downloadFolderName = downloadFolderName,
-                rootName = rootName,
-                existingRootRef = existing.storageRootRef,
-                downloadAuthMode = downloadAuthMode,
-                boundAccountKeyHash = boundAccountKeyHash,
-                onStorageRootResolved = { rootRef ->
-                    val latest = downloadTaskDao.getById(taskId) ?: existing
-                    if (latest.storageRootRef != rootRef) {
-                        downloadTaskDao.upsert(
-                            latest.copy(
-                                storageRootRef = rootRef,
-                                updatedAt = System.currentTimeMillis(),
+        val exportResult =
+            try {
+                steamSessionManager
+                    .downloadWorkshopItem(
+                        item =
+                            WorkshopItem(
+                                publishedFileId = publishedFileId,
+                                appId = appId,
+                                title = title,
+                                shortDescription = "",
+                                description = "",
+                                previewUrl = null,
+                                fileUrl = fileUrl,
+                                fileName = rootName,
+                                fileSize = fallbackTotalBytes,
+                                timeUpdated = 0L,
+                                subscriptions = 0,
+                                creatorSteamId = 0L,
+                                contentManifestId = contentManifestId,
+                                childPublishedFileIds = emptyList(),
+                                tags = emptyList(),
                             ),
+                        stagingTaskId = taskId,
+                        targetTreeUri = targetTreeUri,
+                        downloadFolderName = downloadFolderName,
+                        rootName = rootName,
+                        existingRootRef = existing.storageRootRef,
+                        downloadAuthMode = downloadAuthMode,
+                        boundAccountKeyHash = boundAccountKeyHash,
+                        onStorageRootResolved = { rootRef ->
+                            val latest = downloadTaskDao.getById(taskId) ?: existing
+                            if (latest.storageRootRef != rootRef) {
+                                downloadTaskDao.upsert(
+                                    latest.copy(
+                                        storageRootRef = rootRef,
+                                        updatedAt = System.currentTimeMillis(),
+                                    )
+                                )
+                            }
+                        },
+                        shouldPause = { pauseStatePoller.shouldPause() },
+                        onProgress = { downloaded, total ->
+                            bytesDownloaded = downloaded
+                            totalBytes = total.coerceAtLeast(totalBytes)
+                            progressReporter.report(
+                                bytesDownloaded = bytesDownloaded,
+                                totalBytes = totalBytes,
+                            )
+                        },
+                        onPhaseChanged = { phaseMessage ->
+                            updateRunningProgress(
+                                taskId = taskId,
+                                title = title,
+                                bytesDownloaded = bytesDownloaded.coerceAtLeast(totalBytes),
+                                totalBytes = totalBytes.coerceAtLeast(0L),
+                                phaseMessage = phaseMessage,
+                            )
+                        },
+                        onRuntimeInfoChanged = {
+                            routeLabel,
+                            transportLabel,
+                            endpointLabel,
+                            sourceAddress,
+                            attemptCount,
+                            chunkConcurrency,
+                            lastFailure ->
+                            updateRuntimeInfo(
+                                taskId = taskId,
+                                routeLabel = routeLabel,
+                                transportLabel = transportLabel,
+                                endpointLabel = endpointLabel,
+                                sourceAddress = sourceAddress,
+                                attemptCount = attemptCount,
+                                chunkConcurrency = chunkConcurrency,
+                                lastFailure = lastFailure,
+                            )
+                        },
+                    )
+                    .also {
+                        progressReporter.report(
+                            bytesDownloaded = bytesDownloaded,
+                            totalBytes = totalBytes,
+                            force = true,
                         )
                     }
-                },
-                shouldPause = {
-                    pauseStatePoller.shouldPause()
-                },
-                onProgress = { downloaded, total ->
-                    bytesDownloaded = downloaded
-                    totalBytes = total.coerceAtLeast(totalBytes)
-                    progressReporter.report(
-                        bytesDownloaded = bytesDownloaded,
-                        totalBytes = totalBytes,
-                    )
-                },
-                onPhaseChanged = { phaseMessage ->
-                    updateRunningProgress(
-                        taskId = taskId,
-                        title = title,
-                        bytesDownloaded = bytesDownloaded.coerceAtLeast(totalBytes),
-                        totalBytes = totalBytes.coerceAtLeast(0L),
-                        phaseMessage = phaseMessage,
-                    )
-                },
-                onRuntimeInfoChanged = { routeLabel, transportLabel, endpointLabel, sourceAddress, attemptCount, chunkConcurrency, lastFailure ->
-                    updateRuntimeInfo(
-                        taskId = taskId,
-                        routeLabel = routeLabel,
-                        transportLabel = transportLabel,
-                        endpointLabel = endpointLabel,
-                        sourceAddress = sourceAddress,
-                        attemptCount = attemptCount,
-                        chunkConcurrency = chunkConcurrency,
-                        lastFailure = lastFailure,
-                    )
-                },
-            ).also {
+            } catch (throwable: Throwable) {
                 progressReporter.report(
                     bytesDownloaded = bytesDownloaded,
                     totalBytes = totalBytes,
                     force = true,
                 )
+                throw throwable
             }
-        } catch (throwable: Throwable) {
-            progressReporter.report(
-                bytesDownloaded = bytesDownloaded,
-                totalBytes = totalBytes,
-                force = true,
-            )
-            throw throwable
-        }
 
         return CompletedDownload(
-            savedUri = exportResult.savedUri,
-            savedRelativePath = exportResult.savedRelativePath,
-            postProcessSummary = exportResult.postProcessSummary,
-            bytesDownloaded = bytesDownloaded,
-            totalBytes = totalBytes,
-        ).also {
-            clearDownloadStaging(applicationContext, taskId)
-        }
+                savedUri = exportResult.savedUri,
+                savedRelativePath = exportResult.savedRelativePath,
+                postProcessSummary = exportResult.postProcessSummary,
+                bytesDownloaded = bytesDownloaded,
+                totalBytes = totalBytes,
+            )
+            .also { clearDownloadStaging(applicationContext, taskId) }
     }
 
     private suspend fun updateInterimPhase(
@@ -840,7 +872,7 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         )
         if (
             progressPercent != lastForegroundProgressPercent ||
-            phaseMessage != lastForegroundPhaseMessage
+                phaseMessage != lastForegroundPhaseMessage
         ) {
             setForeground(createForegroundInfo(title, progressPercent, phaseMessage))
             lastForegroundProgressPercent = progressPercent
@@ -858,15 +890,17 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         chunkConcurrency: Int?,
         lastFailure: String?,
     ) {
-        runtimeInfoState = runtimeInfoState.copy(
-            routeLabel = routeLabel ?: runtimeInfoState.routeLabel,
-            transportLabel = transportLabel ?: runtimeInfoState.transportLabel,
-            endpointLabel = endpointLabel ?: runtimeInfoState.endpointLabel,
-            sourceAddress = sanitizeRuntimeSourceAddress(sourceAddress) ?: runtimeInfoState.sourceAddress,
-            attemptCount = attemptCount ?: runtimeInfoState.attemptCount,
-            chunkConcurrency = chunkConcurrency ?: runtimeInfoState.chunkConcurrency,
-            lastFailure = lastFailure,
-        )
+        runtimeInfoState =
+            runtimeInfoState.copy(
+                routeLabel = routeLabel ?: runtimeInfoState.routeLabel,
+                transportLabel = transportLabel ?: runtimeInfoState.transportLabel,
+                endpointLabel = endpointLabel ?: runtimeInfoState.endpointLabel,
+                sourceAddress =
+                    sanitizeRuntimeSourceAddress(sourceAddress) ?: runtimeInfoState.sourceAddress,
+                attemptCount = attemptCount ?: runtimeInfoState.attemptCount,
+                chunkConcurrency = chunkConcurrency ?: runtimeInfoState.chunkConcurrency,
+                lastFailure = lastFailure,
+            )
         downloadTaskDao.updateRuntimeInfo(
             taskId = taskId,
             runtimeRouteLabel = runtimeInfoState.routeLabel,
@@ -880,10 +914,7 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         )
     }
 
-    private fun calculateProgressPercent(
-        bytesDownloaded: Long,
-        totalBytes: Long,
-    ): Int {
+    private fun calculateProgressPercent(bytesDownloaded: Long, totalBytes: Long): Int {
         return if (totalBytes > 0L) {
             val rawPercent = ((bytesDownloaded * 100) / totalBytes).toInt().coerceIn(0, 100)
             when {
@@ -905,16 +936,18 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         val failureInfo = this?.findDownloadFailureInfo() ?: return false
         return failureInfo.source == DownloadFailureSource.Direct &&
             failureInfo.stage == DownloadFailureStage.DirectRequest &&
-            failureInfo.reason in setOf(
-                DownloadFailureReason.Http401,
-                DownloadFailureReason.Http403,
-                DownloadFailureReason.Http404,
-            )
+            failureInfo.reason in
+                setOf(
+                    DownloadFailureReason.Http401,
+                    DownloadFailureReason.Http403,
+                    DownloadFailureReason.Http404,
+                )
     }
 
     private fun directRequestFailureMessage(statusCode: Int): String {
         return when (statusCode) {
-            401, 403 -> "公开直链访问被拒绝，请稍后重试"
+            401,
+            403 -> "公开直链访问被拒绝，请稍后重试"
             404 -> "公开直链已失效或条目已不可用"
             in 500..599 -> "公开直链服务暂时不可用，请稍后重试"
             else -> "公开直链下载失败，请稍后重试"
@@ -934,11 +967,12 @@ class WorkshopDownloadWorker @AssistedInject constructor(
     }
 
     private fun formatEndpointLabel(httpUrl: okhttp3.HttpUrl): String {
-        val defaultPort = when (httpUrl.scheme) {
-            "https" -> 443
-            "http" -> 80
-            else -> -1
-        }
+        val defaultPort =
+            when (httpUrl.scheme) {
+                "https" -> 443
+                "http" -> 80
+                else -> -1
+            }
         return buildString {
             append(httpUrl.scheme)
             append("://")
@@ -956,14 +990,15 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         phaseMessage: String? = null,
     ): ForegroundInfo {
         val isFinalizing = phaseMessage?.startsWith("正在整理文件") == true
-        val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle(title)
-            .setContentText(phaseMessage ?: "下载中 $progressPercent%")
-            .setOnlyAlertOnce(true)
-            .setOngoing(true)
-            .setProgress(100, progressPercent, isFinalizing || progressPercent == 0)
-            .build()
+        val notification =
+            NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle(title)
+                .setContentText(phaseMessage ?: "下载中 $progressPercent%")
+                .setOnlyAlertOnce(true)
+                .setOngoing(true)
+                .setProgress(100, progressPercent, isFinalizing || progressPercent == 0)
+                .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(
@@ -978,14 +1013,15 @@ class WorkshopDownloadWorker @AssistedInject constructor(
 
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Workshop Downloads",
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = "创意工坊下载进度"
-        }
+        val manager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel =
+            NotificationChannel(
+                    CHANNEL_ID,
+                    "Workshop Downloads",
+                    NotificationManager.IMPORTANCE_LOW,
+                )
+                .apply { description = "创意工坊下载进度" }
         manager.createNotificationChannel(channel)
     }
 
@@ -1006,31 +1042,30 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         private var lastFlushedPercent = Int.MIN_VALUE
         private var lastFlushedAtMs = 0L
 
-        suspend fun report(
-            bytesDownloaded: Long,
-            totalBytes: Long,
-            force: Boolean = false,
-        ) {
+        suspend fun report(bytesDownloaded: Long, totalBytes: Long, force: Boolean = false) {
             val progressPercent = calculateProgressPercent(bytesDownloaded, totalBytes)
             val now = System.currentTimeMillis()
-            val bytesDelta = if (lastFlushedBytes == Long.MIN_VALUE) {
-                Long.MAX_VALUE
-            } else {
-                (bytesDownloaded - lastFlushedBytes).coerceAtLeast(0L)
-            }
-            val percentDelta = if (lastFlushedPercent == Int.MIN_VALUE) {
-                Int.MAX_VALUE
-            } else {
-                (progressPercent - lastFlushedPercent).coerceAtLeast(0)
-            }
+            val bytesDelta =
+                if (lastFlushedBytes == Long.MIN_VALUE) {
+                    Long.MAX_VALUE
+                } else {
+                    (bytesDownloaded - lastFlushedBytes).coerceAtLeast(0L)
+                }
+            val percentDelta =
+                if (lastFlushedPercent == Int.MIN_VALUE) {
+                    Int.MAX_VALUE
+                } else {
+                    (progressPercent - lastFlushedPercent).coerceAtLeast(0)
+                }
             val totalChanged = totalBytes != lastFlushedTotal
             val intervalElapsed = now - lastFlushedAtMs >= PROGRESS_UPDATE_INTERVAL_MS
 
-            if (!force &&
-                !totalChanged &&
-                bytesDelta < PROGRESS_UPDATE_BYTES_STEP &&
-                percentDelta < PROGRESS_UPDATE_PERCENT_STEP &&
-                !intervalElapsed
+            if (
+                !force &&
+                    !totalChanged &&
+                    bytesDelta < PROGRESS_UPDATE_BYTES_STEP &&
+                    percentDelta < PROGRESS_UPDATE_PERCENT_STEP &&
+                    !intervalElapsed
             ) {
                 return
             }
@@ -1049,9 +1084,7 @@ class WorkshopDownloadWorker @AssistedInject constructor(
         }
     }
 
-    private inner class PauseStatePoller(
-        private val taskId: String,
-    ) {
+    private inner class PauseStatePoller(private val taskId: String) {
         private var lastCheckedAtMs = Long.MIN_VALUE
         private var lastKnownPauseRequested = false
 
@@ -1059,8 +1092,8 @@ class WorkshopDownloadWorker @AssistedInject constructor(
             val now = SystemClock.elapsedRealtime()
             if (
                 !forceRefresh &&
-                lastCheckedAtMs != Long.MIN_VALUE &&
-                now - lastCheckedAtMs < PAUSE_POLL_INTERVAL_MS
+                    lastCheckedAtMs != Long.MIN_VALUE &&
+                    now - lastCheckedAtMs < PAUSE_POLL_INTERVAL_MS
             ) {
                 return lastKnownPauseRequested
             }

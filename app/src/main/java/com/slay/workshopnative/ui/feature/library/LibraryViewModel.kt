@@ -14,6 +14,7 @@ import com.slay.workshopnative.data.preferences.displayLabel
 import com.slay.workshopnative.data.repository.SteamRepository
 import com.slay.workshopnative.data.repository.TranslationRepository
 import com.slay.workshopnative.data.repository.WorkshopFavoritesRepository
+import com.slay.workshopnative.ui.InlineTranslationState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +23,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.slay.workshopnative.ui.InlineTranslationState
 
 data class LibraryUiState(
     val isLoading: Boolean = false,
@@ -40,7 +40,9 @@ data class LibraryUiState(
 )
 
 @HiltViewModel
-class LibraryViewModel @Inject constructor(
+class LibraryViewModel
+@Inject
+constructor(
     private val steamRepository: SteamRepository,
     private val translationRepository: TranslationRepository,
     private val favoritesRepository: WorkshopFavoritesRepository,
@@ -72,15 +74,13 @@ class LibraryViewModel @Inject constructor(
                     name = name,
                     capsuleUrl = capsuleUrl,
                     previewUrl = previewUrl,
-                ),
+                )
             )
         }
     }
 
     fun markWorkshopOpened(appId: Int) {
-        viewModelScope.launch {
-            favoritesRepository.markOpened(appId)
-        }
+        viewModelScope.launch { favoritesRepository.markOpened(appId) }
     }
 
     fun refresh() = refresh(forceRefresh = true)
@@ -93,14 +93,11 @@ class LibraryViewModel @Inject constructor(
         if (_uiState.value.isLoading) return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            steamRepository.loadOwnedGames(forceRefresh = forceRefresh)
+            steamRepository
+                .loadOwnedGames(forceRefresh = forceRefresh)
                 .onSuccess { games ->
                     _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            hasLoadedOnce = true,
-                            games = games,
-                        )
+                        it.copy(isLoading = false, hasLoadedOnce = true, games = games)
                     }
                 }
                 .onFailure { error ->
@@ -126,7 +123,8 @@ class LibraryViewModel @Inject constructor(
         if (_uiState.value.loadingDetailsAppId == appId) return
         viewModelScope.launch {
             _uiState.update { it.copy(loadingDetailsAppId = appId) }
-            steamRepository.loadGameDetails(appId)
+            steamRepository
+                .loadGameDetails(appId)
                 .onSuccess { details ->
                     _uiState.update {
                         it.copy(
@@ -135,31 +133,26 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
                 }
-                .onFailure {
-                    _uiState.update { state -> state.copy(loadingDetailsAppId = null) }
-                }
+                .onFailure { _uiState.update { state -> state.copy(loadingDetailsAppId = null) } }
         }
     }
 
-    fun translateGameDescription(
-        appId: Int,
-        sourceText: String,
-        forceRefresh: Boolean = false,
-    ) {
+    fun translateGameDescription(appId: Int, sourceText: String, forceRefresh: Boolean = false) {
         val normalized = sourceText.trim()
         if (appId <= 0 || normalized.isBlank()) return
         val fingerprint = textFingerprint(normalized)
         val current = _uiState.value.descriptionTranslationByAppId[appId]
         val reusableState = current?.takeIf { it.sourceFingerprint == fingerprint }
-        if (!forceRefresh &&
-            current?.sourceFingerprint == fingerprint &&
-            !current.translatedText.isNullOrBlank()
+        if (
+            !forceRefresh &&
+                current?.sourceFingerprint == fingerprint &&
+                !current.translatedText.isNullOrBlank()
         ) {
             _uiState.update {
                 it.copy(
-                    descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                        appId to current.copy(showTranslated = true, errorMessage = null)
-                    ),
+                    descriptionTranslationByAppId =
+                        it.descriptionTranslationByAppId +
+                            (appId to current.copy(showTranslated = true, errorMessage = null))
                 )
             }
             return
@@ -168,51 +161,57 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                        appId to InlineTranslationState(
-                            sourceFingerprint = fingerprint,
-                            translatedText = reusableState?.translatedText,
-                            providerLabel = reusableState?.providerLabel,
-                            sourceLanguageLabel = reusableState?.sourceLanguageLabel,
-                            isTranslating = true,
-                            showTranslated = false,
-                            errorMessage = null,
-                        )
-                    ),
+                    descriptionTranslationByAppId =
+                        it.descriptionTranslationByAppId +
+                            (appId to
+                                InlineTranslationState(
+                                    sourceFingerprint = fingerprint,
+                                    translatedText = reusableState?.translatedText,
+                                    providerLabel = reusableState?.providerLabel,
+                                    sourceLanguageLabel = reusableState?.sourceLanguageLabel,
+                                    isTranslating = true,
+                                    showTranslated = false,
+                                    errorMessage = null,
+                                ))
                 )
             }
-            translationRepository.translateToChinese(normalized, forceRefresh = forceRefresh)
+            translationRepository
+                .translateToChinese(normalized, forceRefresh = forceRefresh)
                 .onSuccess { result ->
                     _uiState.update {
                         it.copy(
-                            descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                                appId to InlineTranslationState(
-                                    sourceFingerprint = fingerprint,
-                                    translatedText = result.translatedText,
-                                    providerLabel = result.provider.displayLabel(),
-                                    sourceLanguageLabel = result.detectedSourceLanguageLabel,
-                                    isTranslating = false,
-                                    showTranslated = true,
-                                    errorMessage = null,
-                                )
-                            ),
+                            descriptionTranslationByAppId =
+                                it.descriptionTranslationByAppId +
+                                    (appId to
+                                        InlineTranslationState(
+                                            sourceFingerprint = fingerprint,
+                                            translatedText = result.translatedText,
+                                            providerLabel = result.provider.displayLabel(),
+                                            sourceLanguageLabel =
+                                                result.detectedSourceLanguageLabel,
+                                            isTranslating = false,
+                                            showTranslated = true,
+                                            errorMessage = null,
+                                        ))
                         )
                     }
                 }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(
-                    descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                                appId to InlineTranslationState(
-                                    sourceFingerprint = fingerprint,
-                                    translatedText = reusableState?.translatedText,
-                                    providerLabel = reusableState?.providerLabel,
-                                    sourceLanguageLabel = reusableState?.sourceLanguageLabel,
-                                    isTranslating = false,
-                                    showTranslated = false,
-                                    errorMessage = error.toUserMessage("翻译失败"),
-                                )
-                            ),
+                            descriptionTranslationByAppId =
+                                it.descriptionTranslationByAppId +
+                                    (appId to
+                                        InlineTranslationState(
+                                            sourceFingerprint = fingerprint,
+                                            translatedText = reusableState?.translatedText,
+                                            providerLabel = reusableState?.providerLabel,
+                                            sourceLanguageLabel =
+                                                reusableState?.sourceLanguageLabel,
+                                            isTranslating = false,
+                                            showTranslated = false,
+                                            errorMessage = error.toUserMessage("翻译失败"),
+                                        ))
                         )
                     }
                 }
@@ -223,9 +222,9 @@ class LibraryViewModel @Inject constructor(
         val current = _uiState.value.descriptionTranslationByAppId[appId] ?: return
         _uiState.update {
             it.copy(
-                descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                    appId to current.copy(showTranslated = false, errorMessage = null)
-                ),
+                descriptionTranslationByAppId =
+                    it.descriptionTranslationByAppId +
+                        (appId to current.copy(showTranslated = false, errorMessage = null))
             )
         }
     }
@@ -235,9 +234,9 @@ class LibraryViewModel @Inject constructor(
         if (current.translatedText.isNullOrBlank()) return
         _uiState.update {
             it.copy(
-                descriptionTranslationByAppId = it.descriptionTranslationByAppId + (
-                    appId to current.copy(showTranslated = true, errorMessage = null)
-                ),
+                descriptionTranslationByAppId =
+                    it.descriptionTranslationByAppId +
+                        (appId to current.copy(showTranslated = true, errorMessage = null))
             )
         }
     }
@@ -245,20 +244,16 @@ class LibraryViewModel @Inject constructor(
     private fun preloadSnapshot() {
         viewModelScope.launch {
             if (!canDisplayOwnedGames()) return@launch
-            steamRepository.loadOwnedGamesSnapshot()
-                .onSuccess { games ->
-                    if (games.isEmpty()) return@onSuccess
-                    _uiState.update { state ->
-                        if (state.games.isNotEmpty()) {
-                            state
-                        } else {
-                            state.copy(
-                                hasLoadedOnce = true,
-                                games = games,
-                            )
-                        }
+            steamRepository.loadOwnedGamesSnapshot().onSuccess { games ->
+                if (games.isEmpty()) return@onSuccess
+                _uiState.update { state ->
+                    if (state.games.isNotEmpty()) {
+                        state
+                    } else {
+                        state.copy(hasLoadedOnce = true, games = games)
                     }
                 }
+            }
         }
     }
 
@@ -298,7 +293,11 @@ class LibraryViewModel @Inject constructor(
                 currentSessionStatus = session.status
                 val isAuthenticated = session.status == SessionStatus.Authenticated
                 val currentRevision = session.connectionRevision
-                if (isAuthenticated && canDisplayOwnedGames() && currentRevision != lastConnectionRevision) {
+                if (
+                    isAuthenticated &&
+                        canDisplayOwnedGames() &&
+                        currentRevision != lastConnectionRevision
+                ) {
                     lastConnectionRevision = currentRevision
                     refresh(forceRefresh = false)
                 }

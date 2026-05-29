@@ -9,11 +9,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 @Singleton
-class WorkshopFavoritesRepository @Inject constructor(
-    private val preferencesStore: UserPreferencesStore,
-) {
-    val favorites: Flow<List<FavoriteWorkshopGame>> = preferencesStore.preferences
-        .map { it.favoriteWorkshopGames }
+class WorkshopFavoritesRepository
+@Inject
+constructor(private val preferencesStore: UserPreferencesStore) {
+    val favorites: Flow<List<FavoriteWorkshopGame>> =
+        preferencesStore.preferences.map { it.favoriteWorkshopGames }
 
     suspend fun toggleFavorite(game: WorkshopGameEntry) {
         if (preferencesStore.isFavoriteWorkshopGame(game.appId)) {

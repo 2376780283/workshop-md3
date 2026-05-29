@@ -1,5 +1,6 @@
 package com.slay.workshopnative.data.repository
 
+import com.slay.workshopnative.core.logging.SupportSessionRuntimeSnapshot
 import com.slay.workshopnative.data.model.GameDetails
 import com.slay.workshopnative.data.model.OwnedGame
 import com.slay.workshopnative.data.model.SteamSessionState
@@ -8,20 +9,19 @@ import com.slay.workshopnative.data.model.WorkshopBrowseQuery
 import com.slay.workshopnative.data.model.WorkshopGameEntry
 import com.slay.workshopnative.data.model.WorkshopGamePage
 import com.slay.workshopnative.data.model.WorkshopItem
-import com.slay.workshopnative.core.logging.SupportSessionRuntimeSnapshot
 import com.slay.workshopnative.data.remote.SteamSessionManager
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.StateFlow
 
 @Singleton
-class SteamRepositoryImpl @Inject constructor(
-    private val sessionManager: SteamSessionManager,
-) : SteamRepository {
+class SteamRepositoryImpl @Inject constructor(private val sessionManager: SteamSessionManager) :
+    SteamRepository {
 
     override val sessionState: StateFlow<SteamSessionState> = sessionManager.sessionState
 
-    override fun isAuthenticatedDownloadReady(): Boolean = sessionManager.isAuthenticatedDownloadReady()
+    override fun isAuthenticatedDownloadReady(): Boolean =
+        sessionManager.isAuthenticatedDownloadReady()
 
     override suspend fun bootstrap() {
         sessionManager.bootstrap()
@@ -100,7 +100,9 @@ class SteamRepositoryImpl @Inject constructor(
         query: WorkshopBrowseQuery,
         forceRefresh: Boolean,
     ): Result<WorkshopBrowsePage> {
-        return runCatching { sessionManager.loadAuthenticatedWorkshopQueryPage(appId, query, forceRefresh) }
+        return runCatching {
+            sessionManager.loadAuthenticatedWorkshopQueryPage(appId, query, forceRefresh)
+        }
     }
 
     override suspend fun loadSubscribedWorkshopPage(
@@ -119,7 +121,9 @@ class SteamRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun resolveWorkshopItems(publishedFileIds: Collection<Long>): Result<List<WorkshopItem>> {
+    override suspend fun resolveWorkshopItems(
+        publishedFileIds: Collection<Long>
+    ): Result<List<WorkshopItem>> {
         return runCatching { sessionManager.resolveWorkshopItems(publishedFileIds) }
     }
 
@@ -127,17 +131,21 @@ class SteamRepositoryImpl @Inject constructor(
         return runCatching { sessionManager.resolveWorkshopItem(publishedFileId) }
     }
 
-    override suspend fun resolveWorkshopItemForDetails(publishedFileId: Long): Result<WorkshopItem> {
+    override suspend fun resolveWorkshopItemForDetails(
+        publishedFileId: Long
+    ): Result<WorkshopItem> {
         return runCatching { sessionManager.resolveWorkshopItemForDetails(publishedFileId) }
     }
 
     override suspend fun resolveWorkshopItemsForDownload(
-        publishedFileIds: Collection<Long>,
+        publishedFileIds: Collection<Long>
     ): Result<List<WorkshopItem>> {
         return runCatching { sessionManager.resolveWorkshopItemsForDownload(publishedFileIds) }
     }
 
-    override suspend fun resolveWorkshopItemForDownload(publishedFileId: Long): Result<WorkshopItem> {
+    override suspend fun resolveWorkshopItemForDownload(
+        publishedFileId: Long
+    ): Result<WorkshopItem> {
         return runCatching { sessionManager.resolveWorkshopItemForDownload(publishedFileId) }
     }
 }

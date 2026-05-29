@@ -5,30 +5,24 @@ import java.security.MessageDigest
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 private val HTTP_URL_REGEX = Regex("""https?://[^\s]+""", RegexOption.IGNORE_CASE)
-private val CONTENT_URI_REGEX = Regex("""(?:content|document|file)://[^\s]+""", RegexOption.IGNORE_CASE)
-private val STEAM_PROFILE_REGEX = Regex(
-    """(https://steamcommunity\.com/profiles/)\d+""",
-    RegexOption.IGNORE_CASE,
-)
-private val UNIX_PATH_REGEX = Regex("""/(?:data|storage|sdcard|mnt|var|private|Users|home|tmp)[^\s]*""")
+private val CONTENT_URI_REGEX =
+    Regex("""(?:content|document|file)://[^\s]+""", RegexOption.IGNORE_CASE)
+private val STEAM_PROFILE_REGEX =
+    Regex("""(https://steamcommunity\.com/profiles/)\d+""", RegexOption.IGNORE_CASE)
+private val UNIX_PATH_REGEX =
+    Regex("""/(?:data|storage|sdcard|mnt|var|private|Users|home|tmp)[^\s]*""")
 private val WINDOWS_PATH_REGEX = Regex("""(?i)\b[A-Z]:\\[^\s]+""")
 
-fun buildAccountBindingHash(
-    accountName: String?,
-    steamId64: Long?,
-): String? {
-    val normalized = when {
-        steamId64 != null && steamId64 > 0L -> "steam:$steamId64"
-        !accountName.isNullOrBlank() -> "name:${accountName.trim().lowercase()}"
-        else -> return null
-    }
+fun buildAccountBindingHash(accountName: String?, steamId64: Long?): String? {
+    val normalized =
+        when {
+            steamId64 != null && steamId64 > 0L -> "steam:$steamId64"
+            !accountName.isNullOrBlank() -> "name:${accountName.trim().lowercase()}"
+            else -> return null
+        }
     val digest = MessageDigest.getInstance("SHA-256")
     val bytes = digest.digest(normalized.toByteArray(StandardCharsets.UTF_8))
-    return buildString(bytes.size * 2) {
-        bytes.forEach { byte ->
-            append("%02x".format(byte))
-        }
-    }
+    return buildString(bytes.size * 2) { bytes.forEach { byte -> append("%02x".format(byte)) } }
 }
 
 fun resolveAccountBindingHash(
@@ -37,20 +31,13 @@ fun resolveAccountBindingHash(
     boundSteamId64: Long?,
 ): String? {
     return boundAccountKeyHash?.takeIf { it.isNotBlank() }
-        ?: buildAccountBindingHash(
-            accountName = boundAccountName,
-            steamId64 = boundSteamId64,
-        )
+        ?: buildAccountBindingHash(accountName = boundAccountName, steamId64 = boundSteamId64)
 }
 
 fun sanitizeUrlForLogging(rawValue: String): String {
     val httpUrl = rawValue.toHttpUrlOrNull()
     if (httpUrl != null) {
-        val sanitized = httpUrl.newBuilder()
-            .query(null)
-            .fragment(null)
-            .build()
-            .toString()
+        val sanitized = httpUrl.newBuilder().query(null).fragment(null).build().toString()
         return STEAM_PROFILE_REGEX.replace(sanitized, "$1{steamid}")
     }
     return STEAM_PROFILE_REGEX.replace(rawValue, "$1{steamid}")
@@ -71,11 +58,12 @@ fun sanitizeRuntimeSourceAddress(sourceAddress: String?): String? {
         return sourceAddress
     }
     val httpUrl = sourceAddress.toHttpUrlOrNull() ?: return sanitizeUrlForLogging(sourceAddress)
-    val defaultPort = when (httpUrl.scheme) {
-        "https" -> 443
-        "http" -> 80
-        else -> -1
-    }
+    val defaultPort =
+        when (httpUrl.scheme) {
+            "https" -> 443
+            "http" -> 80
+            else -> -1
+        }
     return buildString {
         append(httpUrl.scheme)
         append("://")

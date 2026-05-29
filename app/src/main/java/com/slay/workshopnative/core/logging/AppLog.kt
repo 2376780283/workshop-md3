@@ -38,10 +38,7 @@ data class AppLogExportResult(
     val totalBytes: Long,
 )
 
-data class AppLogDeletionResult(
-    val deletedFileCount: Int,
-    val reclaimedBytes: Long,
-)
+data class AppLogDeletionResult(val deletedFileCount: Int, val reclaimedBytes: Long)
 
 object AppLog {
     private const val LOGGER_TAG = "AppLog"
@@ -62,27 +59,20 @@ object AppLog {
 
     private val lock = Any()
     private val zoneId: ZoneId = ZoneId.systemDefault()
-    private val fileTimestampFormatter: DateTimeFormatter = DateTimeFormatter
-        .ofPattern("yyyyMMdd-HHmmss", Locale.US)
-        .withZone(zoneId)
-    private val lineTimestampFormatter: DateTimeFormatter = DateTimeFormatter
-        .ofPattern("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
-        .withZone(zoneId)
+    private val fileTimestampFormatter: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss", Locale.US).withZone(zoneId)
+    private val lineTimestampFormatter: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).withZone(zoneId)
 
-    @Volatile
-    private var appContext: Context? = null
+    @Volatile private var appContext: Context? = null
 
-    @Volatile
-    private var sessionFile: File? = null
+    @Volatile private var sessionFile: File? = null
 
-    @Volatile
-    private var previousExceptionHandler: Thread.UncaughtExceptionHandler? = null
+    @Volatile private var previousExceptionHandler: Thread.UncaughtExceptionHandler? = null
 
-    @Volatile
-    private var uncaughtExceptionHandlerInstalled = false
+    @Volatile private var uncaughtExceptionHandlerInstalled = false
 
-    @Volatile
-    private var lastPruneAtMillis = 0L
+    @Volatile private var lastPruneAtMillis = 0L
 
     fun initialize(context: Context) {
         val applicationContext = context.applicationContext
@@ -93,7 +83,10 @@ object AppLog {
             openSessionLocked(applicationContext, reason = "process_start")
             installUncaughtExceptionHandlerLocked()
         }
-        i(LOGGER_TAG, "logger initialized version=${BuildConfig.VERSION_NAME} debug=${BuildConfig.DEBUG}")
+        i(
+            LOGGER_TAG,
+            "logger initialized version=${BuildConfig.VERSION_NAME} debug=${BuildConfig.DEBUG}",
+        )
     }
 
     fun retentionPolicySummary(): String {
@@ -116,51 +109,62 @@ object AppLog {
         }
     }
 
-    suspend fun exportToUri(targetUri: Uri): Result<AppLogExportResult> = exportSupportBundle(
-        targetUri = targetUri,
-        extraEntries = emptyList(),
-    )
+    suspend fun exportToUri(targetUri: Uri): Result<AppLogExportResult> =
+        exportSupportBundle(targetUri = targetUri, extraEntries = emptyList())
 
     suspend fun exportSupportBundle(
         targetUri: Uri,
         extraEntries: List<SupportBundleTextEntry>,
-    ): Result<AppLogExportResult> = withContext(Dispatchers.IO) {
-        runCatching {
-            val context = appContext ?: error("Logger is not initialized")
-            val snapshot = synchronized(lock) {
-                val runtimeFiles = listLogFiles(runtimeDir(context))
-                val crashFiles = listLogFiles(crashDir(context))
-                ExportSnapshot(
-                    createdAtMillis = System.currentTimeMillis(),
-                    runtimeFiles = runtimeFiles,
-                    crashFiles = crashFiles,
-                    summary = AppLogSummary(
-                        runtimeLogCount = runtimeFiles.size,
-                        crashLogCount = crashFiles.size,
-                        totalBytes = runtimeFiles.sumOf(File::length) + crashFiles.sumOf(File::length),
-                        latestRuntimeAtMillis = runtimeFiles.maxOfOrNull(File::lastModified),
-                        latestCrashAtMillis = crashFiles.maxOfOrNull(File::lastModified),
-                    ),
-                )
-            }
+    ): Result<AppLogExportResult> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val context = appContext ?: error("Logger is not initialized")
+                val snapshot =
+                    synchronized(lock) {
+                        val runtimeFiles = listLogFiles(runtimeDir(context))
+                        val crashFiles = listLogFiles(crashDir(context))
+                        ExportSnapshot(
+                            createdAtMillis = System.currentTimeMillis(),
+                            runtimeFiles = runtimeFiles,
+                            crashFiles = crashFiles,
+                            summary =
+                                AppLogSummary(
+                                    runtimeLogCount = runtimeFiles.size,
+                                    crashLogCount = crashFiles.size,
+                                    totalBytes =
+                                        runtimeFiles.sumOf(File::length) +
+                                            crashFiles.sumOf(File::length),
+                                    latestRuntimeAtMillis =
+                                        runtimeFiles.maxOfOrNull(File::lastModified),
+                                    latestCrashAtMillis = crashFiles.maxOfOrNull(File::lastModified),
+                                ),
+                        )
+                    }
 
-            val exportFile = File(
-                exportDir(context),
-                EXPORT_FILE_PREFIX + fileTimestamp(snapshot.createdAtMillis) + EXPORT_FILE_EXTENSION,
-            )
-            buildExportZip(exportFile, snapshot, extraEntries)
-            try {
-                copyLocalFileToUri(context, exportFile, targetUri)
-                AppLogExportResult(
-                    fileName = exportFile.name,
-                    exportedEntryCount = snapshot.runtimeFiles.size + snapshot.crashFiles.size + 1 + extraEntries.size,
-                    totalBytes = exportFile.length(),
-                )
-            } finally {
-                exportFile.delete()
+                val exportFile =
+                    File(
+                        exportDir(context),
+                        EXPORT_FILE_PREFIX +
+                            fileTimestamp(snapshot.createdAtMillis) +
+                            EXPORT_FILE_EXTENSION,
+                    )
+                buildExportZip(exportFile, snapshot, extraEntries)
+                try {
+                    copyLocalFileToUri(context, exportFile, targetUri)
+                    AppLogExportResult(
+                        fileName = exportFile.name,
+                        exportedEntryCount =
+                            snapshot.runtimeFiles.size +
+                                snapshot.crashFiles.size +
+                                1 +
+                                extraEntries.size,
+                        totalBytes = exportFile.length(),
+                    )
+                } finally {
+                    exportFile.delete()
+                }
             }
         }
-    }
 
     fun clearRuntimeLogs(): AppLogDeletionResult {
         val context = appContext ?: return AppLogDeletionResult(0, 0L)
@@ -182,10 +186,7 @@ object AppLog {
             val crashFiles = listLogFiles(crashDir(context))
             val bytes = crashFiles.sumOf(File::length)
             deleteFiles(crashFiles)
-            return AppLogDeletionResult(
-                deletedFileCount = crashFiles.size,
-                reclaimedBytes = bytes,
-            )
+            return AppLogDeletionResult(deletedFileCount = crashFiles.size, reclaimedBytes = bytes)
         }
     }
 
@@ -199,10 +200,7 @@ object AppLog {
             deleteFiles(files)
             sessionFile = null
             exportDir(context).listFiles()?.forEach(File::delete)
-            return AppLogDeletionResult(
-                deletedFileCount = files.size,
-                reclaimedBytes = bytes,
-            )
+            return AppLogDeletionResult(deletedFileCount = files.size, reclaimedBytes = bytes)
         }
     }
 
@@ -218,31 +216,32 @@ object AppLog {
     fun e(tag: String, message: String, throwable: Throwable? = null): Int =
         write(Log.ERROR, tag, message, throwable)
 
-    private fun write(
-        priority: Int,
-        tag: String,
-        message: String,
-        throwable: Throwable?,
-    ): Int {
-        val logResult = when (priority) {
-            Log.DEBUG -> if (throwable == null) Log.d(tag, message) else Log.d(tag, message, throwable)
-            Log.INFO -> if (throwable == null) Log.i(tag, message) else Log.i(tag, message, throwable)
-            Log.WARN -> if (throwable == null) Log.w(tag, message) else Log.w(tag, message, throwable)
-            Log.ERROR -> if (throwable == null) Log.e(tag, message) else Log.e(tag, message, throwable)
-            else -> Log.println(priority, tag, message)
-        }
+    private fun write(priority: Int, tag: String, message: String, throwable: Throwable?): Int {
+        val logResult =
+            when (priority) {
+                Log.DEBUG ->
+                    if (throwable == null) Log.d(tag, message) else Log.d(tag, message, throwable)
+                Log.INFO ->
+                    if (throwable == null) Log.i(tag, message) else Log.i(tag, message, throwable)
+                Log.WARN ->
+                    if (throwable == null) Log.w(tag, message) else Log.w(tag, message, throwable)
+                Log.ERROR ->
+                    if (throwable == null) Log.e(tag, message) else Log.e(tag, message, throwable)
+                else -> Log.println(priority, tag, message)
+            }
 
         val context = appContext ?: return logResult
         synchronized(lock) {
             val file = sessionFile ?: openSessionLocked(context, reason = "lazy_resume")
             appendLineLocked(
                 file = file,
-                line = buildLine(
-                    priority = priority,
-                    tag = tag,
-                    message = message,
-                    threadName = Thread.currentThread().name,
-                ),
+                line =
+                    buildLine(
+                        priority = priority,
+                        tag = tag,
+                        message = message,
+                        threadName = Thread.currentThread().name,
+                    ),
             )
             throwable?.let { appendTextBlockLocked(file, stackTraceOf(it)) }
             pruneLogsLocked(context)
@@ -254,11 +253,10 @@ object AppLog {
         if (uncaughtExceptionHandlerInstalled) return
         previousExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            runCatching {
-                recordCrash(thread, throwable)
-            }.onFailure { failure ->
-                Log.e(LOGGER_TAG, "failed to persist crash report", failure)
-            }
+            runCatching { recordCrash(thread, throwable) }
+                .onFailure { failure ->
+                    Log.e(LOGGER_TAG, "failed to persist crash report", failure)
+                }
             previousExceptionHandler?.uncaughtException(thread, throwable)
         }
         uncaughtExceptionHandlerInstalled = true
@@ -268,10 +266,8 @@ object AppLog {
         val context = appContext ?: return
         synchronized(lock) {
             val now = System.currentTimeMillis()
-            val crashFile = File(
-                crashDir(context),
-                CRASH_FILE_PREFIX + fileTimestamp(now) + LOG_FILE_EXTENSION,
-            )
+            val crashFile =
+                File(crashDir(context), CRASH_FILE_PREFIX + fileTimestamp(now) + LOG_FILE_EXTENSION)
             crashFile.parentFile?.mkdirs()
             val runtimeFileName = sessionFile?.name ?: "none"
             val payload = buildString {
@@ -312,23 +308,13 @@ object AppLog {
     ) {
         exportFile.parentFile?.mkdirs()
         ZipOutputStream(exportFile.outputStream().buffered()).use { zip ->
-            addTextEntry(
-                zip = zip,
-                name = "manifest.txt",
-                payload = buildManifestText(snapshot),
-            )
+            addTextEntry(zip = zip, name = "manifest.txt", payload = buildManifestText(snapshot))
             snapshot.runtimeFiles.forEach { file ->
                 addFileEntry(zip, "runtime/${file.name}", file)
             }
-            snapshot.crashFiles.forEach { file ->
-                addFileEntry(zip, "crash/${file.name}", file)
-            }
+            snapshot.crashFiles.forEach { file -> addFileEntry(zip, "crash/${file.name}", file) }
             extraEntries.forEach { entry ->
-                addTextEntry(
-                    zip = zip,
-                    name = entry.name,
-                    payload = entry.payload,
-                )
+                addTextEntry(zip = zip, name = entry.name, payload = entry.payload)
             }
         }
     }
@@ -347,53 +333,42 @@ object AppLog {
             appendLine("crash_log_count=${snapshot.summary.crashLogCount}")
             appendLine("total_bytes=${snapshot.summary.totalBytes}")
             appendLine("total_size=${formatBytes(snapshot.summary.totalBytes)}")
-            appendLine("latest_runtime_at=${snapshot.summary.latestRuntimeAtMillis?.let(::instantText) ?: "none"}")
-            appendLine("latest_crash_at=${snapshot.summary.latestCrashAtMillis?.let(::instantText) ?: "none"}")
-            appendLine("retention=${
+            appendLine(
+                "latest_runtime_at=${snapshot.summary.latestRuntimeAtMillis?.let(::instantText) ?: "none"}"
+            )
+            appendLine(
+                "latest_crash_at=${snapshot.summary.latestCrashAtMillis?.let(::instantText) ?: "none"}"
+            )
+            appendLine(
+                "retention=${
                 retentionPolicySummary()
-            }")
+            }"
+            )
         }
     }
 
-    private fun addTextEntry(
-        zip: ZipOutputStream,
-        name: String,
-        payload: String,
-    ) {
+    private fun addTextEntry(zip: ZipOutputStream, name: String, payload: String) {
         zip.putNextEntry(ZipEntry(name))
         zip.write(payload.toByteArray(Charsets.UTF_8))
         zip.closeEntry()
     }
 
-    private fun addFileEntry(
-        zip: ZipOutputStream,
-        entryName: String,
-        file: File,
-    ) {
+    private fun addFileEntry(zip: ZipOutputStream, entryName: String, file: File) {
         zip.putNextEntry(ZipEntry(entryName))
-        file.inputStream().buffered().use { input ->
-            input.copyTo(zip)
-        }
+        file.inputStream().buffered().use { input -> input.copyTo(zip) }
         zip.closeEntry()
     }
 
-    private fun buildLine(
-        priority: Int,
-        tag: String,
-        message: String,
-        threadName: String,
-    ): String {
+    private fun buildLine(priority: Int, tag: String, message: String, threadName: String): String {
         return "${instantText(System.currentTimeMillis())} ${priorityLabel(priority)}/$tag [$threadName] $message"
     }
 
-    private fun openSessionLocked(
-        context: Context,
-        reason: String,
-    ): File {
-        val file = File(
-            runtimeDir(context),
-            LOG_FILE_PREFIX + fileTimestamp(System.currentTimeMillis()) + LOG_FILE_EXTENSION,
-        )
+    private fun openSessionLocked(context: Context, reason: String): File {
+        val file =
+            File(
+                runtimeDir(context),
+                LOG_FILE_PREFIX + fileTimestamp(System.currentTimeMillis()) + LOG_FILE_EXTENSION,
+            )
         file.parentFile?.mkdirs()
         appendLineLocked(file, "Workshop Native runtime log")
         appendLineLocked(file, "opened_at=${instantText(System.currentTimeMillis())}")
@@ -414,39 +389,28 @@ object AppLog {
         exportDir(context).mkdirs()
     }
 
-    private fun runtimeDir(context: Context): File = File(File(context.filesDir, LOGS_DIR_NAME), RUNTIME_DIR_NAME)
+    private fun runtimeDir(context: Context): File =
+        File(File(context.filesDir, LOGS_DIR_NAME), RUNTIME_DIR_NAME)
 
-    private fun crashDir(context: Context): File = File(File(context.filesDir, LOGS_DIR_NAME), CRASH_DIR_NAME)
+    private fun crashDir(context: Context): File =
+        File(File(context.filesDir, LOGS_DIR_NAME), CRASH_DIR_NAME)
 
-    private fun exportDir(context: Context): File = File(File(context.cacheDir, LOGS_DIR_NAME), EXPORT_DIR_NAME)
+    private fun exportDir(context: Context): File =
+        File(File(context.cacheDir, LOGS_DIR_NAME), EXPORT_DIR_NAME)
 
     private fun listLogFiles(directory: File): List<File> {
-        return directory.listFiles()
-            ?.filter(File::isFile)
-            ?.sortedBy(File::lastModified)
-            .orEmpty()
+        return directory.listFiles()?.filter(File::isFile)?.sortedBy(File::lastModified).orEmpty()
     }
 
-    private fun appendLineLocked(
-        file: File,
-        line: String,
-    ) {
+    private fun appendLineLocked(file: File, line: String) {
         file.appendText(line + "\n", Charsets.UTF_8)
     }
 
-    private fun appendTextBlockLocked(
-        file: File,
-        block: String,
-    ) {
-        block.lineSequence().forEach { line ->
-            appendLineLocked(file, line)
-        }
+    private fun appendTextBlockLocked(file: File, block: String) {
+        block.lineSequence().forEach { line -> appendLineLocked(file, line) }
     }
 
-    private fun pruneLogsLocked(
-        context: Context,
-        force: Boolean = false,
-    ) {
+    private fun pruneLogsLocked(context: Context, force: Boolean = false) {
         val now = System.currentTimeMillis()
         if (!force && now - lastPruneAtMillis < PRUNE_INTERVAL_MS) return
         trimDirectory(runtimeDir(context), MAX_RUNTIME_LOG_FILES, MAX_RUNTIME_LOG_BYTES)
@@ -454,11 +418,7 @@ object AppLog {
         lastPruneAtMillis = now
     }
 
-    private fun trimDirectory(
-        directory: File,
-        maxFiles: Int,
-        maxBytes: Long,
-    ) {
+    private fun trimDirectory(directory: File, maxFiles: Int, maxBytes: Long) {
         val files = listLogFiles(directory).toMutableList()
         var totalBytes = files.sumOf(File::length)
         while (files.size > maxFiles || totalBytes > maxBytes) {
@@ -500,9 +460,7 @@ object AppLog {
 
     private fun stackTraceOf(throwable: Throwable): String {
         val writer = StringWriter()
-        PrintWriter(writer).use { printWriter ->
-            throwable.printStackTrace(printWriter)
-        }
+        PrintWriter(writer).use { printWriter -> throwable.printStackTrace(printWriter) }
         return writer.toString().trimEnd()
     }
 

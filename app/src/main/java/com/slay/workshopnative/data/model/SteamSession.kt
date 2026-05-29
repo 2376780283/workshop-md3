@@ -9,10 +9,7 @@ enum class SessionStatus {
     Error,
 }
 
-data class SteamAccountSession(
-    val accountName: String,
-    val steamId64: Long,
-)
+data class SteamAccountSession(val accountName: String, val steamId64: Long)
 
 data class SteamSessionState(
     val status: SessionStatus = SessionStatus.Idle,

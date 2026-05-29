@@ -26,8 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -69,11 +69,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.slay.workshopnative.BuildConfig
@@ -126,10 +126,7 @@ private data class DownloadGameGroup(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DownloadsScreen(
-    paddingValues: PaddingValues,
-    viewModel: DownloadsViewModel = hiltViewModel(),
-) {
+fun DownloadsScreen(paddingValues: PaddingValues, viewModel: DownloadsViewModel = hiltViewModel()) {
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
     val isCreatingTask by viewModel.isCreatingTask.collectAsStateWithLifecycle()
     val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsStateWithLifecycle()
@@ -145,73 +142,80 @@ fun DownloadsScreen(
 
     val selectedTask = downloads.firstOrNull { it.taskId == selectedTaskId }
     val previewTask = downloads.firstOrNull { it.taskId == previewTaskId }
-    val hasInactiveHistory = downloads.any {
-        it.status != DownloadStatus.Queued &&
-            it.status != DownloadStatus.Running &&
-            it.status != DownloadStatus.Paused
-    }
-    val runningCount = downloads.count { it.status == DownloadStatus.Queued || it.status == DownloadStatus.Running }
+    val hasInactiveHistory =
+        downloads.any {
+            it.status != DownloadStatus.Queued &&
+                it.status != DownloadStatus.Running &&
+                it.status != DownloadStatus.Paused
+        }
+    val runningCount =
+        downloads.count {
+            it.status == DownloadStatus.Queued || it.status == DownloadStatus.Running
+        }
     val pausedCount = downloads.count { it.status == DownloadStatus.Paused }
     val successCount = downloads.count { it.status == DownloadStatus.Success }
-    val attentionCount = downloads.count {
-        it.status == DownloadStatus.Failed ||
-            it.status == DownloadStatus.Cancelled ||
-            it.status == DownloadStatus.Unavailable
-    }
-    val activeDownloads = downloads.filter { it.status == DownloadStatus.Queued || it.status == DownloadStatus.Running }
+    val attentionCount =
+        downloads.count {
+            it.status == DownloadStatus.Failed ||
+                it.status == DownloadStatus.Cancelled ||
+                it.status == DownloadStatus.Unavailable
+        }
+    val activeDownloads =
+        downloads.filter {
+            it.status == DownloadStatus.Queued || it.status == DownloadStatus.Running
+        }
     val pausedDownloads = downloads.filter { it.status == DownloadStatus.Paused }
-    val attentionDownloads = downloads.filter {
-        it.status == DownloadStatus.Failed ||
-            it.status == DownloadStatus.Cancelled ||
-            it.status == DownloadStatus.Unavailable
-    }
+    val attentionDownloads =
+        downloads.filter {
+            it.status == DownloadStatus.Failed ||
+                it.status == DownloadStatus.Cancelled ||
+                it.status == DownloadStatus.Unavailable
+        }
     val completedDownloads = downloads.filter { it.status == DownloadStatus.Success }
-    val tabStates = listOf(
-        DownloadsTabState(
-            tab = DownloadsTab.Active,
-            count = runningCount,
-            tasks = activeDownloads,
-            emptyTitle = "当前没有进行中的任务",
-            emptyMessage = "新的下载加入队列后，会先显示在这里。",
-        ),
-        DownloadsTabState(
-            tab = DownloadsTab.Paused,
-            count = pausedCount,
-            tasks = pausedDownloads,
-            emptyTitle = "当前没有已暂停任务",
-            emptyMessage = "需要临时停下的任务，会保留在这里继续下载。",
-        ),
-        DownloadsTabState(
-            tab = DownloadsTab.Attention,
-            count = attentionCount,
-            tasks = attentionDownloads,
-            emptyTitle = "当前没有待处理任务",
-            emptyMessage = "失败、已取消或暂不可下载的条目会集中放在这里。",
-        ),
-        DownloadsTabState(
-            tab = DownloadsTab.Completed,
-            count = successCount,
-            tasks = completedDownloads,
-            emptyTitle = "当前没有已完成任务",
-            emptyMessage = "下载完成后，可以在这里直接打开目录。",
-        ),
-    )
-    val selectedTab = DownloadsTab.entries.firstOrNull { it.name == selectedTabName }
-        ?: tabStates.firstOrNull { it.count > 0 }?.tab
-        ?: DownloadsTab.Active
+    val tabStates =
+        listOf(
+            DownloadsTabState(
+                tab = DownloadsTab.Active,
+                count = runningCount,
+                tasks = activeDownloads,
+                emptyTitle = "当前没有进行中的任务",
+                emptyMessage = "新的下载加入队列后，会先显示在这里。",
+            ),
+            DownloadsTabState(
+                tab = DownloadsTab.Paused,
+                count = pausedCount,
+                tasks = pausedDownloads,
+                emptyTitle = "当前没有已暂停任务",
+                emptyMessage = "需要临时停下的任务，会保留在这里继续下载。",
+            ),
+            DownloadsTabState(
+                tab = DownloadsTab.Attention,
+                count = attentionCount,
+                tasks = attentionDownloads,
+                emptyTitle = "当前没有待处理任务",
+                emptyMessage = "失败、已取消或暂不可下载的条目会集中放在这里。",
+            ),
+            DownloadsTabState(
+                tab = DownloadsTab.Completed,
+                count = successCount,
+                tasks = completedDownloads,
+                emptyTitle = "当前没有已完成任务",
+                emptyMessage = "下载完成后，可以在这里直接打开目录。",
+            ),
+        )
+    val selectedTab =
+        DownloadsTab.entries.firstOrNull { it.name == selectedTabName }
+            ?: tabStates.firstOrNull { it.count > 0 }?.tab
+            ?: DownloadsTab.Active
     val selectedTabState = tabStates.first { it.tab == selectedTab }
-    val groupedDownloads = remember(selectedTabState.tasks) {
-        buildDownloadGroups(selectedTabState.tasks)
-    }
+    val groupedDownloads =
+        remember(selectedTabState.tasks) { buildDownloadGroups(selectedTabState.tasks) }
     val defaultExpandedForTab = selectedTab.expandsGroupsByDefault()
-    var expandedGroupOverrides by remember(selectedTabState.tab) {
-        mutableStateOf<Map<String, Boolean>>(emptyMap())
-    }
+    var expandedGroupOverrides by
+        remember(selectedTabState.tab) { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
 
     LaunchedEffect(viewModel) {
-        viewModel.messages.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
+        viewModel.messages.collectLatest { message -> snackbarHostState.showSnackbar(message) }
     }
 
     LaunchedEffect(viewModel) {
@@ -221,15 +225,9 @@ fun DownloadsScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues),
-    ) {
+    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 88.dp),
         ) {
@@ -273,81 +271,93 @@ fun DownloadsScreen(
                             collapsed = !expanded,
                             onToggleCollapse = {
                                 val nextExpanded = !expanded
-                                expandedGroupOverrides = if (nextExpanded == defaultExpandedForTab) {
-                                    expandedGroupOverrides - group.key
-                                } else {
-                                    expandedGroupOverrides + (group.key to nextExpanded)
-                                }
+                                expandedGroupOverrides =
+                                    if (nextExpanded == defaultExpandedForTab) {
+                                        expandedGroupOverrides - group.key
+                                    } else {
+                                        expandedGroupOverrides + (group.key to nextExpanded)
+                                    }
                             },
                         ) { task ->
                             DownloadListItem(
                                 task = task,
                                 onClick = { selectedTaskId = task.taskId },
                                 compact = true,
-                                onPause = if (
-                                    task.status == DownloadStatus.Queued ||
-                                    task.status == DownloadStatus.Running
-                                ) {
-                                    {
-                                        selectedTabName = DownloadsTab.Paused.name
-                                        viewModel.pause(task.taskId)
-                                    }
-                                } else {
-                                    null
-                                },
-                                onResume = if (task.status == DownloadStatus.Paused) {
-                                    {
-                                        selectedTabName = DownloadsTab.Active.name
-                                        viewModel.resume(task.taskId)
-                                    }
-                                } else {
-                                    null
-                                },
-                                onRetry = when (task.status) {
-                                    DownloadStatus.Failed -> ({
-                                        selectedTabName = DownloadsTab.Active.name
-                                        viewModel.retry(task.taskId)
-                                    })
-                                    DownloadStatus.Cancelled -> task.retryActionOrNull {
-                                        selectedTabName = DownloadsTab.Active.name
-                                        viewModel.retry(task.taskId)
-                                    }
-                                    else -> null
-                                },
-                                onCancel = if (
-                                    task.status == DownloadStatus.Queued ||
-                                    task.status == DownloadStatus.Running ||
-                                    task.status == DownloadStatus.Paused ||
-                                    task.status == DownloadStatus.Failed
-                                ) {
-                                    {
-                                        selectedTabName = DownloadsTab.Attention.name
-                                        viewModel.cancel(task.taskId)
-                                    }
-                                } else {
-                                    null
-                                },
-                                onOpenDirectory = if (task.status == DownloadStatus.Success) {
-                                    {
-                                        selectedTabName = DownloadsTab.Completed.name
-                                        when {
-                                            task.canPreviewDirectoryInApp() -> previewTaskId = task.taskId
-                                            else -> {
-                                                val message = openDirectoryLocation(context, task)
-                                                if (message != null) {
-                                                    scope.launch { snackbarHostState.showSnackbar(message) }
+                                onPause =
+                                    if (
+                                        task.status == DownloadStatus.Queued ||
+                                            task.status == DownloadStatus.Running
+                                    ) {
+                                        {
+                                            selectedTabName = DownloadsTab.Paused.name
+                                            viewModel.pause(task.taskId)
+                                        }
+                                    } else {
+                                        null
+                                    },
+                                onResume =
+                                    if (task.status == DownloadStatus.Paused) {
+                                        {
+                                            selectedTabName = DownloadsTab.Active.name
+                                            viewModel.resume(task.taskId)
+                                        }
+                                    } else {
+                                        null
+                                    },
+                                onRetry =
+                                    when (task.status) {
+                                        DownloadStatus.Failed -> ({
+                                                selectedTabName = DownloadsTab.Active.name
+                                                viewModel.retry(task.taskId)
+                                            })
+                                        DownloadStatus.Cancelled ->
+                                            task.retryActionOrNull {
+                                                selectedTabName = DownloadsTab.Active.name
+                                                viewModel.retry(task.taskId)
+                                            }
+                                        else -> null
+                                    },
+                                onCancel =
+                                    if (
+                                        task.status == DownloadStatus.Queued ||
+                                            task.status == DownloadStatus.Running ||
+                                            task.status == DownloadStatus.Paused ||
+                                            task.status == DownloadStatus.Failed
+                                    ) {
+                                        {
+                                            selectedTabName = DownloadsTab.Attention.name
+                                            viewModel.cancel(task.taskId)
+                                        }
+                                    } else {
+                                        null
+                                    },
+                                onOpenDirectory =
+                                    if (task.status == DownloadStatus.Success) {
+                                        {
+                                            selectedTabName = DownloadsTab.Completed.name
+                                            when {
+                                                task.canPreviewDirectoryInApp() ->
+                                                    previewTaskId = task.taskId
+                                                else -> {
+                                                    val message =
+                                                        openDirectoryLocation(context, task)
+                                                    if (message != null) {
+                                                        scope.launch {
+                                                            snackbarHostState.showSnackbar(message)
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
-                                } else {
-                                    null
-                                },
-                                onDelete = if (task.canDeleteIndividually()) {
-                                    { viewModel.delete(task.taskId) }
-                                } else {
-                                    null
-                                },
+                                    } else {
+                                        null
+                                    },
+                                onDelete =
+                                    if (task.canDeleteIndividually()) {
+                                        { viewModel.delete(task.taskId) }
+                                    } else {
+                                        null
+                                    },
                             )
                         }
                     }
@@ -357,10 +367,10 @@ fun DownloadsScreen(
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier =
+                Modifier.align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
         )
     }
 
@@ -382,7 +392,7 @@ fun DownloadsScreen(
                 if (!isCreatingTask) {
                     isCreateTaskSheetVisible = false
                 }
-            },
+            }
         ) {
             CreateDownloadTaskSheet(
                 input = createTaskInput,
@@ -393,7 +403,6 @@ fun DownloadsScreen(
             )
         }
     }
-
 }
 
 @Composable
@@ -416,10 +425,10 @@ private fun DownloadGameGroupCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onToggleCollapse)
-                    .padding(horizontal = 2.dp, vertical = 2.dp),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .clickable(onClick = onToggleCollapse)
+                        .padding(horizontal = 2.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -427,9 +436,7 @@ private fun DownloadGameGroupCard(
                     imageUrl = group.appId.takeIf { it > 0 }?.let(::steamCapsuleUrl),
                     alternateImageUrl = null,
                     fallbackText = group.gameTitle,
-                    modifier = Modifier
-                        .width(84.dp)
-                        .height(48.dp),
+                    modifier = Modifier.width(84.dp).height(48.dp),
                     shape = RoundedCornerShape(16.dp),
                 )
                 Column(
@@ -454,7 +461,11 @@ private fun DownloadGameGroupCard(
                 Surface(
                     shape = RoundedCornerShape(999.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+                    border =
+                        BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+                        ),
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
@@ -467,11 +478,12 @@ private fun DownloadGameGroupCard(
                             fontWeight = FontWeight.SemiBold,
                         )
                         Icon(
-                            imageVector = if (collapsed) {
-                                Icons.Rounded.KeyboardArrowDown
-                            } else {
-                                Icons.Rounded.KeyboardArrowUp
-                            },
+                            imageVector =
+                                if (collapsed) {
+                                    Icons.Rounded.KeyboardArrowDown
+                                } else {
+                                    Icons.Rounded.KeyboardArrowUp
+                                },
                             contentDescription = null,
                         )
                     }
@@ -480,9 +492,7 @@ private fun DownloadGameGroupCard(
 
             if (!collapsed) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    group.tasks.forEach { task ->
-                        itemContent(task)
-                    }
+                    group.tasks.forEach { task -> itemContent(task) }
                 }
             }
         }
@@ -502,22 +512,19 @@ private fun DownloadListItem(
     onDelete: (() -> Unit)? = null,
 ) {
     val cardTone = task.cardTone()
-    val showProgressBar = when (task.status) {
-        DownloadStatus.Queued,
-        DownloadStatus.Running,
-        DownloadStatus.Paused,
-        DownloadStatus.Failed,
-        -> true
-        DownloadStatus.Success,
-        DownloadStatus.Cancelled,
-        DownloadStatus.Unavailable,
-        -> false
-    }
+    val showProgressBar =
+        when (task.status) {
+            DownloadStatus.Queued,
+            DownloadStatus.Running,
+            DownloadStatus.Paused,
+            DownloadStatus.Failed -> true
+            DownloadStatus.Success,
+            DownloadStatus.Cancelled,
+            DownloadStatus.Unavailable -> false
+        }
 
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(if (compact) 20.dp else 24.dp),
         color = cardTone.surface,
         shadowElevation = if (compact) 0.dp else 4.dp,
@@ -525,25 +532,20 @@ private fun DownloadListItem(
         border = BorderStroke(1.dp, cardTone.border),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.horizontalGradient(
-                        listOf(
-                            cardTone.start,
-                            cardTone.end,
-                        ),
-                    ),
-                    shape = RoundedCornerShape(24.dp),
-                )
-            ) {
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(
+                        brush = Brush.horizontalGradient(listOf(cardTone.start, cardTone.end)),
+                        shape = RoundedCornerShape(24.dp),
+                    )
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = if (compact) 10.dp else 11.dp,
-                        vertical = if (compact) 9.dp else 10.dp,
-                    ),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(
+                            horizontal = if (compact) 10.dp else 11.dp,
+                            vertical = if (compact) 9.dp else 10.dp,
+                        ),
                 horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -573,7 +575,9 @@ private fun DownloadListItem(
                                 text = task.title,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                style = if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                                style =
+                                    if (compact) MaterialTheme.typography.titleSmall
+                                    else MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
                         }
@@ -639,11 +643,12 @@ private fun DownloadListItem(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (task.status == DownloadStatus.Failed) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                            color =
+                                if (task.status == DownloadStatus.Failed) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                         )
                     }
                 }
@@ -665,8 +670,7 @@ private fun DownloadRowActions(
     val actions = buildList {
         when (task.status) {
             DownloadStatus.Queued,
-            DownloadStatus.Running,
-            -> {
+            DownloadStatus.Running -> {
                 onPause?.let { add("暂停" to it) }
                 onCancel?.let { add("取消" to it) }
             }
@@ -704,11 +708,12 @@ private fun DownloadRowActions(
     ) {
         actions.forEach { (label, action) ->
             ActionPillButton(
-                modifier = if (onDelete == null && actions.size > 1) {
-                    Modifier.weight(1f)
-                } else {
-                    Modifier.widthIn(min = 88.dp)
-                },
+                modifier =
+                    if (onDelete == null && actions.size > 1) {
+                        Modifier.weight(1f)
+                    } else {
+                        Modifier.widthIn(min = 88.dp)
+                    },
                 onClick = action,
                 icon = null,
                 label = label,
@@ -732,24 +737,20 @@ private fun DownloadRowActions(
 }
 
 @Composable
-private fun DownloadTaskSheet(
-    task: DownloadTaskEntity,
-) {
+private fun DownloadTaskSheet(task: DownloadTaskEntity) {
     val scrollState = rememberScrollState()
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 18.dp, vertical = 4.dp)
-            .verticalScroll(scrollState),
+        modifier =
+            Modifier.fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 18.dp, vertical = 4.dp)
+                .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         DownloadArtwork(
             task = task,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 2.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
             width = null,
             height = 172.dp,
         )
@@ -765,9 +766,7 @@ private fun DownloadTaskSheet(
             shape = RoundedCornerShape(22.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -805,13 +804,14 @@ private fun DownloadTaskSheet(
                         value = task.boundAccountSummary(),
                     )
                 }
-                DetailBlock(
-                    label = "下载位置",
-                    value = task.destinationLabel,
-                )
+                DetailBlock(label = "下载位置", value = task.destinationLabel)
                 DetailBlock(
                     label = "结果路径",
-                    value = task.savedRelativePath ?: task.savedFileUri ?: task.targetTreeUri ?: "当前还没有落盘结果",
+                    value =
+                        task.savedRelativePath
+                            ?: task.savedFileUri
+                            ?: task.targetTreeUri
+                            ?: "当前还没有落盘结果",
                 )
                 task.supportingMessage()?.let { message ->
                     DetailBlock(label = task.supportingMessageLabel(), value = message)
@@ -842,22 +842,24 @@ private fun DownloadTaskSheet(
                         SummaryDetailCard(
                             modifier = Modifier.weight(1f),
                             label = "尝试次数",
-                            value = if (task.runtimeAttemptCount > 0) {
-                                "${task.runtimeAttemptCount} 次"
-                            } else {
-                                "未记录"
-                            },
+                            value =
+                                if (task.runtimeAttemptCount > 0) {
+                                    "${task.runtimeAttemptCount} 次"
+                                } else {
+                                    "未记录"
+                                },
                         )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         SummaryDetailCard(
                             modifier = Modifier.weight(1f),
                             label = "当前并发",
-                            value = if (task.runtimeChunkConcurrency > 0) {
-                                "${task.runtimeChunkConcurrency} 路"
-                            } else {
-                                "未记录"
-                            },
+                            value =
+                                if (task.runtimeChunkConcurrency > 0) {
+                                    "${task.runtimeChunkConcurrency} 路"
+                                } else {
+                                    "未记录"
+                                },
                         )
                         SummaryDetailCard(
                             modifier = Modifier.weight(1f),
@@ -870,15 +872,16 @@ private fun DownloadTaskSheet(
                     }
                     DetailBlock(
                         label = "源地址",
-                        value = sanitizeRuntimeSourceAddress(task.runtimeSourceAddress)
-                            ?: task.sourceUrl
-                                .takeUnless { it.startsWith("steam://publishedfile/") }
-                                ?.let(::sanitizeRuntimeSourceAddress)
-                            ?: "已脱敏",
+                        value =
+                            sanitizeRuntimeSourceAddress(task.runtimeSourceAddress)
+                                ?: task.sourceUrl
+                                    .takeUnless { it.startsWith("steam://publishedfile/") }
+                                    ?.let(::sanitizeRuntimeSourceAddress)
+                                ?: "已脱敏",
                     )
-                    task.runtimeLastFailure?.takeIf { it.isNotBlank() }?.let { failure ->
-                        DetailBlock(label = "最后失败", value = failure)
-                    }
+                    task.runtimeLastFailure
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { failure -> DetailBlock(label = "最后失败", value = failure) }
                 }
             }
         }
@@ -976,16 +979,11 @@ private fun DownloadsControlPanel(
                         icon = {
                             if (isCheckingUpdates) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier
-                                        .width(18.dp)
-                                        .height(18.dp),
+                                    modifier = Modifier.width(18.dp).height(18.dp),
                                     strokeWidth = 2.dp,
                                 )
                             } else {
-                                Icon(
-                                    Icons.Rounded.SystemUpdateAlt,
-                                    contentDescription = "检查已下载更新",
-                                )
+                                Icon(Icons.Rounded.SystemUpdateAlt, contentDescription = "检查已下载更新")
                             }
                         },
                     )
@@ -996,16 +994,11 @@ private fun DownloadsControlPanel(
                             icon = {
                                 if (isSimulatingUpdate) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier
-                                            .width(18.dp)
-                                            .height(18.dp),
+                                        modifier = Modifier.width(18.dp).height(18.dp),
                                         strokeWidth = 2.dp,
                                     )
                                 } else {
-                                    Icon(
-                                        Icons.Rounded.Restore,
-                                        contentDescription = "模拟有更新",
-                                    )
+                                    Icon(Icons.Rounded.Restore, contentDescription = "模拟有更新")
                                 }
                             },
                         )
@@ -1013,7 +1006,9 @@ private fun DownloadsControlPanel(
                     if (hasInactiveHistory) {
                         IconActionSurface(
                             onClick = onClearHistory,
-                            icon = { Icon(Icons.Rounded.CleaningServices, contentDescription = "清理历史") },
+                            icon = {
+                                Icon(Icons.Rounded.CleaningServices, contentDescription = "清理历史")
+                            },
                         )
                     }
                 }
@@ -1045,10 +1040,10 @@ private fun CreateDownloadTaskSheet(
     onDismiss: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 18.dp, vertical = 8.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 18.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1092,11 +1087,7 @@ private fun CreateDownloadTaskSheet(
             ) {
                 Text("取消")
             }
-            Button(
-                onClick = onSubmit,
-                modifier = Modifier.weight(1f),
-                enabled = !isSubmitting,
-            ) {
+            Button(onClick = onSubmit, modifier = Modifier.weight(1f), enabled = !isSubmitting) {
                 if (isSubmitting) {
                     CircularProgressIndicator(
                         modifier = Modifier.width(18.dp).height(18.dp),
@@ -1124,13 +1115,13 @@ fun DownloadedUpdatesSheet(
             if (!state.isUpdating) {
                 onDismiss()
             }
-        },
+        }
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 18.dp, vertical = 8.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1154,10 +1145,10 @@ fun DownloadedUpdatesSheet(
             }
 
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 320.dp)
-                    .verticalScroll(rememberScrollState()),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .heightIn(max = 320.dp)
+                        .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 state.candidates.forEach { candidate ->
@@ -1189,9 +1180,7 @@ fun DownloadedUpdatesSheet(
                     ) {
                         if (state.isUpdating) {
                             CircularProgressIndicator(
-                                modifier = Modifier
-                                    .width(18.dp)
-                                    .height(18.dp),
+                                modifier = Modifier.width(18.dp).height(18.dp),
                                 strokeWidth = 2.dp,
                             )
                         } else {
@@ -1207,9 +1196,7 @@ fun DownloadedUpdatesSheet(
                 ) {
                     if (state.isUpdating) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .width(18.dp)
-                                .height(18.dp),
+                            modifier = Modifier.width(18.dp).height(18.dp),
                             strokeWidth = 2.dp,
                         )
                     } else {
@@ -1229,17 +1216,13 @@ private fun DownloadUpdateCandidateRow(
     onToggle: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onToggle),
+        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onToggle),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1247,9 +1230,7 @@ private fun DownloadUpdateCandidateRow(
                 imageUrl = candidate.previewUrl,
                 alternateImageUrl = candidate.appId.takeIf { it > 0 }?.let(::steamCapsuleUrl),
                 fallbackText = candidate.title,
-                modifier = Modifier
-                    .width(82.dp)
-                    .height(48.dp),
+                modifier = Modifier.width(82.dp).height(48.dp),
                 shape = RoundedCornerShape(16.dp),
             )
             Column(
@@ -1271,11 +1252,12 @@ private fun DownloadUpdateCandidateRow(
             }
             Checkbox(
                 checked = selected,
-                onCheckedChange = if (enabled) {
-                    { onToggle() }
-                } else {
-                    null
-                },
+                onCheckedChange =
+                    if (enabled) {
+                        { onToggle() }
+                    } else {
+                        null
+                    },
                 enabled = enabled,
             )
         }
@@ -1283,15 +1265,14 @@ private fun DownloadUpdateCandidateRow(
 }
 
 @Composable
-private fun DownloadsEmptyStateCard(
-    title: String,
-    message: String,
-) {
+private fun DownloadsEmptyStateCard(title: String, message: String) {
     Card(
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.86f)),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.86f))
+            ),
         border = BorderStroke(1.dp, workshopAdaptiveBorderColor()),
     ) {
         Column(
@@ -1303,10 +1284,7 @@ private fun DownloadsEmptyStateCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(
-                text = message,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(text = message, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -1320,26 +1298,25 @@ private fun DownloadTabChip(
 ) {
     Surface(
         modifier = modifier.clickable(onClick = onClick),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(
-            1.dp,
+        color =
             if (selected) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
+                MaterialTheme.colorScheme.primaryContainer
             } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
+                MaterialTheme.colorScheme.surfaceContainerHigh
             },
-        ),
+        shape = RoundedCornerShape(18.dp),
+        border =
+            BorderStroke(
+                1.dp,
+                if (selected) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
+                } else {
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
+                },
+            ),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .padding(horizontal = 6.dp),
+            modifier = Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 6.dp),
             contentAlignment = Alignment.Center,
         ) {
             Row(
@@ -1350,21 +1327,23 @@ private fun DownloadTabChip(
                     text = state.tab.label,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
+                    color =
+                        if (selected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
                 )
                 Text(
                     text = state.count.toString(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    color =
+                        if (selected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 )
             }
         }
@@ -1381,18 +1360,20 @@ private fun IconActionSurface(
     Surface(
         modifier = Modifier.clickable(enabled = enabled, onClick = onClick),
         shape = RoundedCornerShape(if (compact) 16.dp else 18.dp),
-        color = if (enabled) {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest
-        },
+        color =
+            if (enabled) {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHighest
+            },
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
     ) {
         Box(
-            modifier = Modifier.padding(
-                horizontal = if (compact) 10.dp else 12.dp,
-                vertical = if (compact) 8.dp else 10.dp,
-            ),
+            modifier =
+                Modifier.padding(
+                    horizontal = if (compact) 10.dp else 12.dp,
+                    vertical = if (compact) 8.dp else 10.dp,
+                ),
             contentAlignment = Alignment.Center,
         ) {
             icon()
@@ -1412,36 +1393,42 @@ private fun ActionPillButton(
     Surface(
         modifier = modifier.clickable(enabled = enabled, onClick = onClick),
         shape = RoundedCornerShape(18.dp),
-        color = if (enabled) {
-            workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.72f))
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest
-        },
+        color =
+            if (enabled) {
+                workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.72f))
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHighest
+            },
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
-        contentColor = if (enabled) {
-            MaterialTheme.colorScheme.onSurface
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        },
+        contentColor =
+            if (enabled) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
     ) {
         Row(
-            modifier = Modifier.padding(
-                horizontal = if (compact) 10.dp else 12.dp,
-                vertical = if (compact) 8.dp else 10.dp,
-            ),
+            modifier =
+                Modifier.padding(
+                    horizontal = if (compact) 10.dp else 12.dp,
+                    vertical = if (compact) 8.dp else 10.dp,
+                ),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             icon?.invoke()
             Text(
                 text = label,
-                style = if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
+                style =
+                    if (compact) MaterialTheme.typography.labelMedium
+                    else MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Medium,
-                color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
+                color =
+                    if (enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
             )
         }
     }
@@ -1458,34 +1445,27 @@ private fun DownloadArtwork(
         imageUrl = task.previewUrl,
         alternateImageUrl = steamCapsuleUrl(task.appId),
         fallbackText = task.title,
-        modifier = modifier.then(
-            if (width == null) {
-                Modifier.height(height)
-            } else {
-                Modifier
-                    .width(width)
-                    .height(height)
-            },
-        ),
+        modifier =
+            modifier.then(
+                if (width == null) {
+                    Modifier.height(height)
+                } else {
+                    Modifier.width(width).height(height)
+                }
+            ),
         shape = RoundedCornerShape(22.dp),
     )
 }
 
 @Composable
-private fun SummaryDetailCard(
-    modifier: Modifier = Modifier,
-    label: String,
-    value: String,
-) {
+private fun SummaryDetailCard(modifier: Modifier = Modifier, label: String, value: String) {
     Surface(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         shape = RoundedCornerShape(18.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
@@ -1504,10 +1484,7 @@ private fun SummaryDetailCard(
 }
 
 @Composable
-private fun DetailBlock(
-    label: String,
-    value: String,
-) {
+private fun DetailBlock(label: String, value: String) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = label,
@@ -1521,9 +1498,8 @@ private fun DetailBlock(
             SelectionContainer {
                 Text(
                     text = value,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    modifier =
+                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -1532,40 +1508,37 @@ private fun DetailBlock(
 }
 
 @Composable
-private fun StatusBadge(
-    task: DownloadTaskEntity,
-    compact: Boolean = false,
-) {
+private fun StatusBadge(task: DownloadTaskEntity, compact: Boolean = false) {
     val status = task.status
     val pauseRequested = task.pauseRequested
-    val containerColor = when (status) {
-        DownloadStatus.Success -> MaterialTheme.colorScheme.secondaryContainer
-        DownloadStatus.Failed -> MaterialTheme.colorScheme.errorContainer
-        DownloadStatus.Paused -> MaterialTheme.colorScheme.surfaceVariant
-        DownloadStatus.Cancelled -> MaterialTheme.colorScheme.surfaceContainerHigh
-        DownloadStatus.Unavailable -> MaterialTheme.colorScheme.surfaceContainerHighest
-        DownloadStatus.Queued -> MaterialTheme.colorScheme.tertiaryContainer
-        DownloadStatus.Running -> MaterialTheme.colorScheme.primaryContainer
-    }
-    val contentColor = when (status) {
-        DownloadStatus.Failed -> MaterialTheme.colorScheme.onErrorContainer
-        DownloadStatus.Success -> MaterialTheme.colorScheme.onSecondaryContainer
-        DownloadStatus.Queued -> MaterialTheme.colorScheme.onTertiaryContainer
-        DownloadStatus.Running -> MaterialTheme.colorScheme.onPrimaryContainer
-        DownloadStatus.Paused -> MaterialTheme.colorScheme.onSurfaceVariant
-        else -> MaterialTheme.colorScheme.onSurface
-    }
+    val containerColor =
+        when (status) {
+            DownloadStatus.Success -> MaterialTheme.colorScheme.secondaryContainer
+            DownloadStatus.Failed -> MaterialTheme.colorScheme.errorContainer
+            DownloadStatus.Paused -> MaterialTheme.colorScheme.surfaceVariant
+            DownloadStatus.Cancelled -> MaterialTheme.colorScheme.surfaceContainerHigh
+            DownloadStatus.Unavailable -> MaterialTheme.colorScheme.surfaceContainerHighest
+            DownloadStatus.Queued -> MaterialTheme.colorScheme.tertiaryContainer
+            DownloadStatus.Running -> MaterialTheme.colorScheme.primaryContainer
+        }
+    val contentColor =
+        when (status) {
+            DownloadStatus.Failed -> MaterialTheme.colorScheme.onErrorContainer
+            DownloadStatus.Success -> MaterialTheme.colorScheme.onSecondaryContainer
+            DownloadStatus.Queued -> MaterialTheme.colorScheme.onTertiaryContainer
+            DownloadStatus.Running -> MaterialTheme.colorScheme.onPrimaryContainer
+            DownloadStatus.Paused -> MaterialTheme.colorScheme.onSurfaceVariant
+            else -> MaterialTheme.colorScheme.onSurface
+        }
 
-    Surface(
-        color = containerColor,
-        shape = RoundedCornerShape(999.dp),
-    ) {
+    Surface(color = containerColor, shape = RoundedCornerShape(999.dp)) {
         Text(
             text = task.statusLabel(),
-            modifier = Modifier.padding(
-                horizontal = if (compact) 8.dp else 9.dp,
-                vertical = if (compact) 4.dp else 5.dp,
-            ),
+            modifier =
+                Modifier.padding(
+                    horizontal = if (compact) 8.dp else 9.dp,
+                    vertical = if (compact) 4.dp else 5.dp,
+                ),
             style = MaterialTheme.typography.labelSmall,
             color = contentColor,
         )
@@ -1573,10 +1546,7 @@ private fun StatusBadge(
 }
 
 @Composable
-private fun DownloadAuthBadge(
-    task: DownloadTaskEntity,
-    compact: Boolean = false,
-) {
+private fun DownloadAuthBadge(task: DownloadTaskEntity, compact: Boolean = false) {
     Surface(
         shape = RoundedCornerShape(999.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -1584,10 +1554,11 @@ private fun DownloadAuthBadge(
     ) {
         Text(
             text = task.downloadAuthCompactLabel(),
-            modifier = Modifier.padding(
-                horizontal = if (compact) 8.dp else 9.dp,
-                vertical = if (compact) 4.dp else 5.dp,
-            ),
+            modifier =
+                Modifier.padding(
+                    horizontal = if (compact) 8.dp else 9.dp,
+                    vertical = if (compact) 4.dp else 5.dp,
+                ),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1596,18 +1567,17 @@ private fun DownloadAuthBadge(
 
 @Composable
 private fun DownloadResultSheet(task: DownloadTaskEntity) {
-    val previewState by produceState<PreviewState>(
-        initialValue = PreviewState.Loading,
-        key1 = task.taskId,
-    ) {
-        value = withContext(Dispatchers.IO) {
-            runCatching { buildPreviewState(task) }
-                .fold(
-                    onSuccess = PreviewState::Ready,
-                    onFailure = { PreviewState.Error(it.message ?: "读取下载结果失败") },
-                )
+    val previewState by
+        produceState<PreviewState>(initialValue = PreviewState.Loading, key1 = task.taskId) {
+            value =
+                withContext(Dispatchers.IO) {
+                    runCatching { buildPreviewState(task) }
+                        .fold(
+                            onSuccess = PreviewState::Ready,
+                            onFailure = { PreviewState.Error(it.message ?: "读取下载结果失败") },
+                        )
+                }
         }
-    }
 
     Column(
         modifier = Modifier.padding(horizontal = 18.dp),
@@ -1627,9 +1597,7 @@ private fun DownloadResultSheet(task: DownloadTaskEntity) {
         when (val state = previewState) {
             PreviewState.Loading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
@@ -1680,7 +1648,9 @@ private fun DownloadResultSheet(task: DownloadTaskEntity) {
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
                                     Text(
-                                        text = if (entry.isDirectory) "[目录] ${entry.name}" else entry.name,
+                                        text =
+                                            if (entry.isDirectory) "[目录] ${entry.name}"
+                                            else entry.name,
                                         modifier = Modifier.weight(1f),
                                     )
                                     Text(
@@ -1698,35 +1668,42 @@ private fun DownloadResultSheet(task: DownloadTaskEntity) {
     }
 }
 
-private fun openDirectoryLocation(
-    context: Context,
-    task: DownloadTaskEntity,
-): String? {
+private fun openDirectoryLocation(context: Context, task: DownloadTaskEntity): String? {
     val publicDirectoryUri = resolvePublicDownloadsDirectoryUri(context, task)
     if (publicDirectoryUri != null) {
-        openDirectoryUri(context, publicDirectoryUri)?.let { return it }
+        openDirectoryUri(context, publicDirectoryUri)?.let {
+            return it
+        }
         return null
     }
 
     if (task.isInSystemDownloads()) {
-        val downloadsIntent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        val downloadsIntent =
+            Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         return runCatching {
-            context.startActivity(downloadsIntent)
-            null
-        }.getOrElse {
-            Log.w(DOWNLOADS_SCREEN_LOG_TAG, "openDirectoryLocation failed action=${downloadsIntent.action}", it)
-            "无法打开系统下载目录"
-        }
+                context.startActivity(downloadsIntent)
+                null
+            }
+            .getOrElse {
+                Log.w(
+                    DOWNLOADS_SCREEN_LOG_TAG,
+                    "openDirectoryLocation failed action=${downloadsIntent.action}",
+                    it,
+                )
+                "无法打开系统下载目录"
+            }
     }
 
-    val candidateUris = buildList {
-        task.targetTreeUri?.let { add(Uri.parse(it)) }
-        task.savedFileUri
-            ?.takeUnless { task.isInSystemDownloads() || it.startsWith("file:") }
-            ?.let { add(Uri.parse(it)) }
-    }.distinct()
+    val candidateUris =
+        buildList {
+                task.targetTreeUri?.let { add(Uri.parse(it)) }
+                task.savedFileUri
+                    ?.takeUnless { task.isInSystemDownloads() || it.startsWith("file:") }
+                    ?.let { add(Uri.parse(it)) }
+            }
+            .distinct()
 
     candidateUris.forEach { uri ->
         val message = openDirectoryUri(context, uri)
@@ -1736,10 +1713,7 @@ private fun openDirectoryLocation(
     return "无法打开下载目录"
 }
 
-private fun openDirectoryUri(
-    context: Context,
-    uri: Uri,
-): String? {
+private fun openDirectoryUri(context: Context, uri: Uri): String? {
     val intents = buildList {
         add(
             Intent(Intent.ACTION_VIEW).apply {
@@ -1747,7 +1721,7 @@ private fun openDirectoryUri(
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
+            }
         )
         add(
             Intent(Intent.ACTION_VIEW).apply {
@@ -1755,7 +1729,7 @@ private fun openDirectoryUri(
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
+            }
         )
         add(
             Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
@@ -1763,15 +1737,13 @@ private fun openDirectoryUri(
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
+            }
         )
     }
 
     var lastError: Throwable? = null
     intents.forEach { intent ->
-        val result = runCatching {
-            context.startActivity(intent)
-        }
+        val result = runCatching { context.startActivity(intent) }
         if (result.isSuccess) return null
         lastError = result.exceptionOrNull()
         Log.w(
@@ -1784,16 +1756,15 @@ private fun openDirectoryUri(
     return lastError?.message ?: "无法打开下载目录"
 }
 
-private fun resolvePublicDownloadsDirectoryUri(
-    context: Context,
-    task: DownloadTaskEntity,
-): Uri? {
+private fun resolvePublicDownloadsDirectoryUri(context: Context, task: DownloadTaskEntity): Uri? {
     if (task.targetTreeUri != null) return null
 
     task.savedRelativePath
         ?.takeIf { it.isNotBlank() }
         ?.let(::buildExternalDownloadsDocumentUri)
-        ?.let { return it }
+        ?.let {
+            return it
+        }
 
     val folderName = task.publicDownloadsFolderName() ?: return null
 
@@ -1808,36 +1779,34 @@ private fun resolvePublicDownloadsDirectoryUri(
 
     if (!task.isInSystemDownloads()) return null
 
-    val rootRelativePath = queryMediaStoreRootRelativePath(
-        context = context,
-        folderName = folderName,
-        taskRootName = task.fileName,
-    ) ?: return buildExternalDownloadsDocumentUri(
-        "${Environment.DIRECTORY_DOWNLOADS}/$folderName/",
-    )
+    val rootRelativePath =
+        queryMediaStoreRootRelativePath(
+            context = context,
+            folderName = folderName,
+            taskRootName = task.fileName,
+        )
+            ?: return buildExternalDownloadsDocumentUri(
+                "${Environment.DIRECTORY_DOWNLOADS}/$folderName/"
+            )
 
     return buildExternalDownloadsDocumentUri(rootRelativePath)
 }
 
-private fun queryRelativePath(
-    context: Context,
-    uri: Uri,
-): String? {
+private fun queryRelativePath(context: Context, uri: Uri): String? {
     return runCatching {
-        context.contentResolver.query(
-            uri,
-            arrayOf(MediaStore.MediaColumns.RELATIVE_PATH),
-            null,
-            null,
-            null,
-        )?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH))
-            } else {
-                null
-            }
+            context.contentResolver
+                .query(uri, arrayOf(MediaStore.MediaColumns.RELATIVE_PATH), null, null, null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
+                        )
+                    } else {
+                        null
+                    }
+                }
         }
-    }.getOrNull()
+        .getOrNull()
 }
 
 private fun toInitialTreeUri(uri: Uri): Uri {
@@ -1858,29 +1827,27 @@ private fun queryMediaStoreRootRelativePath(
     val selection = "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
     val args = arrayOf("$basePrefix$taskRootName%")
 
-    return context.contentResolver.query(
-        Uri.parse(MEDIASTORE_DOWNLOADS_URI_STRING),
-        projection,
-        selection,
-        args,
-        null,
-    )?.use { cursor ->
-        val results = linkedSetOf<String>()
-        val relativePathIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
-        while (cursor.moveToNext()) {
-            val relativePath = cursor.getString(relativePathIndex).orEmpty()
-            if (!relativePath.startsWith(basePrefix)) continue
-            val suffix = relativePath.removePrefix(basePrefix)
-            val rootSegment = suffix.substringBefore('/').ifBlank { return@use null }
-            results += "$basePrefix$rootSegment/"
+    return context.contentResolver
+        .query(Uri.parse(MEDIASTORE_DOWNLOADS_URI_STRING), projection, selection, args, null)
+        ?.use { cursor ->
+            val results = linkedSetOf<String>()
+            val relativePathIndex =
+                cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
+            while (cursor.moveToNext()) {
+                val relativePath = cursor.getString(relativePathIndex).orEmpty()
+                if (!relativePath.startsWith(basePrefix)) continue
+                val suffix = relativePath.removePrefix(basePrefix)
+                val rootSegment =
+                    suffix.substringBefore('/').ifBlank {
+                        return@use null
+                    }
+                results += "$basePrefix$rootSegment/"
+            }
+            results.minByOrNull { it.length }
         }
-        results.minByOrNull { it.length }
-    }
 }
 
-private fun buildExternalDownloadsDocumentUri(
-    relativePath: String,
-): Uri {
+private fun buildExternalDownloadsDocumentUri(relativePath: String): Uri {
     val normalized = relativePath.trimEnd('/')
     return DocumentsContract.buildDocumentUri(
         "com.android.externalstorage.documents",
@@ -1898,34 +1865,37 @@ private fun buildPreviewState(task: DownloadTaskEntity): PreviewContent {
         PreviewContent(
             title = "目录内容",
             subtitle = savedFile.absolutePath,
-            entries = savedFile
-                .listFiles()
-                .orEmpty()
-                .sortedWith(compareBy<File>({ !it.isDirectory }, { it.name.lowercase() }))
-                .take(80)
-                .map { file ->
-                    PreviewEntry(
-                        name = file.name,
-                        detail = if (file.isDirectory) {
-                            "${file.listFiles()?.size ?: 0} 项"
-                        } else {
-                            formatBytes(file.length())
-                        },
-                        isDirectory = file.isDirectory,
-                    )
-                },
+            entries =
+                savedFile
+                    .listFiles()
+                    .orEmpty()
+                    .sortedWith(compareBy<File>({ !it.isDirectory }, { it.name.lowercase() }))
+                    .take(80)
+                    .map { file ->
+                        PreviewEntry(
+                            name = file.name,
+                            detail =
+                                if (file.isDirectory) {
+                                    "${file.listFiles()?.size ?: 0} 项"
+                                } else {
+                                    formatBytes(file.length())
+                                },
+                            isDirectory = file.isDirectory,
+                        )
+                    },
         )
     } else {
         PreviewContent(
             title = "已下载文件",
             subtitle = savedFile.parentFile?.absolutePath ?: savedFile.absolutePath,
-            entries = listOf(
-                PreviewEntry(
-                    name = savedFile.name,
-                    detail = formatBytes(savedFile.length()),
-                    isDirectory = false,
+            entries =
+                listOf(
+                    PreviewEntry(
+                        name = savedFile.name,
+                        detail = formatBytes(savedFile.length()),
+                        isDirectory = false,
+                    )
                 ),
-            ),
         )
     }
 }
@@ -1933,8 +1903,11 @@ private fun buildPreviewState(task: DownloadTaskEntity): PreviewContent {
 private sealed interface PreviewState {
     data object Loading : PreviewState
 
-    data class Ready(val title: String, val subtitle: String, val entries: List<PreviewEntry>) : PreviewState {
-        constructor(content: PreviewContent) : this(content.title, content.subtitle, content.entries)
+    data class Ready(val title: String, val subtitle: String, val entries: List<PreviewEntry>) :
+        PreviewState {
+        constructor(
+            content: PreviewContent
+        ) : this(content.title, content.subtitle, content.entries)
     }
 
     data class Error(val message: String) : PreviewState
@@ -1946,11 +1919,7 @@ private data class PreviewContent(
     val entries: List<PreviewEntry>,
 )
 
-private data class PreviewEntry(
-    val name: String,
-    val detail: String,
-    val isDirectory: Boolean,
-)
+private data class PreviewEntry(val name: String, val detail: String, val isDirectory: Boolean)
 
 private fun DownloadTaskEntity.statusLabel(): String {
     return if (isFinalizingDownload()) {
@@ -1977,9 +1946,7 @@ private fun DownloadTaskEntity.isConnectingToSource(): Boolean {
 }
 
 private fun DownloadTaskEntity.isFinalizingDownload(): Boolean {
-    return status == DownloadStatus.Running &&
-        totalBytes > 0L &&
-        bytesDownloaded >= totalBytes
+    return status == DownloadStatus.Running && totalBytes > 0L && bytesDownloaded >= totalBytes
 }
 
 private fun DownloadTaskEntity.progressLabel(): String {
@@ -2063,108 +2030,128 @@ private data class DownloadCardTone(
 private fun DownloadTaskEntity.cardTone(): DownloadCardTone {
     val darkTheme = LocalWorkshopDarkTheme.current
     return when (status) {
-        DownloadStatus.Success -> DownloadCardTone(
-            surface = if (darkTheme) {
-                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f)
-            } else {
-                Color(0xFFF7FBF4)
-            },
-            border = if (darkTheme) {
-                MaterialTheme.colorScheme.secondary.copy(alpha = 0.24f)
-            } else {
-                Color(0xFFD8E7D2)
-            },
-            start = if (darkTheme) {
-                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f)
-            } else {
-                Color(0xFFFFFFFF)
-            },
-            end = if (darkTheme) {
-                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.62f)
-            } else {
-                Color(0xFFEAF5E4)
-            },
-        )
+        DownloadStatus.Success ->
+            DownloadCardTone(
+                surface =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f)
+                    } else {
+                        Color(0xFFF7FBF4)
+                    },
+                border =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.24f)
+                    } else {
+                        Color(0xFFD8E7D2)
+                    },
+                start =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f)
+                    } else {
+                        Color(0xFFFFFFFF)
+                    },
+                end =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.62f)
+                    } else {
+                        Color(0xFFEAF5E4)
+                    },
+            )
         DownloadStatus.Failed,
         DownloadStatus.Cancelled,
-        DownloadStatus.Unavailable,
-        -> DownloadCardTone(
-            surface = if (darkTheme) {
-                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.34f)
-            } else {
-                Color(0xFFFFF8F4)
-            },
-            border = if (darkTheme) {
-                MaterialTheme.colorScheme.error.copy(alpha = 0.24f)
-            } else {
-                Color(0xFFF0D7CB)
-            },
-            start = if (darkTheme) {
-                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f)
-            } else {
-                Color(0xFFFFFFFF)
-            },
-            end = if (darkTheme) {
-                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-            } else {
-                Color(0xFFFBEADF)
-            },
-        )
-        DownloadStatus.Paused -> DownloadCardTone(
-            surface = if (darkTheme) {
-                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.34f)
-            } else {
-                Color(0xFFFBFAF6)
-            },
-            border = if (darkTheme) {
-                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.24f)
-            } else {
-                Color(0xFFE6E0D4)
-            },
-            start = if (darkTheme) {
-                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f)
-            } else {
-                Color(0xFFFFFFFF)
-            },
-            end = if (darkTheme) {
-                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.52f)
-            } else {
-                Color(0xFFF4F0E8)
-            },
-        )
+        DownloadStatus.Unavailable ->
+            DownloadCardTone(
+                surface =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.34f)
+                    } else {
+                        Color(0xFFFFF8F4)
+                    },
+                border =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.24f)
+                    } else {
+                        Color(0xFFF0D7CB)
+                    },
+                start =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f)
+                    } else {
+                        Color(0xFFFFFFFF)
+                    },
+                end =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                    } else {
+                        Color(0xFFFBEADF)
+                    },
+            )
+        DownloadStatus.Paused ->
+            DownloadCardTone(
+                surface =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.34f)
+                    } else {
+                        Color(0xFFFBFAF6)
+                    },
+                border =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.24f)
+                    } else {
+                        Color(0xFFE6E0D4)
+                    },
+                start =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f)
+                    } else {
+                        Color(0xFFFFFFFF)
+                    },
+                end =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.52f)
+                    } else {
+                        Color(0xFFF4F0E8)
+                    },
+            )
         DownloadStatus.Queued,
-        DownloadStatus.Running,
-        -> DownloadCardTone(
-            surface = if (darkTheme) {
-                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f)
-            } else {
-                Color(0xFFFFFBF7)
-            },
-            border = if (darkTheme) {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f)
-            } else {
-                Color.White.copy(alpha = 0.44f)
-            },
-            start = if (darkTheme) {
-                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f)
-            } else {
-                Color.White.copy(alpha = 0.95f)
-            },
-            end = if (darkTheme) {
-                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)
-            } else {
-                Color(0xFFF8EFE5).copy(alpha = 0.9f)
-            },
-        )
+        DownloadStatus.Running ->
+            DownloadCardTone(
+                surface =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f)
+                    } else {
+                        Color(0xFFFFFBF7)
+                    },
+                border =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f)
+                    } else {
+                        Color.White.copy(alpha = 0.44f)
+                    },
+                start =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f)
+                    } else {
+                        Color.White.copy(alpha = 0.95f)
+                    },
+                end =
+                    if (darkTheme) {
+                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)
+                    } else {
+                        Color(0xFFF8EFE5).copy(alpha = 0.9f)
+                    },
+            )
     }
 }
 
 private fun DownloadTaskEntity.supportingMessage(): String? {
     if (status == DownloadStatus.Success) {
         return buildList {
-            postProcessSummary?.takeIf { it.isNotBlank() }?.let(::add)
-            updateCheckError?.takeIf { it.isNotBlank() }?.let { add("更新检查失败：$it") }
-        }.joinToString("；").takeIf { it.isNotBlank() }
+                postProcessSummary?.takeIf { it.isNotBlank() }?.let(::add)
+                updateCheckError?.takeIf { it.isNotBlank() }?.let { add("更新检查失败：$it") }
+            }
+            .joinToString("；")
+            .takeIf { it.isNotBlank() }
     }
 
     val message = errorMessage?.trim().orEmpty()
@@ -2189,19 +2176,18 @@ private fun DownloadTaskEntity.supportingMessageLabel(): String {
 }
 
 @Composable
-private fun UpdateAvailableBadge(
-    compact: Boolean,
-) {
+private fun UpdateAvailableBadge(compact: Boolean) {
     Surface(
         shape = RoundedCornerShape(999.dp),
         color = MaterialTheme.colorScheme.tertiaryContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)),
     ) {
         Row(
-            modifier = Modifier.padding(
-                horizontal = if (compact) 8.dp else 9.dp,
-                vertical = if (compact) 4.dp else 5.dp,
-            ),
+            modifier =
+                Modifier.padding(
+                    horizontal = if (compact) 8.dp else 9.dp,
+                    vertical = if (compact) 4.dp else 5.dp,
+                ),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -2256,15 +2242,11 @@ private fun DownloadTaskEntity.canRetryFromHistory(): Boolean {
     return status == DownloadStatus.Cancelled && publishedFileId > 0L
 }
 
-private fun DownloadTaskEntity.retryActionOrNull(
-    action: () -> Unit,
-): (() -> Unit)? {
+private fun DownloadTaskEntity.retryActionOrNull(action: () -> Unit): (() -> Unit)? {
     return if (canRetryFromHistory()) action else null
 }
 
-private fun buildDownloadGroups(
-    tasks: List<DownloadTaskEntity>,
-): List<DownloadGameGroup> {
+private fun buildDownloadGroups(tasks: List<DownloadTaskEntity>): List<DownloadGameGroup> {
     return tasks
         .groupBy { task ->
             if (task.appId > 0) {
@@ -2276,10 +2258,11 @@ private fun buildDownloadGroups(
         .map { (key, groupTasks) ->
             val sortedTasks = groupTasks.sortedBy(DownloadTaskEntity::createdAt)
             val appId = groupTasks.firstOrNull()?.appId ?: 0
-            val gameTitle = when {
-                appId > 0 -> "Steam App $appId"
-                else -> groupTasks.firstOrNull()?.title ?: "未分类游戏"
-            }
+            val gameTitle =
+                when {
+                    appId > 0 -> "Steam App $appId"
+                    else -> groupTasks.firstOrNull()?.title ?: "未分类游戏"
+                }
             DownloadGameGroup(
                 key = key,
                 appId = appId,
@@ -2289,9 +2272,7 @@ private fun buildDownloadGroups(
                 firstQueuedAt = sortedTasks.minOfOrNull(DownloadTaskEntity::createdAt) ?: 0L,
             )
         }
-        .sortedWith(
-            compareBy<DownloadGameGroup> { it.firstQueuedAt },
-        )
+        .sortedWith(compareBy<DownloadGameGroup> { it.firstQueuedAt })
 }
 
 private fun DownloadsTab.expandsGroupsByDefault(): Boolean {

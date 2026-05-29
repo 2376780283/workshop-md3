@@ -38,19 +38,24 @@ fun ArtworkThumbnail(
     contentScale: ContentScale = ContentScale.Crop,
 ) {
     val context = LocalContext.current
-    val candidateUrls = remember(imageUrl, alternateImageUrl) {
-        buildList {
-            fun addCandidate(url: String?) {
-                val normalizedUrl = normalizeArtworkUrl(url)
-                if (!normalizedUrl.isNullOrBlank()) add(normalizedUrl)
-                if (!normalizedUrl.isNullOrBlank() && normalizedUrl.contains("/capsule_616x353.jpg")) {
-                    add(normalizedUrl.replace("/capsule_616x353.jpg", "/header.jpg"))
+    val candidateUrls =
+        remember(imageUrl, alternateImageUrl) {
+            buildList {
+                    fun addCandidate(url: String?) {
+                        val normalizedUrl = normalizeArtworkUrl(url)
+                        if (!normalizedUrl.isNullOrBlank()) add(normalizedUrl)
+                        if (
+                            !normalizedUrl.isNullOrBlank() &&
+                                normalizedUrl.contains("/capsule_616x353.jpg")
+                        ) {
+                            add(normalizedUrl.replace("/capsule_616x353.jpg", "/header.jpg"))
+                        }
+                    }
+                    addCandidate(imageUrl)
+                    addCandidate(alternateImageUrl)
                 }
-            }
-            addCandidate(imageUrl)
-            addCandidate(alternateImageUrl)
-        }.distinct()
-    }
+                .distinct()
+        }
     var candidateIndex by remember(candidateUrls) { mutableStateOf(0) }
     val resolvedUrl = candidateUrls.getOrNull(candidateIndex)
 
@@ -60,19 +65,21 @@ fun ArtworkThumbnail(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 2.dp,
         shadowElevation = 8.dp,
-        border = BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.35f))),
+        border =
+            BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.35f))),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer,
-                        ),
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(
+                        brush =
+                            Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.tertiaryContainer,
+                                )
+                            )
                     ),
-                ),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -83,13 +90,9 @@ fun ArtworkThumbnail(
             )
             if (!resolvedUrl.isNullOrBlank()) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(resolvedUrl)
-                        .build(),
+                    model = ImageRequest.Builder(context).data(resolvedUrl).build(),
                     contentDescription = fallbackText,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(shape),
+                    modifier = Modifier.fillMaxSize().clip(shape),
                     contentScale = contentScale,
                     onError = {
                         if (candidateIndex < candidateUrls.lastIndex) {
@@ -110,11 +113,12 @@ fun steamCapsuleUrl(appId: Int): String? {
 private fun normalizeArtworkUrl(url: String?): String? {
     if (url.isNullOrBlank()) return null
     return runCatching {
-        val parsed = Uri.parse(url)
-        if (parsed.scheme.equals("http", ignoreCase = true)) {
-            parsed.buildUpon().scheme("https").build().toString()
-        } else {
-            url.trim()
+            val parsed = Uri.parse(url)
+            if (parsed.scheme.equals("http", ignoreCase = true)) {
+                parsed.buildUpon().scheme("https").build().toString()
+            } else {
+                url.trim()
+            }
         }
-    }.getOrDefault(url)
+        .getOrDefault(url)
 }

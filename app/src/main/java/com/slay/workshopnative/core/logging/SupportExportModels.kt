@@ -2,11 +2,7 @@ package com.slay.workshopnative.core.logging
 
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class SupportBundleTextEntry(
-    val name: String,
-    val payload: String,
-)
+@Serializable data class SupportBundleTextEntry(val name: String, val payload: String)
 
 @Serializable
 data class SupportStructuredEvent(
@@ -18,11 +14,7 @@ data class SupportStructuredEvent(
 )
 
 @Serializable
-data class SupportTrafficCounter(
-    val category: String,
-    val host: String? = null,
-    val count: Int,
-)
+data class SupportTrafficCounter(val category: String, val host: String? = null, val count: Int)
 
 @Serializable
 data class SupportDownloadDecisionSnapshot(

@@ -1,8 +1,8 @@
 package com.slay.workshopnative.ui.feature.library
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,23 +50,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.slay.workshopnative.core.util.textFingerprint
 import com.slay.workshopnative.data.model.FavoriteWorkshopGame
 import com.slay.workshopnative.data.model.GameDetails
 import com.slay.workshopnative.data.model.OwnedGame
 import com.slay.workshopnative.ui.components.ArtworkThumbnail
-import com.slay.workshopnative.ui.components.ExpandableBodyText
 import com.slay.workshopnative.ui.components.TranslatableDescriptionCard
 import com.slay.workshopnative.ui.components.WorkshopNativeModalBottomSheet
 import com.slay.workshopnative.ui.theme.workshopAdaptiveBorderColor
@@ -86,12 +83,14 @@ fun LibraryScreen(
     val selectedGame = remember { mutableStateOf<OwnedGame?>(null) }
     val focusManager = LocalFocusManager.current
 
-    val filteredGames = state.games.filter { game ->
-        state.query.isBlank() || game.name.contains(state.query, ignoreCase = true)
-    }
-    val filteredFavoriteGames = state.favoriteGames.filter { game ->
-        state.query.isBlank() || game.name.contains(state.query, ignoreCase = true)
-    }
+    val filteredGames =
+        state.games.filter { game ->
+            state.query.isBlank() || game.name.contains(state.query, ignoreCase = true)
+        }
+    val filteredFavoriteGames =
+        state.favoriteGames.filter { game ->
+            state.query.isBlank() || game.name.contains(state.query, ignoreCase = true)
+        }
     val showSubscriptionEntry = state.isSubscriptionDisplayEnabled
     val favoriteAppIds = state.favoriteGames.mapTo(linkedSetOf(), FavoriteWorkshopGame::appId)
     val ownedGames = filteredGames.filterNot(OwnedGame::isFamilyShared)
@@ -102,10 +101,10 @@ fun LibraryScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier =
+            Modifier.fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         LibraryControlPanel(
@@ -170,11 +169,12 @@ fun LibraryScreen(
                     shape = RoundedCornerShape(24.dp),
                 ) {
                     Text(
-                        text = if (state.games.isEmpty()) {
-                            "还没有读取到可访问的游戏"
-                        } else {
-                            "没有匹配当前搜索词的游戏"
-                        },
+                        text =
+                            if (state.games.isEmpty()) {
+                                "还没有读取到可访问的游戏"
+                            } else {
+                                "没有匹配当前搜索词的游戏"
+                            },
                         modifier = Modifier.padding(18.dp),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -197,11 +197,8 @@ fun LibraryScreen(
                         games = filteredFavoriteGames,
                         onShowDetails = { game ->
                             focusManager.clearFocus(force = true)
-                            selectedGame.value = OwnedGame(
-                                appId = game.appId,
-                                name = game.name,
-                                iconHash = "",
-                            )
+                            selectedGame.value =
+                                OwnedGame(appId = game.appId, name = game.name, iconHash = "")
                         },
                         onToggleFavorite = { game ->
                             viewModel.toggleFavorite(
@@ -290,8 +287,10 @@ fun LibraryScreen(
         val details = state.gameDetailsByAppId[game.appId]
         val isLoadingDetails = state.loadingDetailsAppId == game.appId && details == null
         val description = details?.about?.ifBlank { details.shortDescription }.orEmpty()
-        val translationState = state.descriptionTranslationByAppId[game.appId]
-            ?.takeIf { it.sourceFingerprint == textFingerprint(description.trim()) }
+        val translationState =
+            state.descriptionTranslationByAppId[game.appId]?.takeIf {
+                it.sourceFingerprint == textFingerprint(description.trim())
+            }
         WorkshopNativeModalBottomSheet(onDismissRequest = { selectedGame.value = null }) {
             GameDetailsSheet(
                 game = game,
@@ -315,7 +314,9 @@ fun LibraryScreen(
                     )
                 },
                 onShowOriginalDescription = { viewModel.showOriginalGameDescription(game.appId) },
-                onShowTranslatedDescription = { viewModel.showTranslatedGameDescription(game.appId) },
+                onShowTranslatedDescription = {
+                    viewModel.showTranslatedGameDescription(game.appId)
+                },
                 onOpenWorkshop = {
                     selectedGame.value = null
                     viewModel.markWorkshopOpened(game.appId)
@@ -343,9 +344,7 @@ private fun LibraryLoadingCard(accountName: String) {
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 18.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -357,11 +356,12 @@ private fun LibraryLoadingCard(accountName: String) {
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = if (accountName.isBlank()) {
-                    "正在同步已购买和家庭共享游戏，首次进入通常需要几秒钟。"
-                } else {
-                    "正在同步 $accountName 的已购买和家庭共享游戏，首次进入通常需要几秒钟。"
-                },
+                text =
+                    if (accountName.isBlank()) {
+                        "正在同步已购买和家庭共享游戏，首次进入通常需要几秒钟。"
+                    } else {
+                        "正在同步 $accountName 的已购买和家庭共享游戏，首次进入通常需要几秒钟。"
+                    },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -417,11 +417,12 @@ private fun LibraryControlPanel(
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = if (accountName.isBlank()) {
-                            "已购与家庭共享游戏"
-                        } else {
-                            "$accountName 的已购与共享游戏"
-                        },
+                        text =
+                            if (accountName.isBlank()) {
+                                "已购与家庭共享游戏"
+                            } else {
+                                "$accountName 的已购与共享游戏"
+                            },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -442,7 +443,10 @@ private fun LibraryControlPanel(
                             contentAlignment = Alignment.Center,
                         ) {
                             if (isRefreshing || isInitialSync) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.2.dp)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.2.dp,
+                                )
                             } else {
                                 Icon(Icons.Rounded.Refresh, contentDescription = "刷新游戏库")
                             }
@@ -454,18 +458,15 @@ private fun LibraryControlPanel(
             Surface(
                 shape = RoundedCornerShape(22.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                border =
+                    BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
             ) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = onQueryChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                     placeholder = { Text("搜索已购或共享游戏") },
-                    leadingIcon = {
-                        Icon(Icons.Rounded.Search, contentDescription = null)
-                    },
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     singleLine = true,
                     trailingIcon = {
                         if (query.isNotBlank()) {
@@ -474,13 +475,15 @@ private fun LibraryControlPanel(
                             }
                         }
                     },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        imeAction = ImeAction.Search,
-                    ),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                        onSearch = { onSearch() },
-                        onDone = { onSearch() },
-                    ),
+                    keyboardOptions =
+                        androidx.compose.foundation.text.KeyboardOptions(
+                            imeAction = ImeAction.Search
+                        ),
+                    keyboardActions =
+                        androidx.compose.foundation.text.KeyboardActions(
+                            onSearch = { onSearch() },
+                            onDone = { onSearch() },
+                        ),
                     shape = RoundedCornerShape(18.dp),
                 )
             }
@@ -500,12 +503,7 @@ private fun LazyListScope.gamesSection(
     showSubscriptionEntry: Boolean,
 ) {
     if (games.isEmpty()) return
-    item(key = "section_$title") {
-        LibrarySectionHeader(
-            title = title,
-            count = count,
-        )
-    }
+    item(key = "section_$title") { LibrarySectionHeader(title = title, count = count) }
     items(games, key = { it.appId }) { game ->
         GameRow(
             game = game,
@@ -528,12 +526,7 @@ private fun LazyListScope.favoriteGamesSection(
     showSubscriptionEntry: Boolean,
 ) {
     if (games.isEmpty()) return
-    item(key = "section_favorites") {
-        LibrarySectionHeader(
-            title = "工坊收藏",
-            count = games.size,
-        )
-    }
+    item(key = "section_favorites") { LibrarySectionHeader(title = "工坊收藏", count = games.size) }
     items(games, key = { "favorite_${it.appId}" }) { game ->
         FavoriteWorkshopRow(
             game = game,
@@ -547,14 +540,9 @@ private fun LazyListScope.favoriteGamesSection(
 }
 
 @Composable
-private fun LibrarySectionHeader(
-    title: String,
-    count: Int,
-) {
+private fun LibrarySectionHeader(title: String, count: Int) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 2.dp, bottom = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -588,16 +576,17 @@ private fun GameRow(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = workshopAdaptiveGradientBrush(
-                        lightStart = Color.White.copy(alpha = 0.98f),
-                        lightEnd = Color(0xFFF9F0E5).copy(alpha = 0.94f),
-                    ),
-                    shape = RoundedCornerShape(22.dp),
-                )
-                .padding(horizontal = 10.dp, vertical = 9.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(
+                        brush =
+                            workshopAdaptiveGradientBrush(
+                                lightStart = Color.White.copy(alpha = 0.98f),
+                                lightEnd = Color(0xFFF9F0E5).copy(alpha = 0.94f),
+                            ),
+                        shape = RoundedCornerShape(22.dp),
+                    )
+                    .padding(horizontal = 10.dp, vertical = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -605,15 +594,12 @@ private fun GameRow(
                 imageUrl = game.capsuleUrl,
                 alternateImageUrl = game.iconUrl.ifBlank { null },
                 fallbackText = game.name,
-                modifier = Modifier
-                    .size(width = 78.dp, height = 50.dp),
+                modifier = Modifier.size(width = 78.dp, height = 50.dp),
                 shape = RoundedCornerShape(16.dp),
             )
 
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onShowDetails),
+                modifier = Modifier.weight(1f).clickable(onClick = onShowDetails),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
@@ -625,21 +611,23 @@ private fun GameRow(
                 )
 
                 Text(
-                    text = buildAnnotatedString {
-                        append("AppID ${game.appId}")
-                        append("  ·  ")
-                        pushStyle(
-                            SpanStyle(
-                                color = if (game.isFamilyShared) {
-                                    MaterialTheme.colorScheme.secondary
-                                } else {
-                                    MaterialTheme.colorScheme.primary
-                                },
-                            ),
-                        )
-                        append(game.sourceLabel)
-                        pop()
-                    },
+                    text =
+                        buildAnnotatedString {
+                            append("AppID ${game.appId}")
+                            append("  ·  ")
+                            pushStyle(
+                                SpanStyle(
+                                    color =
+                                        if (game.isFamilyShared) {
+                                            MaterialTheme.colorScheme.secondary
+                                        } else {
+                                            MaterialTheme.colorScheme.primary
+                                        }
+                                )
+                            )
+                            append(game.sourceLabel)
+                            pop()
+                        },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -653,25 +641,22 @@ private fun GameRow(
                 ) {
                     IconButton(onClick = onToggleFavorite, modifier = Modifier.size(28.dp)) {
                         Icon(
-                            imageVector = if (isFavorite) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                            imageVector =
+                                if (isFavorite) Icons.Rounded.Bookmark
+                                else Icons.Rounded.BookmarkBorder,
                             contentDescription = if (isFavorite) "取消收藏" else "收藏工坊",
-                            tint = if (isFavorite) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                            tint =
+                                if (isFavorite) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                         )
                     }
                     if (showSubscriptionEntry) {
-                        SecondaryActionCapsule(
-                            text = "我的订阅",
-                            onClick = onOpenSubscriptions,
-                        )
+                        SecondaryActionCapsule(text = "我的订阅", onClick = onOpenSubscriptions)
                     }
-                    ActionCapsule(
-                        text = "进入工坊",
-                        onClick = onOpenWorkshop,
-                    )
+                    ActionCapsule(text = "进入工坊", onClick = onOpenWorkshop)
                 }
             }
         }
@@ -694,9 +679,7 @@ private fun GameDetailsSheet(
     showSubscriptionEntry: Boolean,
 ) {
     Column(
-        modifier = Modifier
-            .padding(horizontal = 18.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier = Modifier.padding(horizontal = 18.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box {
@@ -704,31 +687,20 @@ private fun GameDetailsSheet(
                 imageUrl = details?.headerImageUrl ?: game.capsuleUrl,
                 alternateImageUrl = game.iconUrl.ifBlank { null },
                 fallbackText = game.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(188.dp)
-                    .clip(RoundedCornerShape(32.dp)),
+                modifier = Modifier.fillMaxWidth().height(188.dp).clip(RoundedCornerShape(32.dp)),
                 shape = RoundedCornerShape(32.dp),
             )
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(188.dp)
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Transparent,
-                                Color(0xAA172131),
-                            ),
-                        ),
-                    ),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(188.dp)
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(
+                            Brush.verticalGradient(listOf(Color.Transparent, Color(0xAA172131)))
+                        )
             )
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomStart)
-                    .padding(18.dp),
+                modifier = Modifier.fillMaxWidth().align(Alignment.BottomStart).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 MetaChip(
@@ -758,16 +730,22 @@ private fun GameDetailsSheet(
                 Surface(
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
                     shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                    border =
+                        BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                        ),
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 18.dp),
+                        modifier =
+                            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.6.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.6.dp,
+                        )
                         Text(
                             text = "正在补全这款游戏的详细资料…",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -807,7 +785,11 @@ private fun GameDetailsSheet(
                 Surface(
                     color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.78f)),
                     shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f))),
+                    border =
+                        BorderStroke(
+                            1.dp,
+                            workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f)),
+                        ),
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ) {
                     Text(
@@ -825,9 +807,7 @@ private fun GameDetailsSheet(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -854,19 +834,11 @@ private fun GameDetailsSheet(
                         Text("我的订阅")
                     }
                 }
-                Button(
-                    onClick = onOpenWorkshop,
-                    shape = RoundedCornerShape(20.dp),
-                ) {
-                    Text("进入工坊")
-                }
+                Button(onClick = onOpenWorkshop, shape = RoundedCornerShape(20.dp)) { Text("进入工坊") }
             }
         }
 
-        FavoriteActionRow(
-            isFavorite = isFavorite,
-            onToggleFavorite = onToggleFavorite,
-        )
+        FavoriteActionRow(isFavorite = isFavorite, onToggleFavorite = onToggleFavorite)
 
         Spacer(modifier = Modifier.height(12.dp))
     }
@@ -887,16 +859,17 @@ private fun FavoriteWorkshopRow(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = workshopAdaptiveGradientBrush(
-                        lightStart = Color.White.copy(alpha = 0.98f),
-                        lightEnd = Color(0xFFF9F0E5).copy(alpha = 0.94f),
-                    ),
-                    shape = RoundedCornerShape(22.dp),
-                )
-                .padding(horizontal = 10.dp, vertical = 9.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(
+                        brush =
+                            workshopAdaptiveGradientBrush(
+                                lightStart = Color.White.copy(alpha = 0.98f),
+                                lightEnd = Color(0xFFF9F0E5).copy(alpha = 0.94f),
+                            ),
+                        shape = RoundedCornerShape(22.dp),
+                    )
+                    .padding(horizontal = 10.dp, vertical = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -909,9 +882,7 @@ private fun FavoriteWorkshopRow(
             )
 
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onShowDetails),
+                modifier = Modifier.weight(1f).clickable(onClick = onShowDetails),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
@@ -922,11 +893,12 @@ private fun FavoriteWorkshopRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = buildString {
-                        append("AppID ${game.appId}")
-                        append("  ·  ")
-                        append(game.workshopItemCount?.let { "$it 个工坊条目" } ?: "工坊收藏")
-                    },
+                    text =
+                        buildString {
+                            append("AppID ${game.appId}")
+                            append("  ·  ")
+                            append(game.workshopItemCount?.let { "$it 个工坊条目" } ?: "工坊收藏")
+                        },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -945,15 +917,9 @@ private fun FavoriteWorkshopRow(
                         )
                     }
                     if (showSubscriptionEntry) {
-                        SecondaryActionCapsule(
-                            text = "我的订阅",
-                            onClick = onOpenSubscriptions,
-                        )
+                        SecondaryActionCapsule(text = "我的订阅", onClick = onOpenSubscriptions)
                     }
-                    ActionCapsule(
-                        text = "进入工坊",
-                        onClick = onOpenWorkshop,
-                    )
+                    ActionCapsule(text = "进入工坊", onClick = onOpenWorkshop)
                 }
             }
         }
@@ -961,19 +927,14 @@ private fun FavoriteWorkshopRow(
 }
 
 @Composable
-private fun FavoriteActionRow(
-    isFavorite: Boolean,
-    onToggleFavorite: () -> Unit,
-) {
+private fun FavoriteActionRow(isFavorite: Boolean, onToggleFavorite: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -987,18 +948,17 @@ private fun FavoriteActionRow(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = if (isFavorite) {
-                        "这款游戏会固定出现在探索和我的内容顶部，方便你快速回到它的工坊。"
-                    } else {
-                        "把常用的工坊游戏固定下来，下次不用再重新搜索。"
-                    },
+                    text =
+                        if (isFavorite) {
+                            "这款游戏会固定出现在探索和我的内容顶部，方便你快速回到它的工坊。"
+                        } else {
+                            "把常用的工坊游戏固定下来，下次不用再重新搜索。"
+                        },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(onClick = onToggleFavorite) {
-                Text(if (isFavorite) "取消收藏" else "收藏")
-            }
+            TextButton(onClick = onToggleFavorite) { Text(if (isFavorite) "取消收藏" else "收藏") }
         }
     }
 }
@@ -1014,7 +974,8 @@ private fun GameOverviewCard(
     Surface(
         color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.78f)),
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f))),
+        border =
+            BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.4f))),
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
@@ -1027,11 +988,7 @@ private fun GameOverviewCard(
                     label = "AppID",
                     value = appId.toString(),
                 )
-                GameMetaTile(
-                    modifier = Modifier.weight(1f),
-                    label = "来源",
-                    value = sourceLabel,
-                )
+                GameMetaTile(modifier = Modifier.weight(1f), label = "来源", value = sourceLabel)
             }
 
             DetailGroup(label = "开发商", values = developers)
@@ -1042,10 +999,7 @@ private fun GameOverviewCard(
 }
 
 @Composable
-private fun ActionCapsule(
-    text: String,
-    onClick: () -> Unit,
-) {
+private fun ActionCapsule(text: String, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
@@ -1053,17 +1007,12 @@ private fun ActionCapsule(
         color = Color.Transparent,
     ) {
         Box(
-            modifier = Modifier
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color(0xFFE96D43),
-                            Color(0xFFF08A52),
-                        ),
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                )
-                .padding(horizontal = 10.dp, vertical = 7.dp),
+            modifier =
+                Modifier.background(
+                        Brush.horizontalGradient(listOf(Color(0xFFE96D43), Color(0xFFF08A52))),
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -1077,10 +1026,7 @@ private fun ActionCapsule(
 }
 
 @Composable
-private fun SecondaryActionCapsule(
-    text: String,
-    onClick: () -> Unit,
-) {
+private fun SecondaryActionCapsule(text: String, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
@@ -1102,10 +1048,7 @@ private fun SecondaryActionCapsule(
 }
 
 @Composable
-private fun DetailGroup(
-    label: String,
-    values: List<String>,
-) {
+private fun DetailGroup(label: String, values: List<String>) {
     if (values.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -1114,19 +1057,13 @@ private fun DetailGroup(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            values.take(4).forEach { value ->
-                MetaChip(label = value)
-            }
+            values.take(4).forEach { value -> MetaChip(label = value) }
         }
     }
 }
 
 @Composable
-private fun GameMetaTile(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-) {
+private fun GameMetaTile(label: String, value: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
@@ -1154,11 +1091,12 @@ private fun GameMetaTile(
 @Composable
 private fun SourceBadge(game: OwnedGame) {
     Surface(
-        color = if (game.isFamilyShared) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.primaryContainer
-        },
+        color =
+            if (game.isFamilyShared) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                MaterialTheme.colorScheme.primaryContainer
+            },
         shape = RoundedCornerShape(999.dp),
     ) {
         Text(
@@ -1167,11 +1105,12 @@ private fun SourceBadge(game: OwnedGame) {
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            color = if (game.isFamilyShared) {
-                MaterialTheme.colorScheme.onSecondaryContainer
-            } else {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            },
+            color =
+                if (game.isFamilyShared) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                },
         )
     }
 }
@@ -1182,10 +1121,7 @@ private fun MetaChip(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
-    Surface(
-        color = containerColor,
-        shape = RoundedCornerShape(999.dp),
-    ) {
+    Surface(color = containerColor, shape = RoundedCornerShape(999.dp)) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),

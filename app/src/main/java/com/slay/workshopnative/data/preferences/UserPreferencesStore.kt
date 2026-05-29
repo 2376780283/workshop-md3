@@ -1,10 +1,6 @@
 package com.slay.workshopnative.data.preferences
 
 import android.net.Uri
-import com.slay.workshopnative.core.storage.DEFAULT_DOWNLOAD_FOLDER_NAME
-import com.slay.workshopnative.data.model.FavoriteWorkshopGame
-import com.slay.workshopnative.data.model.WorkshopGameEntry
-import com.slay.workshopnative.data.model.WorkshopBrowseQuery
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -13,14 +9,14 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.slay.workshopnative.core.storage.DEFAULT_DOWNLOAD_FOLDER_NAME
+import com.slay.workshopnative.data.model.FavoriteWorkshopGame
+import com.slay.workshopnative.data.model.WorkshopBrowseQuery
+import com.slay.workshopnative.data.model.WorkshopGameEntry
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -28,6 +24,10 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 const val DEFAULT_DOWNLOAD_CHUNK_CONCURRENCY = 12
 const val COMPATIBILITY_DOWNLOAD_CHUNK_CONCURRENCY = 4
@@ -135,11 +135,12 @@ data class UserPreferences(
     val themeMode: AppThemeMode = DEFAULT_APP_THEME_MODE,
 ) {
     val isTranslationConfigured: Boolean
-        get() = translationProvider.isReady(
-            azureEndpoint = translationAzureEndpoint,
-            azureApiKey = translationAzureApiKey,
-            googleApiKey = translationGoogleApiKey,
-        )
+        get() =
+            translationProvider.isReady(
+                azureEndpoint = translationAzureEndpoint,
+                azureApiKey = translationAzureApiKey,
+                googleApiKey = translationGoogleApiKey,
+            )
 }
 
 data class OwnedGamesSnapshot(
@@ -149,7 +150,9 @@ data class OwnedGamesSnapshot(
 )
 
 @Singleton
-class UserPreferencesStore @Inject constructor(
+class UserPreferencesStore
+@Inject
+constructor(
     private val dataStore: DataStore<Preferences>,
     private val json: Json,
     private val secureSessionStore: SecureSessionStore,
@@ -163,10 +166,13 @@ class UserPreferencesStore @Inject constructor(
         val SAVED_ACCOUNTS_JSON = stringPreferencesKey("saved_accounts_json")
         val ACCOUNT_LOGIN_ENABLED = booleanPreferencesKey("account_login_enabled")
         val ACCOUNT_LOGIN_DOWNLOAD_ENABLED = booleanPreferencesKey("account_login_download_enabled")
-        val ACCOUNT_OWNED_GAMES_DISPLAY_ENABLED = booleanPreferencesKey("account_owned_games_display_enabled")
-        val ACCOUNT_SUBSCRIPTION_DISPLAY_ENABLED = booleanPreferencesKey("account_subscription_display_enabled")
+        val ACCOUNT_OWNED_GAMES_DISPLAY_ENABLED =
+            booleanPreferencesKey("account_owned_games_display_enabled")
+        val ACCOUNT_SUBSCRIPTION_DISPLAY_ENABLED =
+            booleanPreferencesKey("account_subscription_display_enabled")
         val HAS_ACKNOWLEDGED_DISCLAIMER = booleanPreferencesKey("has_acknowledged_disclaimer")
-        val HAS_ACKNOWLEDGED_USAGE_BOUNDARY = booleanPreferencesKey("has_acknowledged_usage_boundary")
+        val HAS_ACKNOWLEDGED_USAGE_BOUNDARY =
+            booleanPreferencesKey("has_acknowledged_usage_boundary")
         val AUTO_CHECK_APP_UPDATES = booleanPreferencesKey("auto_check_app_updates")
         val AUTO_CHECK_DOWNLOADED_MOD_UPDATES_ON_LAUNCH =
             booleanPreferencesKey("auto_check_downloaded_mod_updates_on_launch")
@@ -188,14 +194,16 @@ class UserPreferencesStore @Inject constructor(
         val PRIMORDIAL_AUTHENTICATED_AGGRESSIVE_CDN_ENABLED =
             booleanPreferencesKey("primordial_authenticated_aggressive_cdn_enabled")
         val PREFER_ANONYMOUS_DOWNLOADS = booleanPreferencesKey("prefer_anonymous_downloads")
-        val ALLOW_AUTHENTICATED_DOWNLOAD_FALLBACK = booleanPreferencesKey("allow_authenticated_download_fallback")
+        val ALLOW_AUTHENTICATED_DOWNLOAD_FALLBACK =
+            booleanPreferencesKey("allow_authenticated_download_fallback")
         val WORKSHOP_PAGE_SIZE = intPreferencesKey("workshop_page_size")
-        val WORKSHOP_AUTO_RESOLVE_VISIBLE_ITEMS = booleanPreferencesKey("workshop_auto_resolve_visible_items")
-        val ANIMATED_WORKSHOP_PREVIEW_ENABLED = booleanPreferencesKey("animated_workshop_preview_enabled")
+        val WORKSHOP_AUTO_RESOLVE_VISIBLE_ITEMS =
+            booleanPreferencesKey("workshop_auto_resolve_visible_items")
+        val ANIMATED_WORKSHOP_PREVIEW_ENABLED =
+            booleanPreferencesKey("animated_workshop_preview_enabled")
         val TERRARIA_ARCHIVE_POST_PROCESSOR_ENABLED =
             booleanPreferencesKey("terraria_archive_post_processor_enabled")
-        val TERRARIA_ARCHIVE_KEEP_ORIGINAL =
-            booleanPreferencesKey("terraria_archive_keep_original")
+        val TERRARIA_ARCHIVE_KEEP_ORIGINAL = booleanPreferencesKey("terraria_archive_keep_original")
         val WALLPAPER_ENGINE_PKG_EXTRACT_ENABLED =
             booleanPreferencesKey("wallpaper_engine_pkg_extract_enabled")
         val WALLPAPER_ENGINE_PKG_KEEP_ORIGINAL =
@@ -211,127 +219,148 @@ class UserPreferencesStore @Inject constructor(
         val FAVORITE_WORKSHOP_GAMES_JSON = stringPreferencesKey("favorite_workshop_games_json")
         val APP_THEME_MODE = stringPreferencesKey("app_theme_mode")
         val OWNED_GAMES_SNAPSHOT_STEAM_ID64 = longPreferencesKey("owned_games_snapshot_steam_id64")
-        val OWNED_GAMES_SNAPSHOT_SAVED_AT_MS = longPreferencesKey("owned_games_snapshot_saved_at_ms")
+        val OWNED_GAMES_SNAPSHOT_SAVED_AT_MS =
+            longPreferencesKey("owned_games_snapshot_saved_at_ms")
         val OWNED_GAMES_SNAPSHOT_JSON = stringPreferencesKey("owned_games_snapshot_json")
     }
 
     private val legacySecretsMigrationMutex = Mutex()
 
-    @Volatile
-    private var legacySecretsMigrated = false
+    @Volatile private var legacySecretsMigrated = false
 
-    val preferences: Flow<UserPreferences> = dataStore.data
-        .catch { throwable ->
-            if (throwable is IOException) emit(emptyPreferences()) else throw throwable
-        }
-        .map { prefs ->
-            val actualActiveSessionProfile = secureSessionStore.readActiveSessionProfile()
-            val actualActiveRefreshToken = secureSessionStore.readActiveRefreshToken()
-                .ifBlank { prefs[REFRESH_TOKEN].orEmpty() }
-            val isLoginFeatureEnabled = prefs[ACCOUNT_LOGIN_ENABLED] ?: false
-            val activeSessionProfile = if (isLoginFeatureEnabled) {
-                actualActiveSessionProfile
-            } else {
-                PersistedActiveSteamSession()
+    val preferences: Flow<UserPreferences> =
+        dataStore.data
+            .catch { throwable ->
+                if (throwable is IOException) emit(emptyPreferences()) else throw throwable
             }
-            val activeRefreshToken = if (isLoginFeatureEnabled) {
-                actualActiveRefreshToken
-            } else {
-                ""
-            }
-            val sanitizedDownloadTree = sanitizeDownloadTree(
-                uri = prefs[DOWNLOAD_TREE_URI],
-                label = prefs[DOWNLOAD_TREE_LABEL],
-            )
-            val downloadPerformanceMode = prefs[DOWNLOAD_PERFORMANCE_MODE]
-                ?.let { value -> runCatching { DownloadPerformanceMode.valueOf(value) }.getOrNull() }
-                ?: DownloadPerformanceMode.Auto
-            val translationProvider = prefs[TRANSLATION_PROVIDER]
-                ?.let { value -> runCatching { TranslationProvider.valueOf(value) }.getOrNull() }
-                ?: DEFAULT_TRANSLATION_PROVIDER
-            val themeMode = prefs[APP_THEME_MODE]
-                ?.let { value -> runCatching { AppThemeMode.valueOf(value) }.getOrNull() }
-                ?: DEFAULT_APP_THEME_MODE
-            val savedAccounts = if (isLoginFeatureEnabled) {
-                buildSavedAccounts(
-                    accountName = actualActiveSessionProfile.accountName,
-                    refreshToken = actualActiveRefreshToken,
-                    clientId = actualActiveSessionProfile.clientId,
-                    steamId64 = actualActiveSessionProfile.steamId64,
+            .map { prefs ->
+                val actualActiveSessionProfile = secureSessionStore.readActiveSessionProfile()
+                val actualActiveRefreshToken =
+                    secureSessionStore.readActiveRefreshToken().ifBlank {
+                        prefs[REFRESH_TOKEN].orEmpty()
+                    }
+                val isLoginFeatureEnabled = prefs[ACCOUNT_LOGIN_ENABLED] ?: false
+                val activeSessionProfile =
+                    if (isLoginFeatureEnabled) {
+                        actualActiveSessionProfile
+                    } else {
+                        PersistedActiveSteamSession()
+                    }
+                val activeRefreshToken =
+                    if (isLoginFeatureEnabled) {
+                        actualActiveRefreshToken
+                    } else {
+                        ""
+                    }
+                val sanitizedDownloadTree =
+                    sanitizeDownloadTree(
+                        uri = prefs[DOWNLOAD_TREE_URI],
+                        label = prefs[DOWNLOAD_TREE_LABEL],
+                    )
+                val downloadPerformanceMode =
+                    prefs[DOWNLOAD_PERFORMANCE_MODE]?.let { value ->
+                        runCatching { DownloadPerformanceMode.valueOf(value) }.getOrNull()
+                    } ?: DownloadPerformanceMode.Auto
+                val translationProvider =
+                    prefs[TRANSLATION_PROVIDER]?.let { value ->
+                        runCatching { TranslationProvider.valueOf(value) }.getOrNull()
+                    } ?: DEFAULT_TRANSLATION_PROVIDER
+                val themeMode =
+                    prefs[APP_THEME_MODE]?.let { value ->
+                        runCatching { AppThemeMode.valueOf(value) }.getOrNull()
+                    } ?: DEFAULT_APP_THEME_MODE
+                val savedAccounts =
+                    if (isLoginFeatureEnabled) {
+                        buildSavedAccounts(
+                            accountName = actualActiveSessionProfile.accountName,
+                            refreshToken = actualActiveRefreshToken,
+                            clientId = actualActiveSessionProfile.clientId,
+                            steamId64 = actualActiveSessionProfile.steamId64,
+                            rememberSession = prefs[REMEMBER_SESSION] ?: true,
+                            persistedAccounts = secureSessionStore.readSavedAccountsMetadata(),
+                            legacyEncodedAccounts = prefs[SAVED_ACCOUNTS_JSON],
+                        )
+                    } else {
+                        emptyList()
+                    }
+                UserPreferences(
+                    accountName = activeSessionProfile.accountName,
+                    refreshToken = activeRefreshToken,
+                    clientId = activeSessionProfile.clientId,
+                    steamId64 = activeSessionProfile.steamId64,
                     rememberSession = prefs[REMEMBER_SESSION] ?: true,
-                    persistedAccounts = secureSessionStore.readSavedAccountsMetadata(),
-                    legacyEncodedAccounts = prefs[SAVED_ACCOUNTS_JSON],
+                    savedAccounts = savedAccounts,
+                    isLoginFeatureEnabled = isLoginFeatureEnabled,
+                    isLoggedInDownloadEnabled = prefs[ACCOUNT_LOGIN_DOWNLOAD_ENABLED] ?: false,
+                    isOwnedGamesDisplayEnabled =
+                        prefs[ACCOUNT_OWNED_GAMES_DISPLAY_ENABLED] ?: false,
+                    isSubscriptionDisplayEnabled =
+                        prefs[ACCOUNT_SUBSCRIPTION_DISPLAY_ENABLED] ?: false,
+                    hasAcknowledgedDisclaimer = prefs[HAS_ACKNOWLEDGED_DISCLAIMER] ?: false,
+                    hasAcknowledgedUsageBoundary = prefs[HAS_ACKNOWLEDGED_USAGE_BOUNDARY] ?: false,
+                    autoCheckAppUpdates = prefs[AUTO_CHECK_APP_UPDATES] ?: false,
+                    autoCheckDownloadedModUpdatesOnLaunch =
+                        prefs[AUTO_CHECK_DOWNLOADED_MOD_UPDATES_ON_LAUNCH] ?: false,
+                    lastDownloadedModUpdatesLaunchCheckAtMs =
+                        prefs[LAST_DOWNLOADED_MOD_UPDATES_LAUNCH_CHECK_AT_MS] ?: 0L,
+                    defaultGuestMode = prefs[DEFAULT_GUEST_MODE] ?: true,
+                    lastConnectionProfileLabel = prefs[LAST_CONNECTION_PROFILE],
+                    lastCdnHost = prefs[LAST_CDN_HOST],
+                    lastCdnTransportDirect = prefs[LAST_CDN_TRANSPORT_DIRECT],
+                    cdnTransportPreference =
+                        prefs[CDN_TRANSPORT_PREFERENCE]?.let { value ->
+                            runCatching { CdnTransportPreference.valueOf(value) }.getOrNull()
+                        } ?: CdnTransportPreference.Auto,
+                    cdnPoolPreference =
+                        prefs[CDN_POOL_PREFERENCE]?.let { value ->
+                            runCatching { CdnPoolPreference.valueOf(value) }.getOrNull()
+                        } ?: CdnPoolPreference.Auto,
+                    downloadFolderName =
+                        prefs[DOWNLOAD_FOLDER_NAME] ?: DEFAULT_DOWNLOAD_FOLDER_NAME,
+                    downloadTreeUri = sanitizedDownloadTree.first,
+                    downloadTreeLabel = sanitizedDownloadTree.second,
+                    downloadPerformanceMode = downloadPerformanceMode,
+                    downloadChunkConcurrency =
+                        requestedDownloadChunkConcurrency(downloadPerformanceMode),
+                    primordialReducedMemoryProtectionEnabled =
+                        prefs[PRIMORDIAL_REDUCED_MEMORY_PROTECTION_ENABLED] ?: false,
+                    primordialAuthenticatedAggressiveCdnEnabled =
+                        prefs[PRIMORDIAL_AUTHENTICATED_AGGRESSIVE_CDN_ENABLED] ?: false,
+                    preferAnonymousDownloads = prefs[PREFER_ANONYMOUS_DOWNLOADS] ?: true,
+                    allowAuthenticatedDownloadFallback =
+                        prefs[ALLOW_AUTHENTICATED_DOWNLOAD_FALLBACK] ?: true,
+                    workshopPageSize =
+                        WorkshopBrowseQuery.normalizePageSize(
+                            prefs[WORKSHOP_PAGE_SIZE] ?: WorkshopBrowseQuery.DEFAULT_PAGE_SIZE
+                        ),
+                    workshopAutoResolveVisibleItems =
+                        prefs[WORKSHOP_AUTO_RESOLVE_VISIBLE_ITEMS] ?: false,
+                    animatedWorkshopPreviewEnabled =
+                        prefs[ANIMATED_WORKSHOP_PREVIEW_ENABLED] ?: false,
+                    terrariaArchivePostProcessorEnabled =
+                        prefs[TERRARIA_ARCHIVE_POST_PROCESSOR_ENABLED] ?: false,
+                    terrariaArchiveKeepOriginal = prefs[TERRARIA_ARCHIVE_KEEP_ORIGINAL] ?: false,
+                    wallpaperEnginePkgExtractEnabled =
+                        prefs[WALLPAPER_ENGINE_PKG_EXTRACT_ENABLED] ?: false,
+                    wallpaperEnginePkgKeepOriginal =
+                        prefs[WALLPAPER_ENGINE_PKG_KEEP_ORIGINAL] ?: false,
+                    wallpaperEngineTexConversionEnabled =
+                        prefs[WALLPAPER_ENGINE_TEX_CONVERSION_ENABLED] ?: false,
+                    wallpaperEngineKeepConvertedTexOriginal =
+                        prefs[WALLPAPER_ENGINE_KEEP_CONVERTED_TEX_ORIGINAL] ?: true,
+                    translationProvider = translationProvider,
+                    translationAzureEndpoint =
+                        prefs[TRANSLATION_AZURE_ENDPOINT]?.trim()?.takeIf(String::isNotBlank)
+                            ?: DEFAULT_AZURE_TRANSLATOR_ENDPOINT,
+                    translationAzureRegion = prefs[TRANSLATION_AZURE_REGION]?.trim().orEmpty(),
+                    translationAzureApiKey = secureSessionStore.readTranslationAzureApiKey(),
+                    translationGoogleApiKey = secureSessionStore.readTranslationGoogleApiKey(),
+                    favoriteWorkshopGames =
+                        decodeFavoriteWorkshopGames(prefs[FAVORITE_WORKSHOP_GAMES_JSON]),
+                    themeMode = themeMode,
                 )
-            } else {
-                emptyList()
             }
-            UserPreferences(
-                accountName = activeSessionProfile.accountName,
-                refreshToken = activeRefreshToken,
-                clientId = activeSessionProfile.clientId,
-                steamId64 = activeSessionProfile.steamId64,
-                rememberSession = prefs[REMEMBER_SESSION] ?: true,
-                savedAccounts = savedAccounts,
-                isLoginFeatureEnabled = isLoginFeatureEnabled,
-                isLoggedInDownloadEnabled = prefs[ACCOUNT_LOGIN_DOWNLOAD_ENABLED] ?: false,
-                isOwnedGamesDisplayEnabled = prefs[ACCOUNT_OWNED_GAMES_DISPLAY_ENABLED] ?: false,
-                isSubscriptionDisplayEnabled = prefs[ACCOUNT_SUBSCRIPTION_DISPLAY_ENABLED] ?: false,
-                hasAcknowledgedDisclaimer = prefs[HAS_ACKNOWLEDGED_DISCLAIMER] ?: false,
-                hasAcknowledgedUsageBoundary = prefs[HAS_ACKNOWLEDGED_USAGE_BOUNDARY] ?: false,
-                autoCheckAppUpdates = prefs[AUTO_CHECK_APP_UPDATES] ?: false,
-                autoCheckDownloadedModUpdatesOnLaunch =
-                    prefs[AUTO_CHECK_DOWNLOADED_MOD_UPDATES_ON_LAUNCH] ?: false,
-                lastDownloadedModUpdatesLaunchCheckAtMs =
-                    prefs[LAST_DOWNLOADED_MOD_UPDATES_LAUNCH_CHECK_AT_MS] ?: 0L,
-                defaultGuestMode = prefs[DEFAULT_GUEST_MODE] ?: true,
-                lastConnectionProfileLabel = prefs[LAST_CONNECTION_PROFILE],
-                lastCdnHost = prefs[LAST_CDN_HOST],
-                lastCdnTransportDirect = prefs[LAST_CDN_TRANSPORT_DIRECT],
-                cdnTransportPreference = prefs[CDN_TRANSPORT_PREFERENCE]
-                    ?.let { value -> runCatching { CdnTransportPreference.valueOf(value) }.getOrNull() }
-                    ?: CdnTransportPreference.Auto,
-                cdnPoolPreference = prefs[CDN_POOL_PREFERENCE]
-                    ?.let { value -> runCatching { CdnPoolPreference.valueOf(value) }.getOrNull() }
-                    ?: CdnPoolPreference.Auto,
-                downloadFolderName = prefs[DOWNLOAD_FOLDER_NAME] ?: DEFAULT_DOWNLOAD_FOLDER_NAME,
-                downloadTreeUri = sanitizedDownloadTree.first,
-                downloadTreeLabel = sanitizedDownloadTree.second,
-                downloadPerformanceMode = downloadPerformanceMode,
-                downloadChunkConcurrency = requestedDownloadChunkConcurrency(downloadPerformanceMode),
-                primordialReducedMemoryProtectionEnabled =
-                    prefs[PRIMORDIAL_REDUCED_MEMORY_PROTECTION_ENABLED] ?: false,
-                primordialAuthenticatedAggressiveCdnEnabled =
-                    prefs[PRIMORDIAL_AUTHENTICATED_AGGRESSIVE_CDN_ENABLED] ?: false,
-                preferAnonymousDownloads = prefs[PREFER_ANONYMOUS_DOWNLOADS] ?: true,
-                allowAuthenticatedDownloadFallback = prefs[ALLOW_AUTHENTICATED_DOWNLOAD_FALLBACK] ?: true,
-                workshopPageSize = WorkshopBrowseQuery.normalizePageSize(
-                    prefs[WORKSHOP_PAGE_SIZE] ?: WorkshopBrowseQuery.DEFAULT_PAGE_SIZE,
-                ),
-                workshopAutoResolveVisibleItems = prefs[WORKSHOP_AUTO_RESOLVE_VISIBLE_ITEMS] ?: false,
-                animatedWorkshopPreviewEnabled = prefs[ANIMATED_WORKSHOP_PREVIEW_ENABLED] ?: false,
-                terrariaArchivePostProcessorEnabled =
-                    prefs[TERRARIA_ARCHIVE_POST_PROCESSOR_ENABLED] ?: false,
-                terrariaArchiveKeepOriginal = prefs[TERRARIA_ARCHIVE_KEEP_ORIGINAL] ?: false,
-                wallpaperEnginePkgExtractEnabled =
-                    prefs[WALLPAPER_ENGINE_PKG_EXTRACT_ENABLED] ?: false,
-                wallpaperEnginePkgKeepOriginal = prefs[WALLPAPER_ENGINE_PKG_KEEP_ORIGINAL] ?: false,
-                wallpaperEngineTexConversionEnabled =
-                    prefs[WALLPAPER_ENGINE_TEX_CONVERSION_ENABLED] ?: false,
-                wallpaperEngineKeepConvertedTexOriginal =
-                    prefs[WALLPAPER_ENGINE_KEEP_CONVERTED_TEX_ORIGINAL] ?: true,
-                translationProvider = translationProvider,
-                translationAzureEndpoint = prefs[TRANSLATION_AZURE_ENDPOINT]
-                    ?.trim()
-                    ?.takeIf(String::isNotBlank)
-                    ?: DEFAULT_AZURE_TRANSLATOR_ENDPOINT,
-                translationAzureRegion = prefs[TRANSLATION_AZURE_REGION]?.trim().orEmpty(),
-                translationAzureApiKey = secureSessionStore.readTranslationAzureApiKey(),
-                translationGoogleApiKey = secureSessionStore.readTranslationGoogleApiKey(),
-                favoriteWorkshopGames = decodeFavoriteWorkshopGames(prefs[FAVORITE_WORKSHOP_GAMES_JSON]),
-                themeMode = themeMode,
-            )
-        }
-        .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers.IO)
 
     suspend fun snapshot(): UserPreferences {
         migrateLegacySecretsIfNeeded()
@@ -347,20 +376,21 @@ class UserPreferencesStore @Inject constructor(
     ) {
         migrateLegacySecretsIfNeeded()
         val currentAccounts = snapshot().savedAccounts
-        val updatedAccounts = if (rememberSession) {
-            currentAccounts.upsert(
-                SavedSteamAccount(
-                    accountName = accountName,
-                    refreshToken = refreshToken,
-                    clientId = clientId,
-                    steamId64 = steamId64,
-                    rememberSession = true,
-                    lastUsedAtMs = System.currentTimeMillis(),
-                ),
-            )
-        } else {
-            currentAccounts.filterNot { it.matches(accountName, steamId64) }
-        }
+        val updatedAccounts =
+            if (rememberSession) {
+                currentAccounts.upsert(
+                    SavedSteamAccount(
+                        accountName = accountName,
+                        refreshToken = refreshToken,
+                        clientId = clientId,
+                        steamId64 = steamId64,
+                        rememberSession = true,
+                        lastUsedAtMs = System.currentTimeMillis(),
+                    )
+                )
+            } else {
+                currentAccounts.filterNot { it.matches(accountName, steamId64) }
+            }
 
         if (rememberSession) {
             secureSessionStore.writeActiveSessionProfile(
@@ -368,7 +398,7 @@ class UserPreferencesStore @Inject constructor(
                     accountName = accountName,
                     clientId = clientId,
                     steamId64 = steamId64,
-                ),
+                )
             )
             secureSessionStore.writeActiveRefreshToken(refreshToken)
             secureSessionStore.writeSavedAccountRefreshToken(
@@ -376,16 +406,16 @@ class UserPreferencesStore @Inject constructor(
                 refreshToken,
             )
             secureSessionStore.writeSavedAccountsMetadata(
-                sanitizeSavedAccounts(updatedAccounts).map { it.toPersisted() },
+                sanitizeSavedAccounts(updatedAccounts).map { it.toPersisted() }
             )
         } else {
             secureSessionStore.clearActiveSessionProfile()
             secureSessionStore.clearActiveRefreshToken()
             secureSessionStore.removeSavedAccountRefreshToken(
-                accountIdentityKey(accountName, steamId64),
+                accountIdentityKey(accountName, steamId64)
             )
             secureSessionStore.writeSavedAccountsMetadata(
-                sanitizeSavedAccounts(updatedAccounts).map { it.toPersisted() },
+                sanitizeSavedAccounts(updatedAccounts).map { it.toPersisted() }
             )
         }
 
@@ -419,17 +449,20 @@ class UserPreferencesStore @Inject constructor(
         migrateLegacySecretsIfNeeded()
         dataStore.edit { prefs ->
             buildSavedAccounts(
-                accountName = secureSessionStore.readActiveSessionProfile().accountName,
-                refreshToken = secureSessionStore.readActiveRefreshToken()
-                    .ifBlank { prefs[REFRESH_TOKEN].orEmpty() },
-                clientId = secureSessionStore.readActiveSessionProfile().clientId,
-                steamId64 = secureSessionStore.readActiveSessionProfile().steamId64,
-                rememberSession = prefs[REMEMBER_SESSION] ?: true,
-                persistedAccounts = secureSessionStore.readSavedAccountsMetadata(),
-                legacyEncodedAccounts = prefs[SAVED_ACCOUNTS_JSON],
-            ).forEach { account ->
-                secureSessionStore.removeSavedAccountRefreshToken(account.identityKey())
-            }
+                    accountName = secureSessionStore.readActiveSessionProfile().accountName,
+                    refreshToken =
+                        secureSessionStore.readActiveRefreshToken().ifBlank {
+                            prefs[REFRESH_TOKEN].orEmpty()
+                        },
+                    clientId = secureSessionStore.readActiveSessionProfile().clientId,
+                    steamId64 = secureSessionStore.readActiveSessionProfile().steamId64,
+                    rememberSession = prefs[REMEMBER_SESSION] ?: true,
+                    persistedAccounts = secureSessionStore.readSavedAccountsMetadata(),
+                    legacyEncodedAccounts = prefs[SAVED_ACCOUNTS_JSON],
+                )
+                .forEach { account ->
+                    secureSessionStore.removeSavedAccountRefreshToken(account.identityKey())
+                }
             prefs.remove(ACCOUNT_NAME)
             prefs.remove(REFRESH_TOKEN)
             prefs.remove(CLIENT_ID)
@@ -450,15 +483,10 @@ class UserPreferencesStore @Inject constructor(
     }
 
     suspend fun saveLastConnectionProfile(label: String) {
-        dataStore.edit { prefs ->
-            prefs[LAST_CONNECTION_PROFILE] = label
-        }
+        dataStore.edit { prefs -> prefs[LAST_CONNECTION_PROFILE] = label }
     }
 
-    suspend fun saveLastCdnSelection(
-        host: String,
-        forceDirect: Boolean,
-    ) {
+    suspend fun saveLastCdnSelection(host: String, forceDirect: Boolean) {
         dataStore.edit { prefs ->
             prefs[LAST_CDN_HOST] = host
             prefs[LAST_CDN_TRANSPORT_DIRECT] = forceDirect
@@ -466,15 +494,11 @@ class UserPreferencesStore @Inject constructor(
     }
 
     suspend fun saveCdnTransportPreference(preference: CdnTransportPreference) {
-        dataStore.edit { prefs ->
-            prefs[CDN_TRANSPORT_PREFERENCE] = preference.name
-        }
+        dataStore.edit { prefs -> prefs[CDN_TRANSPORT_PREFERENCE] = preference.name }
     }
 
     suspend fun saveCdnPoolPreference(preference: CdnPoolPreference) {
-        dataStore.edit { prefs ->
-            prefs[CDN_POOL_PREFERENCE] = preference.name
-        }
+        dataStore.edit { prefs -> prefs[CDN_POOL_PREFERENCE] = preference.name }
     }
 
     suspend fun activateSavedAccount(accountKey: String): SavedSteamAccount? {
@@ -488,11 +512,11 @@ class UserPreferencesStore @Inject constructor(
                 accountName = target.accountName,
                 clientId = target.clientId,
                 steamId64 = target.steamId64,
-            ),
+            )
         )
         secureSessionStore.writeActiveRefreshToken(target.refreshToken)
         secureSessionStore.writeSavedAccountsMetadata(
-            savedAccounts.upsert(selectedAccount).map { it.toPersisted() },
+            savedAccounts.upsert(selectedAccount).map { it.toPersisted() }
         )
         dataStore.edit { prefs ->
             prefs[REMEMBER_SESSION] = target.rememberSession
@@ -510,16 +534,19 @@ class UserPreferencesStore @Inject constructor(
         val currentSnapshot = snapshot()
         val removedAccounts = currentSnapshot.savedAccounts.filter { it.stableKey() == accountKey }
         if (removedAccounts.isEmpty()) return
-        val retainedAccounts = currentSnapshot.savedAccounts.filterNot { it.stableKey() == accountKey }
+        val retainedAccounts =
+            currentSnapshot.savedAccounts.filterNot { it.stableKey() == accountKey }
         val activeProfile = secureSessionStore.readActiveSessionProfile()
-        val activeAccountKey = SavedSteamAccount(
-            accountName = activeProfile.accountName,
-            refreshToken = "",
-            clientId = activeProfile.clientId,
-            steamId64 = activeProfile.steamId64,
-            rememberSession = true,
-            lastUsedAtMs = 0L,
-        ).stableKey()
+        val activeAccountKey =
+            SavedSteamAccount(
+                    accountName = activeProfile.accountName,
+                    refreshToken = "",
+                    clientId = activeProfile.clientId,
+                    steamId64 = activeProfile.steamId64,
+                    rememberSession = true,
+                    lastUsedAtMs = 0L,
+                )
+                .stableKey()
         val removedActiveAccount = accountKey == activeAccountKey
 
         secureSessionStore.writeSavedAccountsMetadata(retainedAccounts.map { it.toPersisted() })
@@ -549,45 +576,31 @@ class UserPreferencesStore @Inject constructor(
     }
 
     suspend fun saveDefaultGuestMode(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[DEFAULT_GUEST_MODE] = enabled
-        }
+        dataStore.edit { prefs -> prefs[DEFAULT_GUEST_MODE] = enabled }
     }
 
     suspend fun saveLoginFeatureEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[ACCOUNT_LOGIN_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[ACCOUNT_LOGIN_ENABLED] = enabled }
     }
 
     suspend fun saveLoggedInDownloadEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[ACCOUNT_LOGIN_DOWNLOAD_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[ACCOUNT_LOGIN_DOWNLOAD_ENABLED] = enabled }
     }
 
     suspend fun saveOwnedGamesDisplayEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[ACCOUNT_OWNED_GAMES_DISPLAY_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[ACCOUNT_OWNED_GAMES_DISPLAY_ENABLED] = enabled }
     }
 
     suspend fun saveSubscriptionDisplayEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[ACCOUNT_SUBSCRIPTION_DISPLAY_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[ACCOUNT_SUBSCRIPTION_DISPLAY_ENABLED] = enabled }
     }
 
     suspend fun saveAutoCheckAppUpdates(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[AUTO_CHECK_APP_UPDATES] = enabled
-        }
+        dataStore.edit { prefs -> prefs[AUTO_CHECK_APP_UPDATES] = enabled }
     }
 
     suspend fun saveAutoCheckDownloadedModUpdatesOnLaunch(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[AUTO_CHECK_DOWNLOADED_MOD_UPDATES_ON_LAUNCH] = enabled
-        }
+        dataStore.edit { prefs -> prefs[AUTO_CHECK_DOWNLOADED_MOD_UPDATES_ON_LAUNCH] = enabled }
     }
 
     suspend fun saveLastDownloadedModUpdatesLaunchCheckAt(timestampMs: Long) {
@@ -597,21 +610,15 @@ class UserPreferencesStore @Inject constructor(
     }
 
     suspend fun saveAppThemeMode(themeMode: AppThemeMode) {
-        dataStore.edit { prefs ->
-            prefs[APP_THEME_MODE] = themeMode.name
-        }
+        dataStore.edit { prefs -> prefs[APP_THEME_MODE] = themeMode.name }
     }
 
     suspend fun saveDisclaimerAcknowledged(acknowledged: Boolean = true) {
-        dataStore.edit { prefs ->
-            prefs[HAS_ACKNOWLEDGED_DISCLAIMER] = acknowledged
-        }
+        dataStore.edit { prefs -> prefs[HAS_ACKNOWLEDGED_DISCLAIMER] = acknowledged }
     }
 
     suspend fun saveUsageBoundaryAcknowledged(acknowledged: Boolean = true) {
-        dataStore.edit { prefs ->
-            prefs[HAS_ACKNOWLEDGED_USAGE_BOUNDARY] = acknowledged
-        }
+        dataStore.edit { prefs -> prefs[HAS_ACKNOWLEDGED_USAGE_BOUNDARY] = acknowledged }
     }
 
     suspend fun saveDownloadTree(uri: String, label: String) {
@@ -622,9 +629,7 @@ class UserPreferencesStore @Inject constructor(
     }
 
     suspend fun saveDownloadFolderName(folderName: String) {
-        dataStore.edit { prefs ->
-            prefs[DOWNLOAD_FOLDER_NAME] = folderName
-        }
+        dataStore.edit { prefs -> prefs[DOWNLOAD_FOLDER_NAME] = folderName }
     }
 
     suspend fun clearDownloadTree() {
@@ -636,11 +641,14 @@ class UserPreferencesStore @Inject constructor(
 
     suspend fun saveDownloadChunkConcurrency(concurrency: Int) {
         val normalized = normalizeDownloadChunkConcurrency(concurrency)
-        val mode = when {
-            normalized <= COMPATIBILITY_DOWNLOAD_CHUNK_CONCURRENCY -> DownloadPerformanceMode.Compatibility
-            normalized > DEFAULT_DOWNLOAD_CHUNK_CONCURRENCY -> DownloadPerformanceMode.Primordial
-            else -> DownloadPerformanceMode.Auto
-        }
+        val mode =
+            when {
+                normalized <= COMPATIBILITY_DOWNLOAD_CHUNK_CONCURRENCY ->
+                    DownloadPerformanceMode.Compatibility
+                normalized > DEFAULT_DOWNLOAD_CHUNK_CONCURRENCY ->
+                    DownloadPerformanceMode.Primordial
+                else -> DownloadPerformanceMode.Auto
+            }
         saveDownloadPerformanceMode(mode)
     }
 
@@ -652,27 +660,19 @@ class UserPreferencesStore @Inject constructor(
     }
 
     suspend fun savePrimordialReducedMemoryProtectionEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[PRIMORDIAL_REDUCED_MEMORY_PROTECTION_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[PRIMORDIAL_REDUCED_MEMORY_PROTECTION_ENABLED] = enabled }
     }
 
     suspend fun savePrimordialAuthenticatedAggressiveCdnEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[PRIMORDIAL_AUTHENTICATED_AGGRESSIVE_CDN_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[PRIMORDIAL_AUTHENTICATED_AGGRESSIVE_CDN_ENABLED] = enabled }
     }
 
     suspend fun savePreferAnonymousDownloads(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[PREFER_ANONYMOUS_DOWNLOADS] = enabled
-        }
+        dataStore.edit { prefs -> prefs[PREFER_ANONYMOUS_DOWNLOADS] = enabled }
     }
 
     suspend fun saveAllowAuthenticatedDownloadFallback(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[ALLOW_AUTHENTICATED_DOWNLOAD_FALLBACK] = enabled
-        }
+        dataStore.edit { prefs -> prefs[ALLOW_AUTHENTICATED_DOWNLOAD_FALLBACK] = enabled }
     }
 
     suspend fun saveWorkshopPageSize(pageSize: Int) {
@@ -682,87 +682,62 @@ class UserPreferencesStore @Inject constructor(
     }
 
     suspend fun saveWorkshopAutoResolveVisibleItems(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[WORKSHOP_AUTO_RESOLVE_VISIBLE_ITEMS] = enabled
-        }
+        dataStore.edit { prefs -> prefs[WORKSHOP_AUTO_RESOLVE_VISIBLE_ITEMS] = enabled }
     }
 
     suspend fun saveAnimatedWorkshopPreviewEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[ANIMATED_WORKSHOP_PREVIEW_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[ANIMATED_WORKSHOP_PREVIEW_ENABLED] = enabled }
     }
 
     suspend fun saveTerrariaArchivePostProcessorEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[TERRARIA_ARCHIVE_POST_PROCESSOR_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[TERRARIA_ARCHIVE_POST_PROCESSOR_ENABLED] = enabled }
     }
 
     suspend fun saveTerrariaArchiveKeepOriginal(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[TERRARIA_ARCHIVE_KEEP_ORIGINAL] = enabled
-        }
+        dataStore.edit { prefs -> prefs[TERRARIA_ARCHIVE_KEEP_ORIGINAL] = enabled }
     }
 
     suspend fun saveWallpaperEnginePkgExtractEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[WALLPAPER_ENGINE_PKG_EXTRACT_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[WALLPAPER_ENGINE_PKG_EXTRACT_ENABLED] = enabled }
     }
 
     suspend fun saveWallpaperEnginePkgKeepOriginal(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[WALLPAPER_ENGINE_PKG_KEEP_ORIGINAL] = enabled
-        }
+        dataStore.edit { prefs -> prefs[WALLPAPER_ENGINE_PKG_KEEP_ORIGINAL] = enabled }
     }
 
     suspend fun saveWallpaperEngineTexConversionEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[WALLPAPER_ENGINE_TEX_CONVERSION_ENABLED] = enabled
-        }
+        dataStore.edit { prefs -> prefs[WALLPAPER_ENGINE_TEX_CONVERSION_ENABLED] = enabled }
     }
 
     suspend fun saveWallpaperEngineKeepConvertedTexOriginal(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[WALLPAPER_ENGINE_KEEP_CONVERTED_TEX_ORIGINAL] = enabled
-        }
+        dataStore.edit { prefs -> prefs[WALLPAPER_ENGINE_KEEP_CONVERTED_TEX_ORIGINAL] = enabled }
     }
 
     suspend fun saveTranslationProvider(provider: TranslationProvider) {
-        dataStore.edit { prefs ->
-            prefs[TRANSLATION_PROVIDER] = provider.name
-        }
+        dataStore.edit { prefs -> prefs[TRANSLATION_PROVIDER] = provider.name }
     }
 
     suspend fun saveTranslationAzureEndpoint(endpoint: String) {
         dataStore.edit { prefs ->
-            prefs[TRANSLATION_AZURE_ENDPOINT] = endpoint
-                .trim()
-                .ifBlank { DEFAULT_AZURE_TRANSLATOR_ENDPOINT }
+            prefs[TRANSLATION_AZURE_ENDPOINT] =
+                endpoint.trim().ifBlank { DEFAULT_AZURE_TRANSLATOR_ENDPOINT }
         }
     }
 
     suspend fun saveTranslationAzureRegion(region: String) {
-        dataStore.edit { prefs ->
-            prefs[TRANSLATION_AZURE_REGION] = region.trim()
-        }
+        dataStore.edit { prefs -> prefs[TRANSLATION_AZURE_REGION] = region.trim() }
     }
 
     suspend fun saveTranslationAzureApiKey(apiKey: String) {
         migrateLegacySecretsIfNeeded()
         secureSessionStore.writeTranslationAzureApiKey(apiKey.trim())
-        dataStore.edit { prefs ->
-            prefs[TRANSLATION_SECRET_VERSION] = System.currentTimeMillis()
-        }
+        dataStore.edit { prefs -> prefs[TRANSLATION_SECRET_VERSION] = System.currentTimeMillis() }
     }
 
     suspend fun saveTranslationGoogleApiKey(apiKey: String) {
         migrateLegacySecretsIfNeeded()
         secureSessionStore.writeTranslationGoogleApiKey(apiKey.trim())
-        dataStore.edit { prefs ->
-            prefs[TRANSLATION_SECRET_VERSION] = System.currentTimeMillis()
-        }
+        dataStore.edit { prefs -> prefs[TRANSLATION_SECRET_VERSION] = System.currentTimeMillis() }
     }
 
     suspend fun clearTranslationSettings() {
@@ -782,17 +757,18 @@ class UserPreferencesStore @Inject constructor(
         dataStore.edit { prefs ->
             val now = System.currentTimeMillis()
             val current = decodeFavoriteWorkshopGames(prefs[FAVORITE_WORKSHOP_GAMES_JSON])
-            val updated = current.upsert(
-                FavoriteWorkshopGame(
-                    appId = game.appId,
-                    name = game.name,
-                    capsuleUrl = game.capsuleUrl,
-                    previewUrl = game.previewUrl,
-                    workshopItemCount = game.workshopItemCount,
-                    addedAtMs = now,
-                    lastOpenedAtMs = now,
-                ),
-            )
+            val updated =
+                current.upsert(
+                    FavoriteWorkshopGame(
+                        appId = game.appId,
+                        name = game.name,
+                        capsuleUrl = game.capsuleUrl,
+                        previewUrl = game.previewUrl,
+                        workshopItemCount = game.workshopItemCount,
+                        addedAtMs = now,
+                        lastOpenedAtMs = now,
+                    )
+                )
             prefs[FAVORITE_WORKSHOP_GAMES_JSON] = encodeFavoriteWorkshopGames(updated)
         }
     }
@@ -801,9 +777,8 @@ class UserPreferencesStore @Inject constructor(
         if (appId <= 0) return
         dataStore.edit { prefs ->
             val current = decodeFavoriteWorkshopGames(prefs[FAVORITE_WORKSHOP_GAMES_JSON])
-            prefs[FAVORITE_WORKSHOP_GAMES_JSON] = encodeFavoriteWorkshopGames(
-                current.filterNot { it.appId == appId },
-            )
+            prefs[FAVORITE_WORKSHOP_GAMES_JSON] =
+                encodeFavoriteWorkshopGames(current.filterNot { it.appId == appId })
         }
     }
 
@@ -813,15 +788,16 @@ class UserPreferencesStore @Inject constructor(
             val current = decodeFavoriteWorkshopGames(prefs[FAVORITE_WORKSHOP_GAMES_JSON])
             if (current.none { it.appId == appId }) return@edit
             val now = System.currentTimeMillis()
-            prefs[FAVORITE_WORKSHOP_GAMES_JSON] = encodeFavoriteWorkshopGames(
-                current.map { favorite ->
-                    if (favorite.appId == appId) {
-                        favorite.copy(lastOpenedAtMs = now)
-                    } else {
-                        favorite
+            prefs[FAVORITE_WORKSHOP_GAMES_JSON] =
+                encodeFavoriteWorkshopGames(
+                    current.map { favorite ->
+                        if (favorite.appId == appId) {
+                            favorite.copy(lastOpenedAtMs = now)
+                        } else {
+                            favorite
+                        }
                     }
-                },
-            )
+                )
         }
     }
 
@@ -854,9 +830,7 @@ class UserPreferencesStore @Inject constructor(
     }
 
     suspend fun clearFavoriteWorkshopGames() {
-        dataStore.edit { prefs ->
-            prefs.remove(FAVORITE_WORKSHOP_GAMES_JSON)
-        }
+        dataStore.edit { prefs -> prefs.remove(FAVORITE_WORKSHOP_GAMES_JSON) }
     }
 
     suspend fun loadOwnedGamesSnapshot(): OwnedGamesSnapshot {
@@ -869,10 +843,7 @@ class UserPreferencesStore @Inject constructor(
         )
     }
 
-    private fun sanitizeDownloadTree(
-        uri: String?,
-        label: String?,
-    ): Pair<String?, String?> {
+    private fun sanitizeDownloadTree(uri: String?, label: String?): Pair<String?, String?> {
         if (uri.isNullOrBlank()) return null to null
         val normalized = runCatching { Uri.decode(uri) }.getOrDefault(uri)
         val lowerCased = normalized.lowercase()
@@ -894,15 +865,16 @@ class UserPreferencesStore @Inject constructor(
                 persistedAccounts.map { persisted ->
                     SavedSteamAccount(
                         accountName = persisted.accountName,
-                        refreshToken = secureSessionStore.readSavedAccountRefreshToken(
-                            persisted.identityKey(),
-                        ),
+                        refreshToken =
+                            secureSessionStore.readSavedAccountRefreshToken(
+                                persisted.identityKey()
+                            ),
                         clientId = persisted.clientId,
                         steamId64 = persisted.steamId64,
                         rememberSession = persisted.rememberSession,
                         lastUsedAtMs = persisted.lastUsedAtMs,
                     )
-                },
+                }
             )
         }
         if (legacyPayload.isNullOrBlank()) return emptyList()
@@ -914,15 +886,16 @@ class UserPreferencesStore @Inject constructor(
                 accounts.map { persisted ->
                     SavedSteamAccount(
                         accountName = persisted.accountName,
-                        refreshToken = secureSessionStore.readSavedAccountRefreshToken(
-                            persisted.identityKey(),
-                        ),
+                        refreshToken =
+                            secureSessionStore.readSavedAccountRefreshToken(
+                                persisted.identityKey()
+                            ),
                         clientId = persisted.clientId,
                         steamId64 = persisted.steamId64,
                         rememberSession = persisted.rememberSession,
                         lastUsedAtMs = persisted.lastUsedAtMs,
                     )
-                },
+                }
             )
         }
         return decodeLegacySavedAccounts(legacyPayload)
@@ -931,9 +904,8 @@ class UserPreferencesStore @Inject constructor(
     private fun decodeFavoriteWorkshopGames(payload: String?): List<FavoriteWorkshopGame> {
         if (payload.isNullOrBlank()) return emptyList()
         return sanitizeFavoriteWorkshopGames(
-            runCatching {
-                json.decodeFromString<List<FavoriteWorkshopGame>>(payload)
-            }.getOrDefault(emptyList()),
+            runCatching { json.decodeFromString<List<FavoriteWorkshopGame>>(payload) }
+                .getOrDefault(emptyList())
         )
     }
 
@@ -946,47 +918,52 @@ class UserPreferencesStore @Inject constructor(
         persistedAccounts: List<PersistedSavedSteamAccount>,
         legacyEncodedAccounts: String?,
     ): List<SavedSteamAccount> {
-        val storedAccounts = decodeSavedAccounts(
-            persistedAccounts = persistedAccounts,
-            legacyPayload = legacyEncodedAccounts,
-        )
+        val storedAccounts =
+            decodeSavedAccounts(
+                persistedAccounts = persistedAccounts,
+                legacyPayload = legacyEncodedAccounts,
+            )
         if (accountName.isBlank() || refreshToken.isBlank() || !rememberSession) {
             return storedAccounts
         }
-        val legacyAccount = SavedSteamAccount(
-            accountName = accountName,
-            refreshToken = refreshToken,
-            clientId = clientId,
-            steamId64 = steamId64,
-            rememberSession = true,
-            lastUsedAtMs = System.currentTimeMillis(),
-        )
+        val legacyAccount =
+            SavedSteamAccount(
+                accountName = accountName,
+                refreshToken = refreshToken,
+                clientId = clientId,
+                steamId64 = steamId64,
+                rememberSession = true,
+                lastUsedAtMs = System.currentTimeMillis(),
+            )
         return sanitizeSavedAccounts(storedAccounts.upsert(legacyAccount))
     }
 
     private fun encodeFavoriteWorkshopGames(games: List<FavoriteWorkshopGame>): String {
-        return json.encodeToString(
-            sanitizeFavoriteWorkshopGames(games),
-        )
+        return json.encodeToString(sanitizeFavoriteWorkshopGames(games))
     }
 
-    private fun List<SavedSteamAccount>.upsert(account: SavedSteamAccount): List<SavedSteamAccount> {
+    private fun List<SavedSteamAccount>.upsert(
+        account: SavedSteamAccount
+    ): List<SavedSteamAccount> {
         return filterNot { it.identityKey() == account.identityKey() } + account
     }
 
-    private fun List<FavoriteWorkshopGame>.upsert(game: FavoriteWorkshopGame): List<FavoriteWorkshopGame> {
+    private fun List<FavoriteWorkshopGame>.upsert(
+        game: FavoriteWorkshopGame
+    ): List<FavoriteWorkshopGame> {
         val existing = firstOrNull { it.appId == game.appId }
-        val merged = if (existing == null) {
-            game
-        } else {
-            game.copy(
-                addedAtMs = existing.addedAtMs.takeIf { it > 0L } ?: game.addedAtMs,
-                lastOpenedAtMs = maxOf(existing.lastOpenedAtMs, game.lastOpenedAtMs),
-                capsuleUrl = game.capsuleUrl ?: existing.capsuleUrl,
-                previewUrl = game.previewUrl ?: existing.previewUrl,
-                workshopItemCount = game.workshopItemCount ?: existing.workshopItemCount,
-            )
-        }
+        val merged =
+            if (existing == null) {
+                game
+            } else {
+                game.copy(
+                    addedAtMs = existing.addedAtMs.takeIf { it > 0L } ?: game.addedAtMs,
+                    lastOpenedAtMs = maxOf(existing.lastOpenedAtMs, game.lastOpenedAtMs),
+                    capsuleUrl = game.capsuleUrl ?: existing.capsuleUrl,
+                    previewUrl = game.previewUrl ?: existing.previewUrl,
+                    workshopItemCount = game.workshopItemCount ?: existing.workshopItemCount,
+                )
+            }
         return filterNot { it.appId == game.appId } + merged
     }
 
@@ -995,18 +972,16 @@ class UserPreferencesStore @Inject constructor(
             accountName.isNotBlank() && this.accountName.equals(accountName, ignoreCase = true)
     }
 
-    private fun accountIdentityKey(
-        accountName: String,
-        steamId64: Long,
-    ): String {
+    private fun accountIdentityKey(accountName: String, steamId64: Long): String {
         return SavedSteamAccount(
-            accountName = accountName,
-            refreshToken = "",
-            clientId = 0L,
-            steamId64 = steamId64,
-            rememberSession = true,
-            lastUsedAtMs = 0L,
-        ).identityKey()
+                accountName = accountName,
+                refreshToken = "",
+                clientId = 0L,
+                steamId64 = steamId64,
+                rememberSession = true,
+                lastUsedAtMs = 0L,
+            )
+            .identityKey()
     }
 
     private fun sanitizeSavedAccounts(accounts: List<SavedSteamAccount>): List<SavedSteamAccount> {
@@ -1017,7 +992,9 @@ class UserPreferencesStore @Inject constructor(
             .sortedByDescending(SavedSteamAccount::lastUsedAtMs)
     }
 
-    private fun sanitizeFavoriteWorkshopGames(games: List<FavoriteWorkshopGame>): List<FavoriteWorkshopGame> {
+    private fun sanitizeFavoriteWorkshopGames(
+        games: List<FavoriteWorkshopGame>
+    ): List<FavoriteWorkshopGame> {
         return games
             .filter { it.appId > 0 && it.name.isNotBlank() }
             .groupBy(FavoriteWorkshopGame::appId)
@@ -1029,14 +1006,16 @@ class UserPreferencesStore @Inject constructor(
                         capsuleUrl = acc.capsuleUrl ?: game.capsuleUrl,
                         previewUrl = acc.previewUrl ?: game.previewUrl,
                         workshopItemCount = acc.workshopItemCount ?: game.workshopItemCount,
-                        addedAtMs = listOf(acc.addedAtMs, game.addedAtMs).filter { it > 0L }.minOrNull() ?: 0L,
+                        addedAtMs =
+                            listOf(acc.addedAtMs, game.addedAtMs).filter { it > 0L }.minOrNull()
+                                ?: 0L,
                         lastOpenedAtMs = maxOf(acc.lastOpenedAtMs, game.lastOpenedAtMs),
                     )
                 }
             }
             .sortedWith(
                 compareByDescending<FavoriteWorkshopGame> { it.lastOpenedAtMs }
-                    .thenByDescending { it.addedAtMs },
+                    .thenByDescending { it.addedAtMs }
             )
     }
 
@@ -1075,16 +1054,12 @@ class UserPreferencesStore @Inject constructor(
     }
 
     private fun PersistedSavedSteamAccount.identityKey(): String {
-        return accountIdentityKey(
-            accountName = accountName,
-            steamId64 = steamId64,
-        )
+        return accountIdentityKey(accountName = accountName, steamId64 = steamId64)
     }
 
     private fun decodePersistedSavedAccounts(payload: String): List<PersistedSavedSteamAccount>? {
-        return runCatching {
-            json.decodeFromString<List<PersistedSavedSteamAccount>>(payload)
-        }.getOrNull()
+        return runCatching { json.decodeFromString<List<PersistedSavedSteamAccount>>(payload) }
+            .getOrNull()
     }
 
     private fun isLegacySavedAccountsPayload(payload: String): Boolean {
@@ -1094,9 +1069,8 @@ class UserPreferencesStore @Inject constructor(
     private fun decodeLegacySavedAccounts(payload: String?): List<SavedSteamAccount> {
         if (payload.isNullOrBlank()) return emptyList()
         return sanitizeSavedAccounts(
-            runCatching {
-                json.decodeFromString<List<SavedSteamAccount>>(payload)
-            }.getOrDefault(emptyList()),
+            runCatching { json.decodeFromString<List<SavedSteamAccount>>(payload) }
+                .getOrDefault(emptyList())
         )
     }
 
@@ -1108,37 +1082,40 @@ class UserPreferencesStore @Inject constructor(
                 val legacyRefreshToken = prefs[REFRESH_TOKEN].orEmpty()
                 val secureActiveProfile = secureSessionStore.readActiveSessionProfile()
                 val secureSavedAccounts = secureSessionStore.readSavedAccountsMetadata()
-                val legacySavedAccounts = decodeSavedAccounts(
-                    persistedAccounts = secureSavedAccounts,
-                    legacyPayload = prefs[SAVED_ACCOUNTS_JSON],
-                )
+                val legacySavedAccounts =
+                    decodeSavedAccounts(
+                        persistedAccounts = secureSavedAccounts,
+                        legacyPayload = prefs[SAVED_ACCOUNTS_JSON],
+                    )
                 val mergedAccounts = legacySavedAccounts.toMutableList()
-                val legacyActiveProfile = PersistedActiveSteamSession(
-                    accountName = prefs[ACCOUNT_NAME].orEmpty(),
-                    clientId = prefs[CLIENT_ID] ?: 0L,
-                    steamId64 = prefs[STEAM_ID64] ?: 0L,
-                )
+                val legacyActiveProfile =
+                    PersistedActiveSteamSession(
+                        accountName = prefs[ACCOUNT_NAME].orEmpty(),
+                        clientId = prefs[CLIENT_ID] ?: 0L,
+                        steamId64 = prefs[STEAM_ID64] ?: 0L,
+                    )
 
                 if (
                     legacyActiveProfile.accountName.isNotBlank() &&
-                    (prefs[REMEMBER_SESSION] ?: true) &&
-                    legacyRefreshToken.isNotBlank()
+                        (prefs[REMEMBER_SESSION] ?: true) &&
+                        legacyRefreshToken.isNotBlank()
                 ) {
-                    mergedAccounts += SavedSteamAccount(
-                        accountName = legacyActiveProfile.accountName,
-                        refreshToken = legacyRefreshToken,
-                        clientId = legacyActiveProfile.clientId,
-                        steamId64 = legacyActiveProfile.steamId64,
-                        rememberSession = true,
-                        lastUsedAtMs = System.currentTimeMillis(),
-                    )
+                    mergedAccounts +=
+                        SavedSteamAccount(
+                            accountName = legacyActiveProfile.accountName,
+                            refreshToken = legacyRefreshToken,
+                            clientId = legacyActiveProfile.clientId,
+                            steamId64 = legacyActiveProfile.steamId64,
+                            rememberSession = true,
+                            lastUsedAtMs = System.currentTimeMillis(),
+                        )
                 }
 
                 if (secureActiveProfile.isBlankProfile()) {
                     if (
                         (prefs[REMEMBER_SESSION] ?: true) &&
-                        legacyRefreshToken.isNotBlank() &&
-                        !legacyActiveProfile.isBlankProfile()
+                            legacyRefreshToken.isNotBlank() &&
+                            !legacyActiveProfile.isBlankProfile()
                     ) {
                         secureSessionStore.writeActiveSessionProfile(legacyActiveProfile)
                     } else {
@@ -1151,7 +1128,10 @@ class UserPreferencesStore @Inject constructor(
                 }
 
                 prefs[OWNED_GAMES_SNAPSHOT_JSON]
-                    ?.takeIf { it.isNotBlank() && secureSessionStore.readOwnedGamesSnapshotPayload().isBlank() }
+                    ?.takeIf {
+                        it.isNotBlank() &&
+                            secureSessionStore.readOwnedGamesSnapshotPayload().isBlank()
+                    }
                     ?.let(secureSessionStore::writeOwnedGamesSnapshotPayload)
 
                 if (mergedAccounts.isNotEmpty()) {
@@ -1165,7 +1145,7 @@ class UserPreferencesStore @Inject constructor(
                         }
                     }
                     secureSessionStore.writeSavedAccountsMetadata(
-                        sanitizedAccounts.map { it.toPersisted() },
+                        sanitizedAccounts.map { it.toPersisted() }
                     )
                 } else if (secureSavedAccounts.isEmpty()) {
                     secureSessionStore.clearSavedAccountsMetadata()

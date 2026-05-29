@@ -48,6 +48,6 @@ fun workshopAdaptiveGradientBrush(
         listOf(
             if (LocalWorkshopDarkTheme.current) darkStart else lightStart,
             if (LocalWorkshopDarkTheme.current) darkEnd else lightEnd,
-        ),
+        )
     )
 }

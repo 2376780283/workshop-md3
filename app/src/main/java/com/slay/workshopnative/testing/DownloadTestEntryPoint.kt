@@ -12,7 +12,10 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface DownloadTestEntryPoint {
     fun steamRepository(): SteamRepository
+
     fun downloadsRepository(): DownloadsRepository
+
     fun preferencesStore(): UserPreferencesStore
+
     fun downloadTaskDao(): DownloadTaskDao
 }

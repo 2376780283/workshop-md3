@@ -41,8 +41,8 @@ android {
         versionCode = appVersionCode
         versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "UPDATE_GITHUB_OWNER", "\"cjtestuse\"")
-        buildConfigField("String", "UPDATE_GITHUB_REPO", "\"Workshop-Native\"")
+        buildConfigField("String", "UPDATE_GITHUB_OWNER", "\"2376780283\"")
+        buildConfigField("String", "UPDATE_GITHUB_REPO", "\"workshop-md3\"")
         multiDexEnabled = true
         multiDexKeepProguard = file("multidex-config.pro")
         vectorDrawables.useSupportLibrary = true

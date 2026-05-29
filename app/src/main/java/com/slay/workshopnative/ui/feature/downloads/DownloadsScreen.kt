@@ -57,10 +57,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -234,12 +237,21 @@ fun DownloadsScreen(paddingValues: PaddingValues, viewModel: DownloadsViewModel 
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 88.dp),
-        ) {
+    Scaffold(
+        modifier = Modifier.fillMaxSize().padding(paddingValues),
+        topBar = {
+            TopAppBar(
+                title = { Text("下载管理", style = MaterialTheme.typography.headlineSmall) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+            )
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 88.dp),
+            ) {
             item {
                 DownloadsControlPanel(
                     tabs = tabStates,
@@ -382,6 +394,7 @@ fun DownloadsScreen(paddingValues: PaddingValues, viewModel: DownloadsViewModel 
                     .padding(horizontal = 16.dp, vertical = 12.dp),
         )
     }
+}
 
     selectedTask?.let { task ->
         val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)

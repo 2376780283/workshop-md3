@@ -3,8 +3,11 @@ package com.slay.workshopnative.ui
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -342,7 +345,11 @@ fun WorkshopNativeRoot(viewModel: MainViewModel = hiltViewModel()) {
 
     WorkshopBackdrop {
         Row(modifier = Modifier.fillMaxSize()) {
-            if (showNavigationRail) {
+            AnimatedVisibility(
+                visible = showNavigationRail,
+                enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
+                exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
+            ) {
                 NavigationRail {
                     rootDestinations(showLibraryTab).forEach { destination ->
                         val selected = currentRootTabRoute == destination.route
@@ -1028,13 +1035,8 @@ private fun SessionStateBanner(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp).padding(end = 10.dp),
-                    strokeWidth = 2.4.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                )
                 Text(
-                    text = "Steam 正在重连，联网操作恢复后会自动接上。",
+                    text = "Steam ，联网操作恢复后会自动接上。",
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,

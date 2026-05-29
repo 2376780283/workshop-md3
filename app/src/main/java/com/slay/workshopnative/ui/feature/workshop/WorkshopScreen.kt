@@ -59,10 +59,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -221,7 +225,16 @@ fun WorkshopScreen(
             }
     }
 
-    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+    Scaffold(
+        modifier = Modifier.fillMaxSize().padding(paddingValues),
+        topBar = {
+            TopAppBar(
+                title = { Text(state.appName, style = MaterialTheme.typography.headlineSmall) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+            )
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -450,6 +463,7 @@ fun WorkshopScreen(
                 Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp),
         )
     }
+}
 
     if (isBrowseMode && showFilters) {
         FilterSheet(
@@ -729,48 +743,14 @@ private fun WorkshopTopBarModern(
             WorkshopLaunchMode.Subscriptions -> "只读取当前账号已订阅的条目，不会执行任何订阅变更。"
         }
 
-    Surface(
-        shape = RoundedCornerShape(26.dp),
-        color =
-            workshopAdaptiveSurfaceColor(
-                light = Color(0xFFF7F1EA).copy(alpha = 0.96f),
-                dark = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
-            ),
-        tonalElevation = 2.dp,
-        shadowElevation = 6.dp,
-        border =
-            BorderStroke(1.dp, workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.5f))),
-        contentColor = MaterialTheme.colorScheme.onSurface,
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
+        // 头卡片
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                if (darkTheme) {
-                                    MaterialTheme.colorScheme.surfaceContainerHighest.copy(
-                                        alpha = 0.98f
-                                    )
-                                } else {
-                                    Color.White.copy(alpha = 0.82f)
-                                },
-                                if (darkTheme) {
-                                    MaterialTheme.colorScheme.surfaceContainerHigh.copy(
-                                        alpha = 0.9f
-                                    )
-                                } else {
-                                    Color(0xFFFFF7EF).copy(alpha = 0.64f)
-                                },
-                                if (darkTheme) {
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
-                                } else {
-                                    Color(0xFFF2E5D7).copy(alpha = 0.38f)
-                                },
-                            )
-                        )
-                    )
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(

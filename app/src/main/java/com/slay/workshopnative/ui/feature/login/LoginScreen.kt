@@ -184,7 +184,15 @@ private fun AuthForm(
     onAuthCodeChange: (String) -> Unit,
     onSubmitAuthCode: (String) -> Unit,
 ) {
-    val challenge = sessionState.challenge!!
+    val challenge = sessionState.challenge
+    if (challenge == null) {
+        // Handle unexpected null challenge gracefully
+        Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+    
     val title =
         when (challenge.type) {
             AuthChallengeType.SteamGuard -> "Steam Guard"

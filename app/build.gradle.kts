@@ -72,6 +72,7 @@ android {
         }
         debug {
             versionNameSuffix = "-debug"
+            applicationIdSuffix = ".debug"
         }
     }
 

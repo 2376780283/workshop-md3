@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Info
@@ -45,10 +46,14 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -180,33 +185,13 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                androidx.compose.material3.ListItem(
-                    headlineContent = {
-                        Text(
-                            text =
-                                if (!uiState.isLoginFeatureEnabled) "账户能力"
-                                else if (isGuestMode) "未连接 Steam"
-                                else uiState.accountName.ifBlank { "未登录" }
-                        )
-                    },
-                    supportingContent = {
-                        Text(
-                            text =
-                                if (!uiState.isLoginFeatureEnabled) "仅开放匿名能力"
-                                else if (isGuestMode) "前往登录" else "已登录"
-                        )
-                    },
-                    leadingContent = {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Rounded.AccountCircle,
-                            contentDescription = null,
-                        )
-                    },
-                    trailingContent = {
-                        Button(onClick = if (isGuestMode) onShowLogin else onLogout) {
-                            Text(if (isGuestMode) "前往登录" else "退出登录")
-                        }
-                    },
+                AccountCard(
+                    uiState = uiState,
+                    isGuestMode = isGuestMode,
+                    onShowLogin = onShowLogin,
+                    onLogout = onLogout,
+                    onSwitchSavedAccount = onSwitchSavedAccount,
+                    onRemoveSavedAccount = viewModel::removeSavedAccount,
                 )
             }
 
@@ -832,108 +817,106 @@ private fun AccountCard(
     onSwitchSavedAccount: (String) -> Unit,
     onRemoveSavedAccount: (String) -> Unit,
 ) {
-    Card(
-        shape = RoundedCornerShape(28.dp),
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
         colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.08f)
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
     ) {
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(
-                        brush =
-                            Brush.linearGradient(
-                                listOf(Color(0xFF182333), Color(0xFF243547), Color(0xFF314861))
-                            )
-                    )
-                    .padding(16.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AccountAvatar(accountName = uiState.accountName, avatarUrl = uiState.avatarUrl)
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        Text(
-                            text =
-                                when {
-                                    !uiState.isLoginFeatureEnabled -> "账户能力"
-                                    isGuestMode -> "当前状态"
-                                    else -> "当前账号"
-                                },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.76f),
-                        )
-                        Text(
-                            text =
-                                if (!uiState.isLoginFeatureEnabled) {
-                                    "当前仅开放匿名能力"
-                                } else if (isGuestMode) {
-                                    "未连接 Steam"
-                                } else {
-                                    uiState.accountName.ifBlank { "未登录" }
-                                },
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                        )
-                    }
-                }
-
-                if (!uiState.isLoginFeatureEnabled) {
+        Column(modifier = Modifier.padding(vertical = 12.dp)) {
+            ListItem(
+                headlineContent = {
                     Text(
-                        text = "登录入口、已保存账号、自动恢复、已购和订阅信息都会在下方“账户行为”里单独开启。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.76f),
+                        text =
+                            if (!uiState.isLoginFeatureEnabled) {
+                                "当前仅开放匿名能力"
+                            } else if (isGuestMode) {
+                                "未连接 Steam"
+                            } else {
+                                uiState.accountName.ifBlank { "未登录" }
+                            },
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
                     )
-                } else {
-                    Button(
-                        onClick = if (isGuestMode) onShowLogin else onLogout,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors =
-                            androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFF07E49),
-                                contentColor = Color.White,
-                            ),
-                    ) {
-                        Icon(
-                            if (isGuestMode) Icons.Rounded.AccountCircle
-                            else Icons.AutoMirrored.Rounded.Logout,
-                            contentDescription = null,
-                        )
-                        Text(
-                            text = if (isGuestMode) "前往登录" else "退出登录",
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    }
-                }
+                },
+                supportingContent = {
+                    Text(
+                        text =
+                            when {
+                                !uiState.isLoginFeatureEnabled -> "账户能力"
+                                isGuestMode -> "当前状态"
+                                else -> "当前账号"
+                            },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                leadingContent = {
+                    AccountAvatar(accountName = uiState.accountName, avatarUrl = uiState.avatarUrl)
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            )
 
-                if (uiState.isLoginFeatureEnabled && uiState.savedAccounts.isNotEmpty()) {
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            text = "已保存账号",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.74f),
-                        )
-                        uiState.savedAccounts.forEach { account ->
-                            SavedAccountRow(
-                                account = account,
-                                isActive = !isGuestMode && account.matches(uiState.accountName),
-                                onSwitch = { onSwitchSavedAccount(account.stableKey()) },
-                                onRemove = { onRemoveSavedAccount(account.stableKey()) },
-                            )
+            if (!uiState.isLoginFeatureEnabled) {
+                Text(
+                    text = "登录入口、已保存账号、自动恢复、已购和订阅信息都会在下方“账户行为”里单独开启。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            } else {
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    if (isGuestMode) {
+                        Button(
+                            onClick = onShowLogin,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Icon(Icons.Rounded.AccountCircle, contentDescription = null)
+                            Text(text = "前往登录", modifier = Modifier.padding(start = 8.dp))
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = onLogout,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors =
+                                androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                ),
+                            border =
+                                BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+                                ),
+                        ) {
+                            Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null)
+                            Text(text = "退出登录", modifier = Modifier.padding(start = 8.dp))
                         }
                     }
+                }
+            }
+
+            if (uiState.isLoginFeatureEnabled && uiState.savedAccounts.isNotEmpty()) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+                Text(
+                    text = "已保存账号",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                uiState.savedAccounts.forEach { account ->
+                    SavedAccountRow(
+                        account = account,
+                        isActive = !isGuestMode && account.matches(uiState.accountName),
+                        onSwitch = { onSwitchSavedAccount(account.stableKey()) },
+                        onRemove = { onRemoveSavedAccount(account.stableKey()) },
+                    )
                 }
             }
         }
@@ -947,85 +930,68 @@ private fun SavedAccountRow(
     onSwitch: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = Color.White.copy(alpha = 0.1f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.18f)) {
-                Box(modifier = Modifier.size(34.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = initialsOf(account.accountName),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
+    ListItem(
+        headlineContent = {
+            Text(
+                text = account.accountName,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+        },
+        supportingContent = {
+            Text(
+                text = if (account.steamId64 > 0L) "SteamID ${account.steamId64}" else "已保存登录态",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        leadingContent = {
+            AccountAvatar(accountName = account.accountName, avatarUrl = null, size = 40.dp)
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isActive) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = "当前账号",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = 8.dp),
                     )
+                } else {
+                    OutlinedButton(
+                        onClick = onSwitch,
+                        modifier = Modifier.padding(end = 8.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    ) {
+                        Text("切换", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = account.accountName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                )
-                Text(
-                    text = if (account.steamId64 > 0L) "SteamID ${account.steamId64}" else "已保存登录态",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.68f),
-                )
-            }
-            if (isActive) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color.White.copy(alpha = 0.16f),
-                ) {
-                    Text(
-                        text = "当前",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                    )
-                }
-            } else {
-                OutlinedButton(onClick = onSwitch, shape = RoundedCornerShape(16.dp)) { Text("切换") }
-            }
-            Surface(
-                modifier = Modifier.clickable(onClick = onRemove),
-                shape = RoundedCornerShape(14.dp),
-                color = Color.White.copy(alpha = 0.08f),
-            ) {
-                Box(
-                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 9.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
+                IconButton(onClick = onRemove) {
                     Icon(
                         imageVector = Icons.Rounded.DeleteOutline,
                         contentDescription = "移除账号",
-                        tint = Color.White.copy(alpha = 0.78f),
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
                     )
                 }
             }
-        }
-    }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    )
 }
 
 @Composable
-private fun AccountAvatar(accountName: String, avatarUrl: String?) {
+private fun AccountAvatar(
+    accountName: String,
+    avatarUrl: String?,
+    size: androidx.compose.ui.unit.Dp = 72.dp,
+) {
     Surface(
-        modifier = Modifier.size(72.dp),
+        modifier = Modifier.size(size),
         shape = CircleShape,
-        color = Color.White.copy(alpha = 0.94f),
-        shadowElevation = 6.dp,
-        border = BorderStroke(2.dp, Color.White.copy(alpha = 0.5f)),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 2.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     ) {
         if (!avatarUrl.isNullOrBlank()) {
             AsyncImage(
@@ -1035,31 +1001,20 @@ private fun AccountAvatar(accountName: String, avatarUrl: String?) {
                 contentScale = ContentScale.Crop,
             )
         } else {
-            Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .background(
-                            brush =
-                                Brush.linearGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
-                                    )
-                                )
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 if (accountName.isBlank()) {
                     Icon(
                         imageVector = Icons.Rounded.AccountCircle,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(36.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(size * 0.6f),
                     )
                 } else {
                     Text(
                         text = initialsOf(accountName),
-                        style = MaterialTheme.typography.titleLarge,
+                        style =
+                            if (size > 48.dp) MaterialTheme.typography.titleLarge
+                            else MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                     )

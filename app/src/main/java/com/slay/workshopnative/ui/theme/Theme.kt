@@ -1,6 +1,9 @@
 package com.slay.workshopnative.ui.theme
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -98,11 +101,58 @@ fun WorkshopNativeTheme(
             AppThemeMode.Light -> false
             AppThemeMode.Dark -> true
         }
+
+    val targetScheme = if (darkTheme) DarkScheme else LightScheme
+    val animatedColorScheme = animateColorScheme(targetScheme)
+
     CompositionLocalProvider(LocalWorkshopDarkTheme provides darkTheme) {
         MaterialTheme(
-            colorScheme = if (darkTheme) DarkScheme else LightScheme,
+            colorScheme = animatedColorScheme,
             typography = WorkshopTypography,
             content = content,
         )
     }
+}
+
+@Composable
+fun animateColorScheme(targetScheme: ColorScheme): ColorScheme {
+    val animationSpec = tween<androidx.compose.ui.graphics.Color>(durationMillis = 300)
+
+    return targetScheme.copy(
+        primary = animateColorAsState(targetScheme.primary, animationSpec).value,
+        onPrimary = animateColorAsState(targetScheme.onPrimary, animationSpec).value,
+        primaryContainer = animateColorAsState(targetScheme.primaryContainer, animationSpec).value,
+        onPrimaryContainer = animateColorAsState(targetScheme.onPrimaryContainer, animationSpec).value,
+        secondary = animateColorAsState(targetScheme.secondary, animationSpec).value,
+        onSecondary = animateColorAsState(targetScheme.onSecondary, animationSpec).value,
+        secondaryContainer = animateColorAsState(targetScheme.secondaryContainer, animationSpec).value,
+        onSecondaryContainer = animateColorAsState(targetScheme.onSecondaryContainer, animationSpec).value,
+        tertiary = animateColorAsState(targetScheme.tertiary, animationSpec).value,
+        onTertiary = animateColorAsState(targetScheme.onTertiary, animationSpec).value,
+        tertiaryContainer = animateColorAsState(targetScheme.tertiaryContainer, animationSpec).value,
+        onTertiaryContainer = animateColorAsState(targetScheme.onTertiaryContainer, animationSpec).value,
+        error = animateColorAsState(targetScheme.error, animationSpec).value,
+        onError = animateColorAsState(targetScheme.onError, animationSpec).value,
+        errorContainer = animateColorAsState(targetScheme.errorContainer, animationSpec).value,
+        onErrorContainer = animateColorAsState(targetScheme.onErrorContainer, animationSpec).value,
+        background = animateColorAsState(targetScheme.background, animationSpec).value,
+        onBackground = animateColorAsState(targetScheme.onBackground, animationSpec).value,
+        surface = animateColorAsState(targetScheme.surface, animationSpec).value,
+        onSurface = animateColorAsState(targetScheme.onSurface, animationSpec).value,
+        surfaceVariant = animateColorAsState(targetScheme.surfaceVariant, animationSpec).value,
+        onSurfaceVariant = animateColorAsState(targetScheme.onSurfaceVariant, animationSpec).value,
+        outline = animateColorAsState(targetScheme.outline, animationSpec).value,
+        outlineVariant = animateColorAsState(targetScheme.outlineVariant, animationSpec).value,
+        scrim = animateColorAsState(targetScheme.scrim, animationSpec).value,
+        inverseSurface = animateColorAsState(targetScheme.inverseSurface, animationSpec).value,
+        inverseOnSurface = animateColorAsState(targetScheme.inverseOnSurface, animationSpec).value,
+        inversePrimary = animateColorAsState(targetScheme.inversePrimary, animationSpec).value,
+        surfaceDim = animateColorAsState(targetScheme.surfaceDim, animationSpec).value,
+        surfaceBright = animateColorAsState(targetScheme.surfaceBright, animationSpec).value,
+        surfaceContainerLowest = animateColorAsState(targetScheme.surfaceContainerLowest, animationSpec).value,
+        surfaceContainerLow = animateColorAsState(targetScheme.surfaceContainerLow, animationSpec).value,
+        surfaceContainer = animateColorAsState(targetScheme.surfaceContainer, animationSpec).value,
+        surfaceContainerHigh = animateColorAsState(targetScheme.surfaceContainerHigh, animationSpec).value,
+        surfaceContainerHighest = animateColorAsState(targetScheme.surfaceContainerHighest, animationSpec).value,
+    )
 }

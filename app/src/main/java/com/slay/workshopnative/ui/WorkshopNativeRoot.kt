@@ -31,14 +31,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.DownloadForOffline
 import androidx.compose.material.icons.rounded.Games
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
@@ -779,36 +785,29 @@ private fun SignedInContentGate(
         !guestMode &&
             (savedAccounts.isNotEmpty() || sessionState.account != null) &&
             sessionState.status == SessionStatus.Error
+
     Box(
         modifier =
             Modifier.fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(horizontal = 16.dp, vertical = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(30.dp),
-            color = workshopAdaptiveSurfaceColor(light = Color.White.copy(alpha = 0.86f)),
-            shadowElevation = 10.dp,
-            tonalElevation = 2.dp,
-            border =
-                BorderStroke(
-                    1.dp,
-                    workshopAdaptiveBorderColor(light = Color.White.copy(alpha = 0.45f)),
-                ),
-            contentColor = MaterialTheme.colorScheme.onSurface,
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 if (isRecovering) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                     Text(
                         text = "正在恢复 Steam 登录",
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = "切回前台后会自动重连 Steam，恢复完成后这里会自动回到我的内容。",
@@ -818,7 +817,7 @@ private fun SignedInContentGate(
                     OutlinedButton(
                         onClick = onRetryRestore,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(16.dp),
                     ) {
                         Text("立即重试")
                     }
@@ -831,7 +830,7 @@ private fun SignedInContentGate(
                                 "我的内容需要 Steam 账号"
                             },
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text =
@@ -847,7 +846,7 @@ private fun SignedInContentGate(
                         Button(
                             onClick = onRetryRestore,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(18.dp),
+                            shape = RoundedCornerShape(16.dp),
                         ) {
                             Text("重试恢复")
                         }
@@ -855,63 +854,57 @@ private fun SignedInContentGate(
                     Button(
                         onClick = onShowLogin,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(16.dp),
                     ) {
                         Text("前往登录")
                     }
                 }
+
                 if (savedAccounts.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            text = "快速切换到已保存账号",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                        )
-                        savedAccounts.forEach { account ->
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(18.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                border =
-                                    BorderStroke(
-                                        1.dp,
-                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-                                    ),
-                            ) {
-                                Row(
-                                    modifier =
-                                        Modifier.fillMaxWidth()
-                                            .clickable { onSwitchSavedAccount(account.stableKey()) }
-                                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        Text(
-                                            text = account.accountName,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight =
-                                                androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        )
-                                        Text(
-                                            text =
-                                                if (account.steamId64 > 0L) {
-                                                    "SteamID ${account.steamId64}"
-                                                } else {
-                                                    "已保存登录态"
-                                                },
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    Text(
-                                        text = "进入",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    )
+                    Text(
+                        text = "快速切换到已保存账号",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    savedAccounts.forEach { account ->
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = account.accountName,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            },
+                            supportingContent = {
+                                Text(
+                                    text =
+                                        if (account.steamId64 > 0L) "SteamID ${account.steamId64}"
+                                        else "已保存登录态",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            leadingContent = {
+                                // Simplified representation using icon as avatar placeholder
+                                Icon(
+                                    imageVector = Icons.Rounded.AccountCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(8.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            },
+                            trailingContent = {
+                                TextButton(onClick = { onSwitchSavedAccount(account.stableKey()) }) {
+                                    Text("切换")
                                 }
-                            }
-                        }
+                            },
+                            modifier = Modifier.clickable { onSwitchSavedAccount(account.stableKey()) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
                     }
                 }
             }

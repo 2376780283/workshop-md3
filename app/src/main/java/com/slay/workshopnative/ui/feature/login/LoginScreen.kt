@@ -128,6 +128,7 @@ fun LoginScreen(
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainer
                         ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 ) {
                     when (targetState) {
                         "busy" -> {
@@ -352,6 +353,7 @@ private fun LoginForm(
                     modifier = Modifier.fillMaxWidth(),
                     colors =
                         CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
